@@ -1,0 +1,19 @@
+{
+  "name": "Steppe.Tests.PlayMode",
+  "rootNamespace": "Steppe.Tests",
+  "references": [
+    "Steppe.Runtime"
+  ],
+  "includePlatforms": [],
+  "excludePlatforms": [],
+  "allowUnsafeCode": false,
+  "overrideReferences": false,
+  "precompiledReferences": [],
+  "autoReferenced": true,
+  "defineConstraints": [],
+  "versionDefines": [],
+  "noEngineReferences": false,
+  "optionalUnityReferences": [
+    "TestAssemblies"
+  ]
+}
