@@ -1,6 +1,9 @@
 using Steppe.Player;
+using Steppe.Rendering;
 using Steppe.Settings;
 using Steppe.Terrain;
+using Steppe.Time;
+using Steppe.Weather;
 using Steppe.World;
 using UnityEngine;
 
@@ -11,6 +14,9 @@ namespace Steppe.Prototype
     {
         [SerializeField] private SteppeWorldSettings settings;
         [SerializeField] private Material terrainMaterial;
+        [SerializeField] private Material vegetationMaterial;
+        [SerializeField] private Material grassMaterial;
+        [SerializeField] private Material cloudMaterial;
 
         private SteppeWorldSettings runtimeSettings;
         private bool initialized;
@@ -23,7 +29,7 @@ namespace Steppe.Prototype
                 return;
             }
 
-            var root = new GameObject("Steppe P0 Prototype");
+            var root = new GameObject("Steppe Prototype");
             root.AddComponent<SteppePrototypeBootstrap>();
         }
 
@@ -69,8 +75,14 @@ namespace Steppe.Prototype
             camera.farClipPlane = runtimeSettings.CameraFarClip;
             camera.clearFlags = CameraClearFlags.Skybox;
 
-            EnsureDirectionalLight();
+            var sun = EnsureDirectionalLight();
+            var moon = EnsureMoonLight();
             ConfigureAtmosphere();
+
+            var timeSystem = gameObject.AddComponent<SteppeTimeSystem>();
+            timeSystem.Configure(runtimeSettings);
+            var celestialPresentation = gameObject.AddComponent<SteppeCelestialPresentation>();
+            celestialPresentation.Configure(timeSystem, sun, moon, runtimeSettings.LatitudeDegrees);
 
             var worldSpaceObject = new GameObject("World Space");
             worldSpaceObject.transform.SetParent(transform, false);
@@ -82,13 +94,28 @@ namespace Steppe.Prototype
                 runtimeSettings.FloatingOriginThreshold,
                 runtimeSettings.ChunkSize);
 
+            var weatherSystem = gameObject.AddComponent<SteppeWeatherSystem>();
+            weatherSystem.Configure(runtimeSettings, timeSystem, floatingOrigin, camera.transform);
+
+            var cloudObject = new GameObject("Cloud Layer");
+            cloudObject.transform.SetParent(worldSpaceObject.transform, false);
+            var cloudLayer = cloudObject.AddComponent<SteppeCloudLayer>();
+            cloudLayer.Configure(runtimeSettings, weatherSystem, floatingOrigin, cloudMaterial);
+
+            var grassObject = new GameObject("Grass Field");
+            grassObject.transform.SetParent(worldSpaceObject.transform, false);
+            var grassRenderer = grassObject.AddComponent<SteppeGrassRenderer>();
+            grassRenderer.Configure(runtimeSettings, floatingOrigin, camera.transform, grassMaterial);
+
             var chunkStreamer = gameObject.AddComponent<TerrainChunkStreamer>();
             chunkStreamer.Configure(
                 runtimeSettings,
                 floatingOrigin,
                 camera.transform,
                 worldSpaceObject.transform,
-                terrainMaterial);
+                terrainMaterial,
+                vegetationMaterial,
+                !grassRenderer.IsRendering);
 
             var overlay = gameObject.AddComponent<WorldDebugOverlay>();
             overlay.Configure(
@@ -96,19 +123,34 @@ namespace Steppe.Prototype
                 floatingOrigin,
                 chunkStreamer,
                 cameraController,
-                camera.transform);
+                camera.transform,
+                timeSystem,
+                weatherSystem,
+                grassRenderer);
+
+            var biomeNavigator = gameObject.AddComponent<BiomeDebugNavigator>();
+            biomeNavigator.Configure(runtimeSettings, floatingOrigin, camera.transform);
 
             Application.targetFrameRate = 60;
         }
 
-        private static void EnsureDirectionalLight()
+        private static Light EnsureDirectionalLight()
         {
+            var namedSun = GameObject.Find("Steppe Sun");
+            if (namedSun != null && namedSun.TryGetComponent<Light>(out var existingSun))
+            {
+                RenderSettings.sun = existingSun;
+                return existingSun;
+            }
+
             var lights = FindObjectsByType<Light>();
             for (var index = 0; index < lights.Length; index++)
             {
-                if (lights[index].type == LightType.Directional)
+                if (lights[index].type == LightType.Directional && lights[index].name != "Steppe Moon")
                 {
-                    return;
+                    lights[index].name = "Steppe Sun";
+                    RenderSettings.sun = lights[index];
+                    return lights[index];
                 }
             }
 
@@ -118,6 +160,26 @@ namespace Steppe.Prototype
             light.intensity = 1.15f;
             light.color = new Color(1f, 0.93f, 0.82f);
             light.transform.rotation = Quaternion.Euler(42f, -28f, 0f);
+            RenderSettings.sun = light;
+            return light;
+        }
+
+        private static Light EnsureMoonLight()
+        {
+            var existingObject = GameObject.Find("Steppe Moon");
+            if (existingObject != null && existingObject.TryGetComponent<Light>(out var existingMoon))
+            {
+                return existingMoon;
+            }
+
+            var lightObject = new GameObject("Steppe Moon");
+            var light = lightObject.AddComponent<Light>();
+            light.type = LightType.Directional;
+            light.intensity = 0f;
+            light.color = new Color(0.55f, 0.67f, 0.92f);
+            light.shadows = LightShadows.None;
+            light.enabled = false;
+            return light;
         }
 
         private static void ConfigureAtmosphere()

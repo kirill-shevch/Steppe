@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using Steppe.Settings;
+using Steppe.Surface;
 using Steppe.World;
 using UnityEngine;
 
@@ -18,8 +19,12 @@ namespace Steppe.Terrain
         private Transform focus;
         private Transform worldSpaceRoot;
         private TerrainHeightGenerator generator;
+        private SteppeSurfaceGenerator surfaceGenerator;
         private Material terrainMaterial;
+        private Material vegetationMaterial;
         private bool ownsMaterial;
+        private bool ownsVegetationMaterial;
+        private bool generateLegacyVegetation;
         private bool hasCenter;
         private ChunkCoordinate center;
 
@@ -32,13 +37,17 @@ namespace Steppe.Terrain
             FloatingOriginSystem origin,
             Transform focusTransform,
             Transform root,
-            Material material = null)
+            Material material = null,
+            Material grassMaterial = null,
+            bool buildLegacyVegetation = true)
         {
             settings = worldSettings != null ? worldSettings : throw new ArgumentNullException(nameof(worldSettings));
             floatingOrigin = origin != null ? origin : throw new ArgumentNullException(nameof(origin));
             focus = focusTransform != null ? focusTransform : throw new ArgumentNullException(nameof(focusTransform));
             worldSpaceRoot = root != null ? root : throw new ArgumentNullException(nameof(root));
             generator = new TerrainHeightGenerator(settings);
+            surfaceGenerator = new SteppeSurfaceGenerator(settings);
+            generateLegacyVegetation = buildLegacyVegetation;
 
             if (material != null)
             {
@@ -49,6 +58,17 @@ namespace Steppe.Terrain
             {
                 terrainMaterial = CreateRuntimeMaterial();
                 ownsMaterial = true;
+            }
+
+            if (grassMaterial != null)
+            {
+                vegetationMaterial = grassMaterial;
+                ownsVegetationMaterial = false;
+            }
+            else
+            {
+                vegetationMaterial = CreateRuntimeVegetationMaterial();
+                ownsVegetationMaterial = true;
             }
 
             hasCenter = false;
@@ -161,7 +181,7 @@ namespace Steppe.Terrain
                 {
                     chunk = pool.Count > 0
                         ? pool.Pop()
-                        : new TerrainChunk(worldSpaceRoot, terrainMaterial);
+                        : new TerrainChunk(worldSpaceRoot, terrainMaterial, vegetationMaterial);
                     loaded.Add(request.Coordinate, chunk);
                 }
 
@@ -171,11 +191,21 @@ namespace Steppe.Terrain
                     request.Coordinate,
                     settings.ChunkSize,
                     resolution,
-                    settings.SkirtDepth);
+                    settings.SkirtDepth,
+                    surfaceGenerator);
+                var vegetationData = generateLegacyVegetation
+                    ? VegetationMeshBuilder.Build(
+                        generator,
+                        surfaceGenerator,
+                        settings,
+                        request.Coordinate,
+                        request.Lod)
+                    : null;
                 chunk.Apply(
                     request.Coordinate,
                     request.Lod,
                     meshData,
+                    vegetationData,
                     settings.ChunkSize,
                     floatingOrigin);
             }
@@ -183,7 +213,8 @@ namespace Steppe.Terrain
 
         private static Material CreateRuntimeMaterial()
         {
-            var shader = Shader.Find("Universal Render Pipeline/Lit")
+            var shader = Shader.Find("Steppe/Terrain Surface")
+                         ?? Shader.Find("Universal Render Pipeline/Lit")
                          ?? Shader.Find("Universal Render Pipeline/Simple Lit")
                          ?? Shader.Find("Standard");
 
@@ -194,11 +225,11 @@ namespace Steppe.Terrain
 
             var material = new Material(shader)
             {
-                name = "Steppe P0 Terrain Material",
+                name = "Steppe P1 Terrain Material",
                 hideFlags = HideFlags.DontSave
             };
 
-            var baseColor = new Color(0.32f, 0.39f, 0.20f, 1f);
+            var baseColor = Color.white;
             if (material.HasProperty("_BaseColor"))
             {
                 material.SetColor("_BaseColor", baseColor);
@@ -213,6 +244,26 @@ namespace Steppe.Terrain
                 material.SetFloat("_Smoothness", 0.05f);
             }
 
+            return material;
+        }
+
+        private static Material CreateRuntimeVegetationMaterial()
+        {
+            var shader = Shader.Find("Steppe/Vegetation")
+                         ?? Shader.Find("Universal Render Pipeline/Unlit")
+                         ?? Shader.Find("Unlit/Color");
+
+            if (shader == null)
+            {
+                throw new InvalidOperationException("No supported vegetation shader was found.");
+            }
+
+            var material = new Material(shader)
+            {
+                name = "Steppe P1 Vegetation Material",
+                hideFlags = HideFlags.DontSave,
+                enableInstancing = true
+            };
             return material;
         }
 
@@ -240,6 +291,18 @@ namespace Steppe.Terrain
                 else
                 {
                     DestroyImmediate(terrainMaterial);
+                }
+            }
+
+            if (ownsVegetationMaterial && vegetationMaterial != null)
+            {
+                if (Application.isPlaying)
+                {
+                    Destroy(vegetationMaterial);
+                }
+                else
+                {
+                    DestroyImmediate(vegetationMaterial);
                 }
             }
         }

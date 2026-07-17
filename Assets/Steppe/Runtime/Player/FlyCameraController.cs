@@ -79,7 +79,7 @@ namespace Steppe.Player
 
             if (movement.sqrMagnitude > 0f)
             {
-                transform.position += movement.normalized * (CurrentMoveSpeed * Time.unscaledDeltaTime);
+                transform.position += movement.normalized * (CurrentMoveSpeed * UnityEngine.Time.unscaledDeltaTime);
             }
         }
 

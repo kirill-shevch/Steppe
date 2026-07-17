@@ -2,7 +2,10 @@ using System.Collections;
 using NUnit.Framework;
 using Steppe.Player;
 using Steppe.Prototype;
+using Steppe.Rendering;
 using Steppe.Terrain;
+using Steppe.Time;
+using Steppe.Weather;
 using Steppe.World;
 using UnityEngine;
 using UnityEngine.TestTools;
@@ -24,12 +27,106 @@ namespace Steppe.Tests
 
             var cameraController = Object.FindAnyObjectByType<FlyCameraController>();
             var streamer = Object.FindAnyObjectByType<TerrainChunkStreamer>();
+            var grass = Object.FindAnyObjectByType<SteppeGrassRenderer>();
+            var timeSystem = Object.FindAnyObjectByType<SteppeTimeSystem>();
 
             Assert.That(cameraController, Is.Not.Null);
             Assert.That(streamer, Is.Not.Null);
             Assert.That(streamer.LoadedCount, Is.GreaterThan(0));
+            Assert.That(Object.FindAnyObjectByType<BiomeDebugNavigator>(), Is.Not.Null);
+            Assert.That(Object.FindAnyObjectByType<SteppeTimeSystem>(), Is.Not.Null);
+            Assert.That(Object.FindAnyObjectByType<SteppeCelestialPresentation>(), Is.Not.Null);
+            Assert.That(Object.FindAnyObjectByType<SteppeWeatherSystem>(), Is.Not.Null);
+            Assert.That(Object.FindAnyObjectByType<SteppeCloudLayer>(), Is.Not.Null);
+            Assert.That(Object.FindAnyObjectByType<SteppeGrassRenderer>(), Is.Not.Null);
+            Assert.That(GameObject.Find("Steppe Sun"), Is.Not.Null);
+            Assert.That(GameObject.Find("Steppe Moon"), Is.Not.Null);
+            Assert.That(RenderSettings.skybox, Is.Not.Null);
+            Assert.That(RenderSettings.skybox.shader.name, Is.EqualTo("Steppe/Skybox"));
+            Assert.That(timeSystem.DebugMultiplier, Is.EqualTo(1f));
+            Assert.That(GameObject.Find("Cloud Layer"), Is.Not.Null);
+            Assert.That(GameObject.Find("Grass Field"), Is.Not.Null);
             Assert.That(cameraController.GetComponent<Collider>(), Is.Null);
             Assert.That(cameraController.GetComponent<Rigidbody>(), Is.Null);
+            if (grass.IsRendering)
+            {
+                Assert.That(grass.LoadedCellCount, Is.GreaterThan(0));
+                Assert.That(grass.InstanceCount, Is.GreaterThan(0));
+                Assert.That(grass.UsesAuthoredMesh, Is.True);
+                Assert.That(grass.TuftVertexCount, Is.GreaterThan(12));
+                Assert.That(grass.TuftTriangleCount, Is.EqualTo(72));
+                var wind = Shader.GetGlobalVector("_SteppeWindVelocity");
+                Assert.That(new Vector2(wind.x, wind.y).magnitude, Is.GreaterThan(0.1f));
+                Assert.That(wind.z, Is.EqualTo(new Vector2(wind.x, wind.y).magnitude).Within(0.001f));
+                Assert.That(
+                    Shader.GetGlobalFloat("_SteppeWindTime"),
+                    Is.EqualTo((float)Object.FindAnyObjectByType<SteppeWeatherSystem>().WeatherSeconds).Within(0.05f));
+                Assert.That(Shader.GetGlobalFloat("_SteppeWindAnimationTime"), Is.GreaterThan(0f));
+                Assert.That(
+                    Shader.GetGlobalFloat("_SteppeWindAnimationTime"),
+                    Is.EqualTo((float)Object.FindAnyObjectByType<SteppeWeatherSystem>().WindAnimationSeconds).Within(0.01f));
+            }
+            else
+            {
+                Assert.That(GameObject.Find("Vegetation"), Is.Not.Null);
+            }
+        }
+
+        [UnityTest]
+        public IEnumerator NightRevealsMoonStarsAndWeakDirectionalLight()
+        {
+            if (Object.FindAnyObjectByType<SteppePrototypeBootstrap>() == null)
+            {
+                new GameObject("P2 Night Test Bootstrap").AddComponent<SteppePrototypeBootstrap>();
+            }
+
+            var timeSystem = Object.FindAnyObjectByType<SteppeTimeSystem>();
+            var celestial = Object.FindAnyObjectByType<SteppeCelestialPresentation>();
+            var hoursToMidnight = (24.0 - timeSystem.Current.Hour) % 24.0;
+            timeSystem.AdvanceSimulationSeconds(hoursToMidnight * 3600.0);
+            yield return null;
+
+            Assert.That(celestial.CurrentSolarState.Daylight, Is.LessThan(0.01));
+            Assert.That(celestial.MoonVisibility, Is.GreaterThan(0.9f));
+            Assert.That(celestial.MoonLight.enabled, Is.True);
+            Assert.That(celestial.MoonLight.intensity, Is.GreaterThan(0.01f));
+            Assert.That(celestial.MoonLight.intensity, Is.LessThan(0.1f));
+            Assert.That(RenderSettings.sun, Is.SameAs(celestial.MoonLight));
+            Assert.That(Shader.GetGlobalFloat("_SteppeNightAmount"), Is.GreaterThan(0.95f));
+            Assert.That(Shader.GetGlobalFloat("_SteppeMoonVisibility"), Is.GreaterThan(0.9f));
+
+            var fixedMoonRotation = celestial.MoonLight.transform.rotation;
+            var fixedMoonDirection = Shader.GetGlobalVector("_SteppeMoonDirection");
+            timeSystem.AdvanceSimulationSeconds(2.0 * 3600.0);
+            yield return null;
+
+            Assert.That(Quaternion.Angle(celestial.MoonLight.transform.rotation, fixedMoonRotation), Is.LessThan(0.001f));
+            Assert.That(
+                Vector3.Distance(Shader.GetGlobalVector("_SteppeMoonDirection"), fixedMoonDirection),
+                Is.LessThan(0.0001f));
+        }
+
+        [UnityTest]
+        public IEnumerator WeatherMapPublishesVisibleWaterBearingClouds()
+        {
+            if (Object.FindAnyObjectByType<SteppePrototypeBootstrap>() == null)
+            {
+                new GameObject("P3 Weather Test Bootstrap").AddComponent<SteppePrototypeBootstrap>();
+            }
+
+            var weather = Object.FindAnyObjectByType<SteppeWeatherSystem>();
+            var clouds = Object.FindAnyObjectByType<SteppeCloudLayer>();
+            for (var frame = 0; frame < 20 && !weather.IsWeatherMapReady; frame++)
+            {
+                yield return null;
+            }
+
+            Assert.That(weather.IsWeatherMapReady, Is.True);
+            Assert.That(weather.MapMaximumCoverage, Is.GreaterThan(0.7f));
+            Assert.That(weather.MapMaximumWater, Is.GreaterThan(0.7f));
+            Assert.That(clouds.Renderer.enabled, Is.True);
+            Assert.That(clouds.Renderer.sharedMaterial.shader.name, Is.EqualTo("Steppe/Cloud Layer"));
+            Assert.That(clouds.Renderer.sharedMaterial.GetTexture("_WeatherMap"), Is.SameAs(weather.WeatherMap));
         }
 
         [UnityTest]
@@ -55,10 +152,18 @@ namespace Steppe.Tests
             Assert.That(after.Z, Is.EqualTo(before.Z).Within(0.0001));
             Assert.That(Mathf.Abs(focusObject.transform.position.x), Is.LessThan(128f));
             Assert.That(Mathf.Abs(focusObject.transform.position.z), Is.LessThan(128f));
+            var shaderOrigin = Shader.GetGlobalVector("_SteppeWorldOriginXZ");
+            Assert.That(shaderOrigin.x, Is.EqualTo(PositiveModulo(system.OriginX, 65536.0)).Within(0.001f));
+            Assert.That(shaderOrigin.z, Is.EqualTo(PositiveModulo(system.OriginZ, 65536.0)).Within(0.001f));
 
             Object.Destroy(systemObject);
             Object.Destroy(focusObject);
             Object.Destroy(worldRoot);
+        }
+
+        private static float PositiveModulo(double value, double modulus)
+        {
+            return (float)(value - System.Math.Floor(value / modulus) * modulus);
         }
     }
 }

@@ -9,6 +9,7 @@ namespace Steppe.World
         private Transform worldSpaceRoot;
         private float threshold;
         private float shiftQuantum;
+        private const double ShaderCoordinatePeriod = 65536.0;
 
         public double OriginX { get; private set; }
         public double OriginZ { get; private set; }
@@ -21,6 +22,7 @@ namespace Steppe.World
             worldSpaceRoot = root != null ? root : throw new ArgumentNullException(nameof(root));
             threshold = Mathf.Max(128f, shiftThreshold);
             shiftQuantum = Mathf.Max(1f, quantum);
+            PublishShaderOrigin();
         }
 
         public WorldPosition LocalToWorld(Vector3 localPosition)
@@ -69,7 +71,22 @@ namespace Steppe.World
 
             OriginX += shift.x;
             OriginZ += shift.z;
+            PublishShaderOrigin();
             Shifted?.Invoke(shift);
+        }
+
+        private void PublishShaderOrigin()
+        {
+            Shader.SetGlobalVector("_SteppeWorldOriginXZ", new Vector4(
+                PositiveModulo(OriginX, ShaderCoordinatePeriod),
+                0f,
+                PositiveModulo(OriginZ, ShaderCoordinatePeriod),
+                0f));
+        }
+
+        private static float PositiveModulo(double value, double modulus)
+        {
+            return (float)(value - Math.Floor(value / modulus) * modulus);
         }
     }
 }

@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using Steppe.Surface;
 using Steppe.World;
 using UnityEngine;
 
@@ -7,11 +8,18 @@ namespace Steppe.Terrain
 {
     public sealed class TerrainMeshData
     {
-        public TerrainMeshData(Vector3[] vertices, Vector3[] normals, Vector2[] uvs, int[] triangles, int topResolution)
+        public TerrainMeshData(
+            Vector3[] vertices,
+            Vector3[] normals,
+            Vector2[] uvs,
+            Color32[] colors,
+            int[] triangles,
+            int topResolution)
         {
             Vertices = vertices;
             Normals = normals;
             Uvs = uvs;
+            Colors = colors;
             Triangles = triangles;
             TopResolution = topResolution;
         }
@@ -19,6 +27,7 @@ namespace Steppe.Terrain
         public Vector3[] Vertices { get; }
         public Vector3[] Normals { get; }
         public Vector2[] Uvs { get; }
+        public Color32[] Colors { get; }
         public int[] Triangles { get; }
         public int TopResolution { get; }
 
@@ -40,7 +49,8 @@ namespace Steppe.Terrain
             ChunkCoordinate coordinate,
             float chunkSize,
             int resolution,
-            float skirtDepth)
+            float skirtDepth,
+            SteppeSurfaceGenerator surfaceGenerator = null)
         {
             if (generator == null)
             {
@@ -55,6 +65,7 @@ namespace Steppe.Terrain
             var vertices = new List<Vector3>(resolution * resolution + resolution * 16);
             var normals = new List<Vector3>(vertices.Capacity);
             var uvs = new List<Vector2>(vertices.Capacity);
+            var colors = new List<Color32>(vertices.Capacity);
             var triangles = new List<int>((resolution - 1) * (resolution - 1) * 6 + resolution * 24);
 
             var worldOriginX = coordinate.X * (double)chunkSize;
@@ -71,9 +82,13 @@ namespace Steppe.Terrain
                     var worldZ = worldOriginZ + localZ;
                     var height = generator.SampleHeight(worldX, worldZ);
 
+                    var normal = generator.SampleNormal(worldX, worldZ, Math.Max(1.0, step * 0.5));
                     vertices.Add(new Vector3(localX, (float)height, localZ));
-                    normals.Add(generator.SampleNormal(worldX, worldZ, Math.Max(1.0, step * 0.5)));
+                    normals.Add(normal);
                     uvs.Add(new Vector2(localX / chunkSize, localZ / chunkSize));
+                    colors.Add(surfaceGenerator != null
+                        ? surfaceGenerator.Sample(worldX, worldZ, height, normal.y).GroundColor
+                        : new Color32(255, 255, 255, 255));
                 }
             }
 
@@ -98,19 +113,19 @@ namespace Steppe.Terrain
             var depth = Mathf.Max(0.5f, skirtDepth);
             for (var index = 0; index < resolution - 1; index++)
             {
-                AddSkirtSegment(vertices, normals, uvs, triangles,
+                AddSkirtSegment(vertices, normals, uvs, colors, triangles,
                     index, index + 1, Vector3.back, depth);
-                AddSkirtSegment(vertices, normals, uvs, triangles,
+                AddSkirtSegment(vertices, normals, uvs, colors, triangles,
                     (resolution - 1) * resolution + index + 1,
                     (resolution - 1) * resolution + index,
                     Vector3.forward,
                     depth);
-                AddSkirtSegment(vertices, normals, uvs, triangles,
+                AddSkirtSegment(vertices, normals, uvs, colors, triangles,
                     (index + 1) * resolution,
                     index * resolution,
                     Vector3.left,
                     depth);
-                AddSkirtSegment(vertices, normals, uvs, triangles,
+                AddSkirtSegment(vertices, normals, uvs, colors, triangles,
                     index * resolution + resolution - 1,
                     (index + 1) * resolution + resolution - 1,
                     Vector3.right,
@@ -121,6 +136,7 @@ namespace Steppe.Terrain
                 vertices.ToArray(),
                 normals.ToArray(),
                 uvs.ToArray(),
+                colors.ToArray(),
                 triangles.ToArray(),
                 resolution);
         }
@@ -129,6 +145,7 @@ namespace Steppe.Terrain
             List<Vector3> vertices,
             List<Vector3> normals,
             List<Vector2> uvs,
+            List<Color32> colors,
             List<int> triangles,
             int firstTopIndex,
             int secondTopIndex,
@@ -153,6 +170,11 @@ namespace Steppe.Terrain
             uvs.Add(Vector2.right);
             uvs.Add(Vector2.up);
             uvs.Add(Vector2.one);
+
+            colors.Add(colors[firstTopIndex]);
+            colors.Add(colors[secondTopIndex]);
+            colors.Add(colors[firstTopIndex]);
+            colors.Add(colors[secondTopIndex]);
 
             triangles.Add(start);
             triangles.Add(start + 2);
