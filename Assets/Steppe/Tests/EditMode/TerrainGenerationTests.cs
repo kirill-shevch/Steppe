@@ -1,5 +1,6 @@
 using System;
 using NUnit.Framework;
+using Steppe.Rendering;
 using Steppe.Settings;
 using Steppe.Surface;
 using Steppe.Terrain;
@@ -220,6 +221,26 @@ namespace Steppe.Tests
             CollectionAssert.AreEqual(nearVegetation.Vertices, reloadedNearVegetation.Vertices,
                 "Reloading a chunk must reproduce identical vegetation placement.");
             CollectionAssert.AreEqual(nearVegetation.Colors, reloadedNearVegetation.Colors);
+        }
+
+        [Test]
+        public void GrassCellBuilderIsDeterministicAndOwnsNoSceneState()
+        {
+            var builder = new GrassCellDataBuilder(settings);
+            var coordinate = new ChunkCoordinate(7, -11);
+            var first = builder.Build(coordinate);
+            var second = builder.Build(coordinate);
+
+            Assert.That(first.Length, Is.GreaterThan(1000));
+            Assert.That(second.Length, Is.EqualTo(first.Length));
+            var indices = new[] { 0, first.Length / 2, first.Length - 1 };
+            foreach (var index in indices)
+            {
+                Assert.That(second[index].PositionHeight, Is.EqualTo(first[index].PositionHeight));
+                Assert.That(second[index].ColorWidth, Is.EqualTo(first[index].ColorWidth));
+                Assert.That(second[index].Parameters, Is.EqualTo(first[index].Parameters));
+                Assert.That(second[index].Motion, Is.EqualTo(first[index].Motion));
+            }
         }
 
         [Test]

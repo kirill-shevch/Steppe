@@ -94,8 +94,11 @@ namespace Steppe.Prototype
                 runtimeSettings.FloatingOriginThreshold,
                 runtimeSettings.ChunkSize);
 
+            var workScheduler = gameObject.AddComponent<WorldWorkScheduler>();
+            workScheduler.Configure(runtimeSettings.WorldWorkBudgetMilliseconds);
+
             var weatherSystem = gameObject.AddComponent<SteppeWeatherSystem>();
-            weatherSystem.Configure(runtimeSettings, timeSystem, floatingOrigin, camera.transform);
+            weatherSystem.Configure(runtimeSettings, timeSystem, floatingOrigin, camera.transform, workScheduler);
 
             var cloudObject = new GameObject("Cloud Layer");
             cloudObject.transform.SetParent(worldSpaceObject.transform, false);
@@ -105,7 +108,7 @@ namespace Steppe.Prototype
             var grassObject = new GameObject("Grass Field");
             grassObject.transform.SetParent(worldSpaceObject.transform, false);
             var grassRenderer = grassObject.AddComponent<SteppeGrassRenderer>();
-            grassRenderer.Configure(runtimeSettings, floatingOrigin, camera.transform, grassMaterial);
+            grassRenderer.Configure(runtimeSettings, floatingOrigin, camera.transform, workScheduler, grassMaterial);
 
             var chunkStreamer = gameObject.AddComponent<TerrainChunkStreamer>();
             chunkStreamer.Configure(
@@ -113,9 +116,21 @@ namespace Steppe.Prototype
                 floatingOrigin,
                 camera.transform,
                 worldSpaceObject.transform,
-                terrainMaterial,
-                vegetationMaterial,
-                !grassRenderer.IsRendering);
+                workScheduler,
+                terrainMaterial);
+
+            if (!grassRenderer.IsRendering)
+            {
+                var legacyVegetationObject = new GameObject("Legacy Vegetation");
+                legacyVegetationObject.transform.SetParent(worldSpaceObject.transform, false);
+                var legacyVegetation = legacyVegetationObject.AddComponent<SteppeLegacyVegetationRenderer>();
+                legacyVegetation.Configure(
+                    runtimeSettings,
+                    floatingOrigin,
+                    chunkStreamer,
+                    workScheduler,
+                    vegetationMaterial);
+            }
 
             var overlay = gameObject.AddComponent<WorldDebugOverlay>();
             overlay.Configure(
@@ -126,7 +141,8 @@ namespace Steppe.Prototype
                 camera.transform,
                 timeSystem,
                 weatherSystem,
-                grassRenderer);
+                grassRenderer,
+                workScheduler);
 
             var biomeNavigator = gameObject.AddComponent<BiomeDebugNavigator>();
             biomeNavigator.Configure(runtimeSettings, floatingOrigin, camera.transform);

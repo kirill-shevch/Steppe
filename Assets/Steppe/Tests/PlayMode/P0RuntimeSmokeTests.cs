@@ -29,6 +29,7 @@ namespace Steppe.Tests
             var streamer = Object.FindAnyObjectByType<TerrainChunkStreamer>();
             var grass = Object.FindAnyObjectByType<SteppeGrassRenderer>();
             var timeSystem = Object.FindAnyObjectByType<SteppeTimeSystem>();
+            var workScheduler = Object.FindAnyObjectByType<WorldWorkScheduler>();
 
             Assert.That(cameraController, Is.Not.Null);
             Assert.That(streamer, Is.Not.Null);
@@ -39,6 +40,9 @@ namespace Steppe.Tests
             Assert.That(Object.FindAnyObjectByType<SteppeWeatherSystem>(), Is.Not.Null);
             Assert.That(Object.FindAnyObjectByType<SteppeCloudLayer>(), Is.Not.Null);
             Assert.That(Object.FindAnyObjectByType<SteppeGrassRenderer>(), Is.Not.Null);
+            Assert.That(workScheduler, Is.Not.Null);
+            Assert.That(workScheduler.RegisteredSourceCount, Is.GreaterThanOrEqualTo(3));
+            Assert.That(workScheduler.TotalStepsExecuted, Is.GreaterThan(0));
             Assert.That(GameObject.Find("Steppe Sun"), Is.Not.Null);
             Assert.That(GameObject.Find("Steppe Moon"), Is.Not.Null);
             Assert.That(RenderSettings.skybox, Is.Not.Null);
@@ -68,7 +72,7 @@ namespace Steppe.Tests
             }
             else
             {
-                Assert.That(GameObject.Find("Vegetation"), Is.Not.Null);
+                Assert.That(Object.FindAnyObjectByType<SteppeLegacyVegetationRenderer>(), Is.Not.Null);
             }
         }
 

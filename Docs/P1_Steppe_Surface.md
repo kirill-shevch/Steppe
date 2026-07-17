@@ -50,6 +50,10 @@ Every sample already publishes future animation and weather-response inputs:
 - The F3 panel shows both the dominant biome and all four blend weights. The dominant label changes only after another weight becomes largest.
 - Debug keys `1` through `4` move the camera to representative meadow, feather-grass, dry, and desert-steppe regions. These are inspection shortcuts, not player navigation.
 
+The P1 CPU vegetation mesh is retained only as a capability fallback. Its streaming and
+rendering are owned by `SteppeLegacyVegetationRenderer`; terrain chunks no longer create,
+store, or dispose vegetation meshes.
+
 ## Acceptance criteria
 
 - Repeated samples at the same coordinates are identical.

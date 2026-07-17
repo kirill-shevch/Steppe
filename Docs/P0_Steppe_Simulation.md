@@ -26,7 +26,8 @@ The camera intentionally has no collider and does not follow the terrain.
 3. `TerrainOverrideMap` applies sparse authored corrections without changing the generator everywhere else.
 4. `TerrainChunkStreamer` creates concentric LOD rings around the flying camera and recycles chunks that leave the active radius.
 5. `FloatingOriginSystem` keeps the camera and active world content near Unity's local origin while retaining absolute logical coordinates.
-6. Presentation consumes the generated data but does not own the simulation state.
+6. `WorldWorkScheduler` shares one measured main-thread budget between terrain, weather, and vegetation generation so their independent queues cannot stack full quotas in one frame.
+7. Presentation consumes the generated data but does not own the simulation state.
 
 Future weather systems must query the camera through `FloatingOriginSystem.LocalToWorld` and place spawned presentation objects under the shared `World Space` root.
 

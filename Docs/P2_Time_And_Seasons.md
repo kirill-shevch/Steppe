@@ -9,14 +9,16 @@ P2 does not create clouds, fronts, precipitation, current soil moisture, or seas
 ## Time composition
 
 - The underlying `x1` rate keeps one game day at 20 real minutes.
-- The current test build starts at `x100`, making one game day last about 12 real seconds.
+- The build starts at `x1`; the optional `x100` debug rate makes one game day last about 12 real seconds.
 - The temporary test year contains 12 game days: each season lasts approximately 3 game days or 36 real seconds.
 - The starting point is spring, day 2, at 08:00.
 - The clock uses accumulated double-precision simulation seconds and is independent of frame rate.
 - `F5` pauses or resumes world time.
-- `F6` cycles debug multipliers `x100`, `x1`, and `x10` without changing the canonical clock model.
+- `F6` cycles debug multipliers `x1`, `x10`, and `x100` without changing the canonical clock model.
 
-The 12-day year and `x100` startup are temporary validation settings. The production cadence will return to long seasons intended to be inhabited across multiple sessions.
+The 12-day year remains a temporary validation setting. Normal play starts at `x1`,
+while `x10` and `x100` only expose slow changes during testing. The production cadence
+will return to long seasons intended to be inhabited across multiple sessions.
 
 ## Astronomy
 

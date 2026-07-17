@@ -38,7 +38,10 @@ P3 therefore uses one low-poly, camera-centred cloud deck and one transparent UR
 - Rain intensity appears only after cloud water crosses the configured threshold.
 - Clear-air regions may contain sparse fair-weather cover, but cannot rain.
 
-The P2 seasonal debug clock currently starts at `x100`. P3 weather uses the same debug multiplier: `F6` cycles x100, x1, and x10 for both the seasons and cloud advection, while `F5` pauses both. At x100 an 8 m/s front crosses 800 metres every real second, deliberately exposing the simulation for validation. Production cadence will return to a slow, inhabitable rate after accelerated testing.
+The P2 clock starts at `x1`. P3 weather uses the same debug multiplier: `F6` cycles
+`x1`, `x10`, and `x100` for both seasons and cloud advection, while `F5` pauses both.
+At x100 an 8 m/s front crosses 800 metres every real second, deliberately exposing the
+simulation for validation without making that accelerated state the default.
 
 ## Weather map and performance budget
 

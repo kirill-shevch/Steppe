@@ -27,16 +27,21 @@ Open Unity grass experiments confirm that indirect rendering is practical in URP
 
 ## Selected representation
 
-No third-party grass package is required for the first P4 vertical slice. The first production candidate is a custom URP shader plus a tiny authored-in-code blade mesh:
+The renderer has no third-party runtime dependency. Its accepted source geometry and
+atlas are the CC0 `03_t` tuft from Yughues/Nobiax, transformed at startup into a
+wind-segmented three-tuft cluster by Steppe's own code. A small authored-in-code mesh
+remains the missing-asset fallback.
 
-- three or four vertical segments, tapered to a tip;
-- opaque geometry for the main blade, avoiding alpha-card overdraw;
-- normalized vertex height and stiffness stored in UV/color channels;
-- a shared mesh instanced many times;
+- four vertical segments added to every source card for curved bending;
+- an alpha-tested atlas shared by all clusters;
+- normalized vertex height, stiffness, and cluster phase stored in mesh channels;
+- one three-tuft cluster mesh instanced many times;
 - deterministic position, rotation, width, height, tint, and phase per instance;
-- optional alpha-tested feather awns only in the closest LOD after the base renderer is proven.
+- indirect GPU drawing without one GameObject per plant.
 
-The renderer must be profile-driven so later authored meshes can replace the procedural prototype without changing placement, ecology, or wind. The iconic feather-grass profile is implemented and tuned first; meadow, dry tussock, and desert profiles follow through the same interface.
+Placement is now isolated in the pure `GrassCellDataBuilder`, while
+`SteppeGrassRenderer` owns streaming and GPU resources. A later `VegetationProfile`
+can replace the current resource constants without changing placement, ecology, or wind.
 
 ## Rendering architecture
 
@@ -128,7 +133,9 @@ No weather or season change rebuilds terrain or instance placement.
 Current implementation status: P4.1 and P4.2 are now present in the prototype. It uses 64 m
 canonical grass cells, one segmented three-card grass asset, indirect rendering, stable
 distance thinning, terrain-level far detail, and the old P1 meshes as an automatic
-capability fallback. The authored mesh is bent in the vertex shader by a canonical
+capability fallback owned by a separate renderer. Grass, terrain, legacy fallback, and
+the weather map share the measured `WorldWorkScheduler` budget. The authored mesh is
+bent in the vertex shader by a canonical
 two-scale P3 wind field; the same broad gust drives far-terrain bands. Ecological state
 belongs to the separate future water-cycle task.
 

@@ -48,7 +48,6 @@ namespace Steppe.Settings
         [SerializeField, Min(0.35f)] private float grassCandidateSpacing = 0.7f;
         [SerializeField, Min(16f)] private float grassFullDensityRadius = 145f;
         [SerializeField, Min(32f)] private float grassDrawRadius = 320f;
-        [SerializeField, Range(1, 8)] private int grassCellsBuiltPerFrame = 1;
 
         [Header("World time and clear-sky climate")]
         [Tooltip("One game day lasts twenty real minutes at the default value.")]
@@ -98,8 +97,11 @@ namespace Steppe.Settings
         [SerializeField, Min(0)] private int nearRadius = 2;
         [SerializeField, Min(1)] private int middleRadius = 5;
         [SerializeField, Min(2)] private int farRadius = 9;
-        [SerializeField, Range(1, 16)] private int chunksBuiltPerFrame = 4;
         [SerializeField, Min(0.5f)] private float skirtDepth = 20f;
+
+        [Header("Streamed world work")]
+        [Tooltip("Shared main-thread budget for terrain, vegetation, and weather generation. A single indivisible step may exceed it.")]
+        [SerializeField, Min(0.25f)] private float worldWorkBudgetMilliseconds = 6f;
 
         [Header("Floating origin")]
         [SerializeField, Min(256f)] private float floatingOriginThreshold = 2048f;
@@ -135,7 +137,6 @@ namespace Steppe.Settings
         public float GrassCandidateSpacing => Mathf.Clamp(grassCandidateSpacing, 0.35f, GrassCellSize * 0.25f);
         public float GrassFullDensityRadius => Mathf.Max(16f, grassFullDensityRadius);
         public float GrassDrawRadius => Mathf.Max(grassDrawRadius, GrassFullDensityRadius + GrassCellSize);
-        public int GrassCellsBuiltPerFrame => Mathf.Max(1, grassCellsBuiltPerFrame);
         public float SimulationSecondsPerRealSecond => simulationSecondsPerRealSecond;
         public int DaysPerYear => daysPerYear;
         public float LatitudeDegrees => latitudeDegrees;
@@ -167,8 +168,8 @@ namespace Steppe.Settings
         public int NearRadius => Mathf.Max(0, nearRadius);
         public int MiddleRadius => Mathf.Max(NearRadius + 1, middleRadius);
         public int FarRadius => Mathf.Max(MiddleRadius + 1, farRadius);
-        public int ChunksBuiltPerFrame => Mathf.Max(1, chunksBuiltPerFrame);
         public float SkirtDepth => skirtDepth;
+        public float WorldWorkBudgetMilliseconds => Mathf.Max(0.25f, worldWorkBudgetMilliseconds);
         public float FloatingOriginThreshold => floatingOriginThreshold;
         public float CameraMoveSpeed => cameraMoveSpeed;
         public float CameraBoostMultiplier => cameraBoostMultiplier;

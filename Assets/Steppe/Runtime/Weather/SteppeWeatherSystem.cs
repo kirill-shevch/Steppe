@@ -7,9 +7,9 @@ using UnityEngine;
 namespace Steppe.Weather
 {
     [DisallowMultipleComponent]
-    public sealed class SteppeWeatherSystem : MonoBehaviour
+    public sealed class SteppeWeatherSystem : MonoBehaviour, IWorldWorkSource
     {
-        private const int WeatherMapRowsPerFrame = 16;
+        private const int WeatherMapRowsPerWorkStep = 32;
         private static readonly int WindVelocityId = Shader.PropertyToID("_SteppeWindVelocity");
         private static readonly int WindTimeId = Shader.PropertyToID("_SteppeWindTime");
         private static readonly int WindAnimationTimeId = Shader.PropertyToID("_SteppeWindAnimationTime");
@@ -19,6 +19,7 @@ namespace Steppe.Weather
         private SteppeTimeSystem timeSystem;
         private FloatingOriginSystem floatingOrigin;
         private Transform focus;
+        private WorldWorkScheduler workScheduler;
         private SteppeWeatherModel model;
         private Texture2D weatherMap;
         private Color32[] weatherPixels;
@@ -49,17 +50,20 @@ namespace Steppe.Weather
         public float MapMaximumCoverage { get; private set; }
         public float MapMaximumWater { get; private set; }
         public SteppeWeatherSample CurrentAtFocus { get; private set; }
+        public bool HasPendingWorldWork => mapBuildInProgress;
 
         public void Configure(
             SteppeWorldSettings worldSettings,
             SteppeTimeSystem clock,
             FloatingOriginSystem origin,
-            Transform focusTransform)
+            Transform focusTransform,
+            WorldWorkScheduler scheduler)
         {
             settings = worldSettings != null ? worldSettings : throw new ArgumentNullException(nameof(worldSettings));
             timeSystem = clock != null ? clock : throw new ArgumentNullException(nameof(clock));
             floatingOrigin = origin != null ? origin : throw new ArgumentNullException(nameof(origin));
             focus = focusTransform != null ? focusTransform : throw new ArgumentNullException(nameof(focusTransform));
+            workScheduler = scheduler != null ? scheduler : throw new ArgumentNullException(nameof(scheduler));
             model = new SteppeWeatherModel(settings);
             weatherSeconds = 0.0;
             windAnimationSeconds = 0.0;
@@ -70,6 +74,7 @@ namespace Steppe.Weather
             CurrentAtFocus = model.Sample(focusWorld.X, focusWorld.Z, weatherSeconds);
             PublishWindShaderState();
             BeginWeatherMapBuild(focusWorld.X, focusWorld.Z);
+            workScheduler.Register(this);
         }
 
         public SteppeWeatherSample Sample(double worldX, double worldZ)
@@ -107,7 +112,6 @@ namespace Steppe.Weather
 
             if (mapBuildInProgress)
             {
-                BuildWeatherMapRows();
                 return;
             }
 
@@ -147,6 +151,14 @@ namespace Steppe.Weather
             mapBuildInProgress = true;
         }
 
+        public void ExecuteWorldWorkStep()
+        {
+            if (mapBuildInProgress)
+            {
+                BuildWeatherMapRows();
+            }
+        }
+
         private void BuildWeatherMapRows()
         {
             var resolution = settings.WeatherMapResolution;
@@ -154,7 +166,7 @@ namespace Steppe.Weather
             var step = worldSize / resolution;
             var minimumX = buildCenterX - worldSize * 0.5 + step * 0.5;
             var minimumZ = buildCenterZ - worldSize * 0.5 + step * 0.5;
-            var endRow = Mathf.Min(resolution, nextMapBuildRow + WeatherMapRowsPerFrame);
+            var endRow = Mathf.Min(resolution, nextMapBuildRow + WeatherMapRowsPerWorkStep);
 
             for (var z = nextMapBuildRow; z < endRow; z++)
             {
@@ -214,6 +226,10 @@ namespace Steppe.Weather
 
         private void OnDestroy()
         {
+            if (workScheduler != null)
+            {
+                workScheduler.Unregister(this);
+            }
             if (weatherMap == null)
             {
                 return;

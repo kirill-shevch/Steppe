@@ -24,6 +24,7 @@ namespace Steppe.Prototype
         private SteppeClimateModel climateModel;
         private SteppeWeatherSystem weatherSystem;
         private SteppeGrassRenderer grassRenderer;
+        private WorldWorkScheduler workScheduler;
         private bool visible = true;
 
         public void Configure(
@@ -34,7 +35,8 @@ namespace Steppe.Prototype
             Transform focusTransform,
             SteppeTimeSystem clock,
             SteppeWeatherSystem weather,
-            SteppeGrassRenderer grass)
+            SteppeGrassRenderer grass,
+            WorldWorkScheduler scheduler)
         {
             settings = worldSettings;
             floatingOrigin = origin;
@@ -44,6 +46,7 @@ namespace Steppe.Prototype
             timeSystem = clock;
             weatherSystem = weather;
             grassRenderer = grass;
+            workScheduler = scheduler;
             terrainGenerator = new TerrainHeightGenerator(settings);
             surfaceGenerator = new SteppeSurfaceGenerator(settings);
             climateModel = new SteppeClimateModel(settings);
@@ -79,7 +82,7 @@ namespace Steppe.Prototype
             chunkStreamer.GetLodCounts(out var near, out var middle, out var far);
 
             const float width = 470f;
-            const float height = 350f;
+            const float height = 372f;
             var area = new Rect(12f, 12f, width, height);
             GUI.Box(area, GUIContent.none);
 
@@ -98,6 +101,7 @@ namespace Steppe.Prototype
             GUILayout.Label(grassRenderer != null && grassRenderer.IsRendering
                 ? $"Grass: {grassRenderer.InstanceCount:N0} tufts / {grassRenderer.LoadedCellCount} cells / {grassRenderer.PendingCount} queued / {grassRenderer.TuftVertexCount}v {grassRenderer.TuftTriangleCount}t / {(grassRenderer.UsesAuthoredMesh ? "Nobiax CC0 mesh" : "procedural fallback")}"
                 : "Grass: P1 CPU fallback");
+            GUILayout.Label($"World work: {workScheduler.LastFrameWorkMilliseconds:F2} ms / {workScheduler.LastFrameStepCount} steps / {workScheduler.RegisteredSourceCount} sources");
             GUILayout.Label($"Seed: {settings.WorldSeed}    Terrain: v{settings.GeneratorVersion}    Surface: v{settings.SurfaceVersion}    Speed: {cameraController.CurrentMoveSpeed:F0} m/s");
             GUILayout.Space(4f);
             GUILayout.Label("WASD move - mouse look - Q/E down/up - Shift boost - wheel speed");

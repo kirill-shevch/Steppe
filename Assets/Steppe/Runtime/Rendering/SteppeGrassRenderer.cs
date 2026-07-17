@@ -1,8 +1,6 @@
 using System;
 using System.Collections.Generic;
-using System.Runtime.InteropServices;
 using Steppe.Settings;
-using Steppe.Surface;
 using Steppe.Terrain;
 using Steppe.World;
 using UnityEngine;
@@ -16,7 +14,7 @@ namespace Steppe.Rendering
     /// against the canonical P3 wind field without rebuilding buffers on the CPU.
     /// </summary>
     [DisallowMultipleComponent]
-    public sealed class SteppeGrassRenderer : MonoBehaviour
+    public sealed class SteppeGrassRenderer : MonoBehaviour, IWorldWorkSource
     {
         private const int InstanceStride = 64;
         private const string AuthoredModelResource =
@@ -43,8 +41,8 @@ namespace Steppe.Rendering
         private SteppeWorldSettings settings;
         private FloatingOriginSystem floatingOrigin;
         private Transform focus;
-        private TerrainHeightGenerator terrainGenerator;
-        private SteppeSurfaceGenerator surfaceGenerator;
+        private WorldWorkScheduler workScheduler;
+        private GrassCellDataBuilder cellDataBuilder;
         private Mesh tuftMesh;
         private Material grassMaterial;
         private bool ownsMesh;
@@ -64,18 +62,20 @@ namespace Steppe.Rendering
         public bool UsesAuthoredMesh { get; private set; }
         public int TuftVertexCount => tuftMesh != null ? tuftMesh.vertexCount : 0;
         public int TuftTriangleCount => tuftMesh != null ? (int)tuftMesh.GetIndexCount(0) / 3 : 0;
+        public bool HasPendingWorldWork => IsRendering && pending.Count > 0;
 
         public void Configure(
             SteppeWorldSettings worldSettings,
             FloatingOriginSystem origin,
             Transform focusTransform,
+            WorldWorkScheduler scheduler,
             Material material = null)
         {
             settings = worldSettings != null ? worldSettings : throw new ArgumentNullException(nameof(worldSettings));
             floatingOrigin = origin != null ? origin : throw new ArgumentNullException(nameof(origin));
             focus = focusTransform != null ? focusTransform : throw new ArgumentNullException(nameof(focusTransform));
-            terrainGenerator = new TerrainHeightGenerator(settings);
-            surfaceGenerator = new SteppeSurfaceGenerator(settings);
+            workScheduler = scheduler != null ? scheduler : throw new ArgumentNullException(nameof(scheduler));
+            cellDataBuilder = new GrassCellDataBuilder(settings);
             propertyBlock ??= new MaterialPropertyBlock();
 
             if (!HardwareSupported)
@@ -127,6 +127,7 @@ namespace Steppe.Rendering
             grassMaterial.SetFloat(WindBendStrengthId, settings.GrassWindBend);
             hasCenter = false;
             IsRendering = true;
+            workScheduler.Register(this);
         }
 
         private static Texture2D LoadAuthoredGrass(out Mesh mesh)
@@ -162,8 +163,6 @@ namespace Steppe.Rendering
                 hasCenter = true;
                 RefreshDesiredCells(focusWorld);
             }
-
-            ProcessPendingBuilds();
         }
 
         private void LateUpdate()
@@ -269,90 +268,24 @@ namespace Steppe.Rendering
             pending.Sort((left, right) => left.DistanceSquared.CompareTo(right.DistanceSquared));
         }
 
-        private void ProcessPendingBuilds()
+        public void ExecuteWorldWorkStep()
         {
-            var buildCount = Mathf.Min(settings.GrassCellsBuiltPerFrame, pending.Count);
-            for (var index = 0; index < buildCount; index++)
+            if (pending.Count == 0)
             {
-                var request = pending[0];
-                pending.RemoveAt(0);
-                if (!desired.Contains(request.Coordinate) || loaded.ContainsKey(request.Coordinate))
-                {
-                    continue;
-                }
-
-                var cell = BuildCell(request.Coordinate);
-                loaded.Add(request.Coordinate, cell);
-                InstanceCount += cell.InstanceCount;
-            }
-        }
-
-        private GrassCell BuildCell(ChunkCoordinate coordinate)
-        {
-            var cellSize = settings.GrassCellSize;
-            var axisCount = Mathf.Max(1, Mathf.CeilToInt(cellSize / settings.GrassCandidateSpacing));
-            var spacing = cellSize / axisCount;
-            var instances = new List<GrassInstanceData>(axisCount * axisCount);
-            var worldOriginX = coordinate.X * (double)cellSize;
-            var worldOriginZ = coordinate.Z * (double)cellSize;
-            var seed = unchecked(settings.WorldSeed + settings.SurfaceVersion * 104729 + 47111);
-
-            for (var z = 0; z < axisCount; z++)
-            {
-                for (var x = 0; x < axisCount; x++)
-                {
-                    var hash = DeterministicNoise.Hash(
-                        coordinate.X * axisCount + x,
-                        coordinate.Z * axisCount + z,
-                        seed);
-                    var localX = (x + 0.1 + Hash01(hash) * 0.8) * spacing;
-                    var localZ = (z + 0.1 + Hash01(Rotate(hash, 17)) * 0.8) * spacing;
-                    var worldX = worldOriginX + localX;
-                    var worldZ = worldOriginZ + localZ;
-                    var height = terrainGenerator.SampleHeight(worldX, worldZ);
-                    var normal = terrainGenerator.SampleNormal(worldX, worldZ, 2.5);
-                    var surface = surfaceGenerator.Sample(worldX, worldZ, height, normal.y);
-
-                    var presence = Hash01(Rotate(hash, 39));
-                    if (presence > surface.VegetationPotential * 0.94)
-                    {
-                        continue;
-                    }
-
-                    var scaleVariation = 0.78 + Hash01(Rotate(hash, 7)) * 0.44;
-                    var tuftHeight = (float)(settings.GrassTuftHeight
-                                              * surface.NominalVegetationHeight
-                                              * scaleVariation);
-                    if (tuftHeight < 0.09f)
-                    {
-                        continue;
-                    }
-
-                    var tuftWidth = settings.GrassTuftWidth
-                                    * (0.78f + (float)Hash01(Rotate(hash, 27)) * 0.36f);
-                    var angle = (float)(Hash01(Rotate(hash, 51)) * Math.PI * 2.0);
-                    var color = (Color)surface.VegetationColor;
-                    color *= 0.86f + (float)Hash01(Rotate(hash, 13)) * 0.22f;
-
-                    instances.Add(new GrassInstanceData
-                    {
-                        PositionHeight = new Vector4((float)localX, (float)height + 0.015f, (float)localZ, tuftHeight),
-                        ColorWidth = new Vector4(color.r, color.g, color.b, tuftWidth),
-                        Parameters = new Vector4(
-                            Mathf.Sin(angle),
-                            Mathf.Cos(angle),
-                            (float)surface.WindCoherence,
-                            (float)Hash01(Rotate(hash, 33))),
-                        Motion = new Vector4(
-                            (float)surface.MotionFrequency,
-                            (float)Hash01(Rotate(hash, 45)),
-                            0f,
-                            0f)
-                    });
-                }
+                return;
             }
 
-            return new GrassCell(coordinate, tuftMesh, instances);
+            var request = pending[0];
+            pending.RemoveAt(0);
+            if (!desired.Contains(request.Coordinate) || loaded.ContainsKey(request.Coordinate))
+            {
+                return;
+            }
+
+            var data = cellDataBuilder.Build(request.Coordinate);
+            var cell = new GrassCell(request.Coordinate, tuftMesh, data);
+            loaded.Add(request.Coordinate, cell);
+            InstanceCount += cell.InstanceCount;
         }
 
         private static Material CreateRuntimeMaterial()
@@ -371,18 +304,12 @@ namespace Steppe.Rendering
             };
         }
 
-        private static double Hash01(ulong hash)
-        {
-            return (hash >> 11) * (1.0 / 9007199254740992.0);
-        }
-
-        private static ulong Rotate(ulong value, int count)
-        {
-            return (value << count) | (value >> (64 - count));
-        }
-
         private void OnDestroy()
         {
+            if (workScheduler != null)
+            {
+                workScheduler.Unregister(this);
+            }
             foreach (var cell in loaded.Values)
             {
                 cell.Dispose();
@@ -419,21 +346,12 @@ namespace Steppe.Rendering
             }
         }
 
-        [StructLayout(LayoutKind.Sequential)]
-        private struct GrassInstanceData
-        {
-            public Vector4 PositionHeight;
-            public Vector4 ColorWidth;
-            public Vector4 Parameters;
-            public Vector4 Motion;
-        }
-
         private sealed class GrassCell : IDisposable
         {
-            public GrassCell(ChunkCoordinate coordinate, Mesh mesh, List<GrassInstanceData> data)
+            public GrassCell(ChunkCoordinate coordinate, Mesh mesh, GrassInstanceData[] data)
             {
                 Coordinate = coordinate;
-                InstanceCount = data.Count;
+                InstanceCount = data.Length;
                 if (InstanceCount == 0)
                 {
                     return;
