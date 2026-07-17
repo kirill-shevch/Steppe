@@ -16,7 +16,7 @@ namespace Steppe.Prototype
         [SerializeField] private Material terrainMaterial;
         [SerializeField] private Material vegetationMaterial;
         [SerializeField] private Material grassMaterial;
-        [SerializeField] private Material cloudMaterial;
+        [SerializeField] private Material rainMaterial;
 
         private SteppeWorldSettings runtimeSettings;
         private bool initialized;
@@ -103,7 +103,12 @@ namespace Steppe.Prototype
             var cloudObject = new GameObject("Cloud Layer");
             cloudObject.transform.SetParent(worldSpaceObject.transform, false);
             var cloudLayer = cloudObject.AddComponent<SteppeCloudLayer>();
-            cloudLayer.Configure(runtimeSettings, weatherSystem, floatingOrigin, cloudMaterial);
+            cloudLayer.Configure(runtimeSettings, weatherSystem, floatingOrigin);
+
+            var rainObject = new GameObject("Rain Volume");
+            rainObject.transform.SetParent(worldSpaceObject.transform, false);
+            var rainPresentation = rainObject.AddComponent<SteppeRainPresentation>();
+            rainPresentation.Configure(runtimeSettings, weatherSystem, camera.transform, rainMaterial);
 
             var grassObject = new GameObject("Grass Field");
             grassObject.transform.SetParent(worldSpaceObject.transform, false);

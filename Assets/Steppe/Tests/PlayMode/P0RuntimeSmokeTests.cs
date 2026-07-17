@@ -39,6 +39,7 @@ namespace Steppe.Tests
             Assert.That(Object.FindAnyObjectByType<SteppeCelestialPresentation>(), Is.Not.Null);
             Assert.That(Object.FindAnyObjectByType<SteppeWeatherSystem>(), Is.Not.Null);
             Assert.That(Object.FindAnyObjectByType<SteppeCloudLayer>(), Is.Not.Null);
+            Assert.That(Object.FindAnyObjectByType<SteppeRainPresentation>(), Is.Not.Null);
             Assert.That(Object.FindAnyObjectByType<SteppeGrassRenderer>(), Is.Not.Null);
             Assert.That(workScheduler, Is.Not.Null);
             Assert.That(workScheduler.RegisteredSourceCount, Is.GreaterThanOrEqualTo(3));
@@ -49,6 +50,7 @@ namespace Steppe.Tests
             Assert.That(RenderSettings.skybox.shader.name, Is.EqualTo("Steppe/Skybox"));
             Assert.That(timeSystem.DebugMultiplier, Is.EqualTo(1f));
             Assert.That(GameObject.Find("Cloud Layer"), Is.Not.Null);
+            Assert.That(GameObject.Find("Rain Volume"), Is.Not.Null);
             Assert.That(GameObject.Find("Grass Field"), Is.Not.Null);
             Assert.That(cameraController.GetComponent<Collider>(), Is.Null);
             Assert.That(cameraController.GetComponent<Rigidbody>(), Is.Null);
@@ -120,6 +122,7 @@ namespace Steppe.Tests
 
             var weather = Object.FindAnyObjectByType<SteppeWeatherSystem>();
             var clouds = Object.FindAnyObjectByType<SteppeCloudLayer>();
+            var rain = Object.FindAnyObjectByType<SteppeRainPresentation>();
             for (var frame = 0; frame < 20 && !weather.IsWeatherMapReady; frame++)
             {
                 yield return null;
@@ -128,9 +131,29 @@ namespace Steppe.Tests
             Assert.That(weather.IsWeatherMapReady, Is.True);
             Assert.That(weather.MapMaximumCoverage, Is.GreaterThan(0.7f));
             Assert.That(weather.MapMaximumWater, Is.GreaterThan(0.7f));
-            Assert.That(clouds.Renderer.enabled, Is.True);
-            Assert.That(clouds.Renderer.sharedMaterial.shader.name, Is.EqualTo("Steppe/Cloud Layer"));
-            Assert.That(clouds.Renderer.sharedMaterial.GetTexture("_WeatherMap"), Is.SameAs(weather.WeatherMap));
+            Assert.That(weather.MapMaximumRain, Is.GreaterThan(0.01f));
+            Assert.That(clouds.IsReady, Is.True);
+            Assert.That(clouds.GetComponent<MeshRenderer>(), Is.Null, "Volumetric clouds must not use a visible dome mesh");
+            Assert.That(clouds.GetComponent<MeshFilter>(), Is.Null, "Volumetric clouds must not use a carrier mesh");
+            Assert.That(clouds.NoiseTexture, Is.Not.Null);
+            Assert.That(clouds.NoiseTexture.dimension, Is.EqualTo(UnityEngine.Rendering.TextureDimension.Tex3D));
+            Assert.That(clouds.NoiseTexture.width, Is.EqualTo(32));
+            Assert.That(
+                Shader.GetGlobalTexture("_SteppeCloudWeatherMap"),
+                Is.SameAs(weather.WeatherMap));
+            Assert.That(Shader.GetGlobalFloat("_SteppeCloudRendererActive"), Is.EqualTo(1f));
+            Assert.That(Shader.Find("Hidden/Steppe/Volumetric Clouds"), Is.Not.Null);
+            var layer = Shader.GetGlobalVector("_SteppeCloudLayerParameters");
+            Assert.That(layer.x, Is.GreaterThan(1000f));
+            Assert.That(layer.y, Is.GreaterThan(1000f));
+            Assert.That(SteppeVolumetricCloudRendererFeature.PresentationActive, Is.True);
+            Assert.That(rain, Is.Not.Null);
+            Assert.That(rain.Particles.main.simulationSpace, Is.EqualTo(ParticleSystemSimulationSpace.World));
+            Assert.That(rain.Renderer.renderMode, Is.EqualTo(ParticleSystemRenderMode.Stretch));
+            Assert.That(rain.Renderer.sharedMaterial.shader.name, Is.EqualTo("Steppe/Rain Streak"));
+            var rainVelocity = rain.Particles.velocityOverLifetime;
+            Assert.That(rainVelocity.x.mode, Is.EqualTo(rainVelocity.y.mode));
+            Assert.That(rainVelocity.y.mode, Is.EqualTo(rainVelocity.z.mode));
         }
 
         [UnityTest]

@@ -68,15 +68,26 @@ namespace Steppe.Settings
         [SerializeField, Min(0f)] private float weatherSecondsPerRealSecond = 1f;
         [Tooltip("The first wet front starts north of the prototype camera and drifts south with the wind.")]
         [SerializeField] private float initialFrontDistanceAlongWind = -4400f;
-        [SerializeField, Min(250f)] private float frontHalfWidth = 2800f;
-        [Tooltip("Distance between successive wet fronts along the prevailing wind.")]
-        [SerializeField, Min(4000f)] private float weatherFrontSpacing = 8200f;
+        [SerializeField, Min(250f)] private float frontHalfWidth = 5200f;
+        [Tooltip("Distance between successive wet fronts. It exceeds the visible cloud horizon so only one storm body can be seen at a time.")]
+        [SerializeField, Min(20000f)] private float weatherFrontSpacing = 42000f;
         [SerializeField, Range(0.1f, 0.99f)] private float rainWaterThreshold = 0.68f;
         [SerializeField, Range(32, 256)] private int weatherMapResolution = 128;
         [SerializeField, Min(4000f)] private float weatherMapWorldSize = 24000f;
         [SerializeField, Min(0.1f)] private float weatherMapUpdateInterval = 0.6f;
         [SerializeField, Min(200f)] private float cloudBaseHeight = 1350f;
+        [Tooltip("Vertical depth of the raymarched atmosphere occupied by clouds.")]
+        [SerializeField, Min(300f)] private float cloudLayerThickness = 1800f;
         [SerializeField, Min(1000f)] private float cloudLayerRadius = 11000f;
+
+        [Header("P5 rain presentation")]
+        [Tooltip("Width and depth of the camera-centred rain volume in metres.")]
+        [SerializeField, Min(20f)] private float rainEmissionArea = 150f;
+        [SerializeField, Min(5f)] private float rainSpawnHeight = 32f;
+        [SerializeField, Min(1f)] private float rainFallSpeed = 34f;
+        [SerializeField, Range(0f, 1f)] private float rainWindInfluence = 0.55f;
+        [SerializeField, Min(100)] private int rainMaxParticles = 6000;
+        [SerializeField, Min(10f)] private float rainMaximumEmissionRate = 3000f;
 
         [Header("P4 wind presentation")]
         [Tooltip("Distance between the broad dark/silver gust bands visible across feather grass.")]
@@ -149,13 +160,22 @@ namespace Steppe.Settings
         public float WeatherSecondsPerRealSecond => weatherSecondsPerRealSecond;
         public float InitialFrontDistanceAlongWind => initialFrontDistanceAlongWind;
         public float FrontHalfWidth => frontHalfWidth;
-        public float WeatherFrontSpacing => Mathf.Max(weatherFrontSpacing, FrontHalfWidth * 2.75f);
+        public float WeatherFrontSpacing => Mathf.Max(
+            weatherFrontSpacing,
+            Mathf.Max(FrontHalfWidth * 5f, CloudLayerRadius * 3.2f));
         public float RainWaterThreshold => rainWaterThreshold;
         public int WeatherMapResolution => Mathf.Clamp(Mathf.ClosestPowerOfTwo(weatherMapResolution), 32, 256);
         public float WeatherMapWorldSize => Mathf.Max(weatherMapWorldSize, FarRadius * ChunkSize * 2.4f);
         public float WeatherMapUpdateInterval => weatherMapUpdateInterval;
         public float CloudBaseHeight => cloudBaseHeight;
+        public float CloudLayerThickness => Mathf.Max(300f, cloudLayerThickness);
         public float CloudLayerRadius => Mathf.Min(cloudLayerRadius, WeatherMapWorldSize * 0.48f);
+        public float RainEmissionArea => Mathf.Max(20f, rainEmissionArea);
+        public float RainSpawnHeight => Mathf.Max(5f, rainSpawnHeight);
+        public float RainFallSpeed => Mathf.Max(1f, rainFallSpeed);
+        public float RainWindInfluence => Mathf.Clamp01(rainWindInfluence);
+        public int RainMaxParticles => Mathf.Max(100, rainMaxParticles);
+        public float RainMaximumEmissionRate => Mathf.Max(10f, rainMaximumEmissionRate);
         public float WindGustWavelength => Mathf.Max(80f, windGustWavelength);
         public float WindGustCrossScale => Mathf.Max(WindGustWavelength, windGustCrossScale);
         public float WindFineScale => Mathf.Max(8f, windFineScale);

@@ -36,6 +36,7 @@ namespace Steppe.Weather
         private double publishedMapWeatherSeconds;
         private float buildMaximumCoverage;
         private float buildMaximumWater;
+        private float buildMaximumRain;
 
         public SteppeWeatherModel Model => model;
         public Texture2D WeatherMap => weatherMap;
@@ -49,6 +50,7 @@ namespace Steppe.Weather
         public bool IsWeatherMapReady => MapRevision > 0;
         public float MapMaximumCoverage { get; private set; }
         public float MapMaximumWater { get; private set; }
+        public float MapMaximumRain { get; private set; }
         public SteppeWeatherSample CurrentAtFocus { get; private set; }
         public bool HasPendingWorldWork => mapBuildInProgress;
 
@@ -148,6 +150,7 @@ namespace Steppe.Weather
             nextMapBuildRow = 0;
             buildMaximumCoverage = 0f;
             buildMaximumWater = 0f;
+            buildMaximumRain = 0f;
             mapBuildInProgress = true;
         }
 
@@ -175,6 +178,7 @@ namespace Steppe.Weather
                     var sample = model.Sample(minimumX + x * step, minimumZ + z * step, buildWeatherSeconds);
                     buildMaximumCoverage = Mathf.Max(buildMaximumCoverage, (float)sample.CloudCoverage);
                     buildMaximumWater = Mathf.Max(buildMaximumWater, (float)sample.CloudWater);
+                    buildMaximumRain = Mathf.Max(buildMaximumRain, (float)sample.RainIntensity);
                     weatherPixels[z * resolution + x] = new Color32(
                         ToByte(sample.CloudCoverage),
                         ToByte(sample.CloudWater),
@@ -196,6 +200,7 @@ namespace Steppe.Weather
             publishedMapWeatherSeconds = buildWeatherSeconds;
             MapMaximumCoverage = buildMaximumCoverage;
             MapMaximumWater = buildMaximumWater;
+            MapMaximumRain = buildMaximumRain;
             MapRevision++;
             mapBuildInProgress = false;
             secondsUntilMapUpdate = settings.WeatherMapUpdateInterval;

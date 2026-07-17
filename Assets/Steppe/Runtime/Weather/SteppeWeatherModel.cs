@@ -87,16 +87,26 @@ namespace Steppe.Weather
             var alongWind = worldX * windDirection.x + worldZ * windDirection.y;
             var unwrappedDistance = alongWind - centerAlongWind + broadShape * halfWidth * 0.42;
             var signedDistance = RepeatSigned(unwrappedDistance, settings.WeatherFrontSpacing);
-            var normalizedDistance = Math.Abs(signedDistance) / halfWidth;
-            var wetEnvelope = 1.0 - SmoothStep(0.62, 1.52, normalizedDistance);
+            var normalizedFrontDistance = signedDistance / halfWidth;
+            var cloudEnvelope = 1.0 - SmoothStep(0.72, 1.48, Math.Abs(normalizedFrontDistance));
+
+            // A front is a coherent lifecycle rather than a collection of unrelated
+            // dark spots. Moisture condenses gradually on the windward (positive)
+            // side, reaches a broad saturated core, then drains faster than the cloud
+            // cover clears on the leeward (negative) side. A fixed observer therefore
+            // sees white cloud thicken, darken into rain, and brighten again afterwards.
+            var condensation = 1.0 - SmoothStep(0.18, 1.30, normalizedFrontDistance);
+            var postRainRetention = SmoothStep(-1.24, -0.16, normalizedFrontDistance);
+            var saturatedCore = condensation * postRainRetention;
 
             var shapedCloud = Saturate(0.54 + cloudShape * 0.72 + fineBreakup * 0.22);
             var fairWeather = Saturate(0.34 + cloudShape * 0.25 + fineBreakup * 0.08);
-            var stormCoverage = Saturate(0.68 + shapedCloud * 0.32);
-            var coverage = Lerp(fairWeather, stormCoverage, wetEnvelope);
-            var water = Saturate(wetEnvelope * (0.57 + shapedCloud * 0.43));
+            var stormCoverage = Saturate(0.76 + shapedCloud * 0.24);
+            var coverage = Lerp(fairWeather, stormCoverage, cloudEnvelope);
+            var saturation = SmoothStep(0.10, 0.86, saturatedCore);
+            var water = Saturate(cloudEnvelope * saturation * (0.72 + shapedCloud * 0.28));
             var rain = SmoothStep(settings.RainWaterThreshold, 0.96, water)
-                       * SmoothStep(0.48, 0.9, coverage);
+                       * SmoothStep(0.52, 0.92, coverage);
 
             return new SteppeWeatherSample(
                 windVelocity,

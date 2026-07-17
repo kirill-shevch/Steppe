@@ -97,6 +97,46 @@ namespace Steppe.Tests
         }
 
         [Test]
+        public void FrontBuildsABroadRainCoreAndDrainsBeforeCloudCoverClears()
+        {
+            var model = new SteppeWeatherModel(settings);
+            var direction = model.WindDirection;
+            var center = settings.InitialFrontDistanceAlongWind;
+            var leading = AverageAcrossFront(model, direction, center, 0.95);
+            var core = AverageAcrossFront(model, direction, center, 0.0);
+            var trailing = AverageAcrossFront(model, direction, center, -0.95);
+
+            Assert.That(core.CloudWater, Is.GreaterThan(settings.RainWaterThreshold));
+            Assert.That(core.RainIntensity, Is.GreaterThan(0.05));
+            Assert.That(core.CloudWater, Is.GreaterThan(leading.CloudWater + 0.2));
+            Assert.That(core.CloudWater, Is.GreaterThan(trailing.CloudWater + 0.2));
+            Assert.That(trailing.CloudCoverage, Is.GreaterThan(0.45));
+            Assert.That(trailing.CloudWater, Is.LessThan(trailing.CloudCoverage * 0.65));
+        }
+
+        [Test]
+        public void RainBelongsToAContinuousFrontInsteadOfAnIsolatedSample()
+        {
+            var model = new SteppeWeatherModel(settings);
+            var direction = model.WindDirection;
+            var center = settings.InitialFrontDistanceAlongWind;
+            var rainySamples = 0;
+
+            for (var index = -8; index <= 8; index++)
+            {
+                var normalizedOffset = index / 16.0;
+                var distance = center + normalizedOffset * settings.FrontHalfWidth;
+                var sample = model.Sample(direction.x * distance, direction.y * distance, 0.0);
+                if (sample.RainIntensity > 0.01)
+                {
+                    rainySamples++;
+                }
+            }
+
+            Assert.That(rainySamples, Is.GreaterThanOrEqualTo(5));
+        }
+
+        [Test]
         public void CoverageNeverFallsIntoAWorldWideClearBandBetweenFronts()
         {
             var model = new SteppeWeatherModel(settings);
@@ -118,6 +158,48 @@ namespace Steppe.Tests
             Assert.That(settings.WeatherMapWorldSize, Is.GreaterThan(terrainDiameter));
             Assert.That(settings.CloudLayerRadius, Is.GreaterThan(settings.FarRadius * settings.ChunkSize));
             Assert.That(settings.CloudLayerRadius, Is.LessThanOrEqualTo(settings.WeatherMapWorldSize * 0.5f));
+        }
+
+        [Test]
+        public void OnlyOneWetFrontCanOccupyTheVisibleCloudHorizon()
+        {
+            var visibleDiameter = settings.CloudLayerRadius * 2f;
+            Assert.That(
+                settings.WeatherFrontSpacing,
+                Is.GreaterThan(visibleDiameter + settings.FrontHalfWidth * 2f));
+        }
+
+        private SteppeWeatherSample AverageAcrossFront(
+            SteppeWeatherModel model,
+            Vector2 direction,
+            double center,
+            double normalizedAlongFront)
+        {
+            var crossDirection = new Vector2(-direction.y, direction.x);
+            var coverage = 0.0;
+            var water = 0.0;
+            var rain = 0.0;
+            const int sampleCount = 9;
+
+            for (var index = 0; index < sampleCount; index++)
+            {
+                var crossOffset = (index - (sampleCount - 1) * 0.5) * 320.0;
+                var along = center + normalizedAlongFront * settings.FrontHalfWidth;
+                var sample = model.Sample(
+                    direction.x * along + crossDirection.x * crossOffset,
+                    direction.y * along + crossDirection.y * crossOffset,
+                    0.0);
+                coverage += sample.CloudCoverage;
+                water += sample.CloudWater;
+                rain += sample.RainIntensity;
+            }
+
+            return new SteppeWeatherSample(
+                model.WindVelocity,
+                0.0,
+                coverage / sampleCount,
+                water / sampleCount,
+                rain / sampleCount);
         }
     }
 }

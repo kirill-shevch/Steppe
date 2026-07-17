@@ -95,7 +95,7 @@ namespace Steppe.Prototype
             GUILayout.Label($"Year {time.Year + 1}, day {time.DayOfYear:F1}/{settings.DaysPerYear}    {time.Hour:00.00} h    {time.Season}");
             GUILayout.Label($"Air: {climate.AirTemperatureC:F1} C    Sun: {solar.ElevationDegrees:F1} deg    Clock: x{timeSystem.DebugMultiplier:F0}{(timeSystem.IsPaused ? " PAUSED" : string.Empty)}");
             GUILayout.Label($"Wind: {weather.Wind.x:F1}, {weather.Wind.y:F1} m/s    Clouds: {weather.CloudCoverage:P0}    Water: {weather.CloudWater:P0}    Rain: {weather.RainIntensity:P0}");
-            GUILayout.Label($"Weather map: {(weatherSystem.IsWeatherMapReady ? $"ready v{weatherSystem.MapRevision}" : "building")}    Max clouds: {weatherSystem.MapMaximumCoverage:P0}    Max water: {weatherSystem.MapMaximumWater:P0}");
+            GUILayout.Label($"Weather map: {(weatherSystem.IsWeatherMapReady ? $"ready v{weatherSystem.MapRevision}" : "building")}    Max clouds: {weatherSystem.MapMaximumCoverage:P0}    Max water: {weatherSystem.MapMaximumWater:P0}    Max rain: {weatherSystem.MapMaximumRain:P0}");
             GUILayout.Label($"Chunk: {chunkStreamer.CenterCoordinate}    Origin XZ: {floatingOrigin.OriginX:F0}, {floatingOrigin.OriginZ:F0}");
             GUILayout.Label($"Chunks: {chunkStreamer.LoadedCount} loaded / {chunkStreamer.PendingCount} queued    LOD: {near}/{middle}/{far}");
             GUILayout.Label(grassRenderer != null && grassRenderer.IsRendering
