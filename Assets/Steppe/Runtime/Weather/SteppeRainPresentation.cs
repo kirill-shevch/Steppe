@@ -144,7 +144,7 @@ namespace Steppe.Weather
 
         private void ApplyVelocity(ParticleSystem.VelocityOverLifetimeModule velocity)
         {
-            var wind = weatherSystem != null ? weatherSystem.Model.WindVelocity : Vector2.zero;
+            var wind = weatherSystem != null ? weatherSystem.CurrentAtFocus.SurfaceWind : Vector2.zero;
             velocity.x = wind.x * settings.RainWindInfluence;
             // Unity requires all three velocity axes to use the same MinMaxCurve mode.
             // X and Z are constants, so Y must be a constant as well; mixing their

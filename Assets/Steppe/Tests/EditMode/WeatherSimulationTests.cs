@@ -22,7 +22,90 @@ namespace Steppe.Tests
         }
 
         [Test]
-        public void CompleteWeatherPatternAdvectsWithPrevailingWind()
+        public void WeatherTimeIsDerivedFromTheCanonicalSimulationClock()
+        {
+            const double elapsedSimulationSeconds = 98765.4321;
+            var expected = elapsedSimulationSeconds
+                           * settings.WeatherSecondsPerRealSecond
+                           / settings.SimulationSecondsPerRealSecond;
+
+            Assert.That(
+                SteppeWeatherTime.FromSimulationSeconds(settings, elapsedSimulationSeconds),
+                Is.EqualTo(expected).Within(0.000000001));
+            Assert.That(
+                SteppeWeatherTime.ToSimulationSeconds(settings, expected),
+                Is.EqualTo(elapsedSimulationSeconds).Within(0.000000001));
+            Assert.That(
+                SteppeWeatherTime.FromSimulationSeconds(settings, -10.0),
+                Is.EqualTo(0.0));
+        }
+
+        [Test]
+        public void WeatherTimeIsIndependentOfSimulationAdvanceCadence()
+        {
+            const double totalSimulationSeconds = 5.75 * 86400.0;
+            var accumulatedSimulationSeconds = 0.0;
+            const int stepCount = 173;
+
+            for (var step = 0; step < stepCount; step++)
+            {
+                accumulatedSimulationSeconds += totalSimulationSeconds / stepCount;
+            }
+
+            var direct = SteppeWeatherTime.FromSimulationSeconds(settings, totalSimulationSeconds);
+            var stepped = SteppeWeatherTime.FromSimulationSeconds(settings, accumulatedSimulationSeconds);
+            Assert.That(stepped, Is.EqualTo(direct).Within(0.000000001));
+        }
+
+        [Test]
+        public void WindRegimesAreDeterministicSmoothAndActuallyChange()
+        {
+            var firstModel = new SteppeWindRegimeModel(settings);
+            var secondModel = new SteppeWindRegimeModel(settings);
+            var initial = firstModel.Sample(0.0);
+            var maximumCloudTurn = 0f;
+            var maximumSpeedDifference = 0f;
+
+            for (var index = 1; index <= 12; index++)
+            {
+                var time = firstModel.RegimeDuration * (index + 0.37);
+                var first = firstModel.Sample(time);
+                var second = secondModel.Sample(time);
+                Assert.That(first.CloudVelocity, Is.EqualTo(second.CloudVelocity));
+                Assert.That(first.SurfaceVelocity, Is.EqualTo(second.SurfaceVelocity));
+                Assert.That(first.CloudAdvection.X, Is.EqualTo(second.CloudAdvection.X));
+                Assert.That(first.CloudAdvection.Z, Is.EqualTo(second.CloudAdvection.Z));
+                maximumCloudTurn = Mathf.Max(
+                    maximumCloudTurn,
+                    Vector2.Angle(initial.CloudVelocity, first.CloudVelocity));
+                maximumSpeedDifference = Mathf.Max(
+                    maximumSpeedDifference,
+                    Mathf.Abs(initial.CloudVelocity.magnitude - first.CloudVelocity.magnitude));
+            }
+
+            var boundary = firstModel.RegimeDuration * 4.0;
+            var justBefore = firstModel.Sample(boundary - 0.001);
+            var justAfter = firstModel.Sample(boundary + 0.001);
+            Assert.That(Vector2.Distance(justBefore.CloudVelocity, justAfter.CloudVelocity), Is.LessThan(0.01f));
+            Assert.That(Vector2.Distance(justBefore.SurfaceVelocity, justAfter.SurfaceVelocity), Is.LessThan(0.01f));
+            Assert.That(maximumCloudTurn, Is.GreaterThan(15f));
+            Assert.That(maximumSpeedDifference, Is.GreaterThan(0.5f));
+        }
+
+        [Test]
+        public void CloudAndSurfaceWindRemainRelatedButDistinct()
+        {
+            var model = new SteppeWindRegimeModel(settings);
+            var sample = model.Sample(model.RegimeDuration * 2.43);
+
+            Assert.That(sample.CloudVelocity.magnitude, Is.GreaterThan(0.1f));
+            Assert.That(sample.SurfaceVelocity.magnitude, Is.GreaterThan(0.1f));
+            Assert.That(Vector2.Distance(sample.CloudVelocity, sample.SurfaceVelocity), Is.GreaterThan(0.25f));
+            Assert.That(Vector2.Angle(sample.CloudVelocity, sample.SurfaceVelocity), Is.LessThan(45f));
+        }
+
+        [Test]
+        public void CompleteWeatherPatternAdvectsWithIntegratedCloudWind()
         {
             var model = new SteppeWeatherModel(settings);
             const double startTime = 37.0;
@@ -30,8 +113,10 @@ namespace Steppe.Tests
             const double startX = 812.5;
             const double startZ = -1704.25;
             var before = model.Sample(startX, startZ, startTime);
-            var displacement = model.WindVelocity * (float)duration;
-            var after = model.Sample(startX + displacement.x, startZ + displacement.y, startTime + duration);
+            var startWind = model.SampleWind(startTime);
+            var endWind = model.SampleWind(startTime + duration);
+            var displacement = endWind.CloudAdvection - startWind.CloudAdvection;
+            var after = model.Sample(startX + displacement.X, startZ + displacement.Z, startTime + duration);
 
             Assert.That(after.CloudCoverage, Is.EqualTo(before.CloudCoverage).Within(0.000001));
             Assert.That(after.CloudWater, Is.EqualTo(before.CloudWater).Within(0.000001));
@@ -40,10 +125,34 @@ namespace Steppe.Tests
         }
 
         [Test]
+        public void WetFrontLeadingEdgeAddsALocalSurfaceGust()
+        {
+            var model = new SteppeWeatherModel(settings);
+            var direction = model.FrontDirection;
+            var center = settings.InitialFrontDistanceAlongWind;
+            var baseWind = model.SampleWind(0.0).SurfaceVelocity;
+            var strongest = model.Sample(direction.x * center, direction.y * center, 0.0);
+
+            for (var index = -12; index <= 16; index++)
+            {
+                var distance = center + index / 12.0 * settings.FrontHalfWidth;
+                var sample = model.Sample(direction.x * distance, direction.y * distance, 0.0);
+                if (sample.StormGust > strongest.StormGust)
+                {
+                    strongest = sample;
+                }
+            }
+
+            Assert.That(strongest.StormGust, Is.GreaterThan(0.25));
+            Assert.That(strongest.SurfaceWind.magnitude, Is.GreaterThan(baseWind.magnitude + 1f));
+            Assert.That(strongest.CloudWind, Is.EqualTo(model.SampleWind(0.0).CloudVelocity));
+        }
+
+        [Test]
         public void WetFrontProducesRainWhileTheInterfrontSkyRemainsCloudyButDrier()
         {
             var model = new SteppeWeatherModel(settings);
-            var direction = model.WindDirection;
+            var direction = model.FrontDirection;
             var center = settings.InitialFrontDistanceAlongWind;
             var wettest = model.Sample(direction.x * center, direction.y * center, 0.0);
 
@@ -86,7 +195,7 @@ namespace Steppe.Tests
         public void SuccessiveFrontsKeepReturningAlongTheWindAxis()
         {
             var model = new SteppeWeatherModel(settings);
-            var direction = model.WindDirection;
+            var direction = model.FrontDirection;
             var firstCenter = settings.InitialFrontDistanceAlongWind;
             var nextCenter = firstCenter + settings.WeatherFrontSpacing;
             var first = model.Sample(direction.x * firstCenter, direction.y * firstCenter, 0.0);
@@ -100,7 +209,7 @@ namespace Steppe.Tests
         public void FrontBuildsABroadRainCoreAndDrainsBeforeCloudCoverClears()
         {
             var model = new SteppeWeatherModel(settings);
-            var direction = model.WindDirection;
+            var direction = model.FrontDirection;
             var center = settings.InitialFrontDistanceAlongWind;
             var leading = AverageAcrossFront(model, direction, center, 0.95);
             var core = AverageAcrossFront(model, direction, center, 0.0);
@@ -118,7 +227,7 @@ namespace Steppe.Tests
         public void RainBelongsToAContinuousFrontInsteadOfAnIsolatedSample()
         {
             var model = new SteppeWeatherModel(settings);
-            var direction = model.WindDirection;
+            var direction = model.FrontDirection;
             var center = settings.InitialFrontDistanceAlongWind;
             var rainySamples = 0;
 
@@ -140,7 +249,7 @@ namespace Steppe.Tests
         public void CoverageNeverFallsIntoAWorldWideClearBandBetweenFronts()
         {
             var model = new SteppeWeatherModel(settings);
-            var direction = model.WindDirection;
+            var direction = model.FrontDirection;
             var center = settings.InitialFrontDistanceAlongWind;
 
             for (var index = 0; index <= 64; index++)
@@ -194,8 +303,11 @@ namespace Steppe.Tests
                 rain += sample.RainIntensity;
             }
 
+            var wind = model.SampleWind(0.0);
             return new SteppeWeatherSample(
-                model.WindVelocity,
+                wind.CloudVelocity,
+                wind.SurfaceVelocity,
+                0.0,
                 0.0,
                 coverage / sampleCount,
                 water / sampleCount,

@@ -11,6 +11,13 @@ float _SteppeWindAnimationTime;
 // X: wavelength along the wind, Y: cross-wind coherence scale,
 // Z: fine turbulence scale, W: fraction of physical wind advection used visually.
 float4 _SteppeGustScales;
+// XY is the analytically integrated surface-flow displacement on the canonical map.
+float4 _SteppeSurfaceWindAdvection;
+// XY is the stable prevailing basis used to orient the material gust pattern. Keeping
+// this basis fixed prevents a direction change from rotating the whole field around zero.
+float4 _SteppeWindFieldBasis;
+// X: regime gustiness, Y: local storm-front gust at the observer.
+float4 _SteppeWindRegime;
 
 struct SteppeWindFieldSample
 {
@@ -50,14 +57,27 @@ SteppeWindFieldSample SampleSteppeWindField(
 {
     SteppeWindFieldSample result;
     float speed = max(_SteppeWindVelocity.z, 0.001);
-    result.direction = _SteppeWindVelocity.xy / speed;
+    float2 baseDirection = _SteppeWindVelocity.xy / speed;
+    float basisLength = max(length(_SteppeWindFieldBasis.xy), 0.001);
+    float2 fieldBasis = _SteppeWindFieldBasis.xy / basisLength;
+    float2 fieldAcross = float2(-fieldBasis.y, fieldBasis.x);
 
     float broadScale = max(_SteppeGustScales.x, 1.0);
     float crossScale = max(_SteppeGustScales.y, broadScale);
     float fineScale = max(_SteppeGustScales.z, 1.0);
-    float travel = _SteppeWindTime * speed * _SteppeGustScales.w;
-    float along = dot(canonicalXZ, result.direction) - travel;
-    float across = dot(canonicalXZ, float2(-result.direction.y, result.direction.x));
+    float2 fieldPosition = canonicalXZ
+                           - _SteppeSurfaceWindAdvection.xy * _SteppeGustScales.w;
+    float along = dot(fieldPosition, fieldBasis);
+    float across = dot(fieldPosition, fieldAcross);
+
+    float directionNoise = SteppeWindValueNoise(
+        fieldPosition / max(crossScale * 0.42, 1.0) + float2(19.7, -8.3)) - 0.5;
+    float turn = directionNoise * saturate(_SteppeWindRegime.x) * 0.30;
+    float turnSine = sin(turn);
+    float turnCosine = cos(turn);
+    result.direction = float2(
+        baseDirection.x * turnCosine - baseDirection.y * turnSine,
+        baseDirection.x * turnSine + baseDirection.y * turnCosine);
 
     // A slowly changing cross-wind warp stops the gusts from looking like ruler-straight
     // shader stripes while preserving their very long, readable steppe-scale fronts.
@@ -74,7 +94,9 @@ SteppeWindFieldSample SampleSteppeWindField(
     // Fine motion is also advected, rather than oscillating in object/chunk space. A tiny
     // stable per-plant offset prevents adjacent cards from becoming a rigid marching wall.
     float2 finePosition = canonicalXZ
-                          - result.direction * travel * 1.65
+                          - _SteppeSurfaceWindAdvection.xy
+                          * _SteppeGustScales.w
+                          * 1.65
                           + float2(plantPhase * 5.7, plantPhase * 2.9);
     result.fine = SteppeWindValueNoise(finePosition / fineScale);
 
@@ -83,7 +105,9 @@ SteppeWindFieldSample SampleSteppeWindField(
     float broadResponse = 0.25 + result.broad * 0.75;
     result.strength = saturate(
         lerp(localResponse, broadResponse, coherence)
-        * lerp(0.90, 1.10, result.fine));
+        * lerp(0.90, 1.10, result.fine)
+        * lerp(0.86, 1.16, saturate(_SteppeWindRegime.x))
+        * (1.0 + saturate(_SteppeWindRegime.y) * 0.16));
     return result;
 }
 

@@ -8,20 +8,27 @@ namespace Steppe.Weather
     public readonly struct SteppeWeatherSample
     {
         public SteppeWeatherSample(
-            Vector2 wind,
+            Vector2 cloudWind,
+            Vector2 surfaceWind,
+            double stormGust,
             double signedFrontDistance,
             double cloudCoverage,
             double cloudWater,
             double rainIntensity)
         {
-            Wind = wind;
+            CloudWind = cloudWind;
+            SurfaceWind = surfaceWind;
+            StormGust = stormGust;
             SignedFrontDistance = signedFrontDistance;
             CloudCoverage = cloudCoverage;
             CloudWater = cloudWater;
             RainIntensity = rainIntensity;
         }
 
-        public Vector2 Wind { get; }
+        public Vector2 CloudWind { get; }
+        public Vector2 SurfaceWind { get; }
+        public Vector2 Wind => SurfaceWind;
+        public double StormGust { get; }
         public double SignedFrontDistance { get; }
         public double CloudCoverage { get; }
         public double CloudWater { get; }
@@ -36,25 +43,31 @@ namespace Steppe.Weather
     public sealed class SteppeWeatherModel
     {
         private readonly SteppeWorldSettings settings;
-        private readonly Vector2 windDirection;
-        private readonly Vector2 windVelocity;
+        private readonly Vector2 frontDirection;
+        private readonly SteppeWindRegimeModel windModel;
 
         public SteppeWeatherModel(SteppeWorldSettings worldSettings)
         {
             settings = worldSettings != null ? worldSettings : throw new ArgumentNullException(nameof(worldSettings));
             var radians = settings.PrevailingWindDirectionDegrees * Mathf.Deg2Rad;
-            windDirection = new Vector2(Mathf.Sin(radians), Mathf.Cos(radians)).normalized;
-            windVelocity = windDirection * settings.PrevailingWindSpeed;
+            frontDirection = new Vector2(Mathf.Sin(radians), Mathf.Cos(radians)).normalized;
+            windModel = new SteppeWindRegimeModel(settings);
         }
 
-        public Vector2 WindDirection => windDirection;
-        public Vector2 WindVelocity => windVelocity;
+        public Vector2 FrontDirection => frontDirection;
+        public SteppeWindRegimeModel WindModel => windModel;
+
+        public SteppeWindRegimeSample SampleWind(double weatherSeconds)
+        {
+            return windModel.Sample(weatherSeconds);
+        }
 
         public SteppeWeatherSample Sample(double worldX, double worldZ, double weatherSeconds)
         {
             var clampedTime = Math.Max(0.0, weatherSeconds);
-            var advectedX = worldX - windVelocity.x * clampedTime;
-            var advectedZ = worldZ - windVelocity.y * clampedTime;
+            var wind = windModel.Sample(clampedTime);
+            var advectedX = worldX - wind.CloudAdvection.X;
+            var advectedZ = worldZ - wind.CloudAdvection.Z;
             var halfWidth = settings.FrontHalfWidth;
 
             // The broad perturbation keeps the front from becoming a ruler-straight band.
@@ -82,10 +95,10 @@ namespace Steppe.Weather
                 2.17,
                 0.48);
 
-            var centerAlongWind = settings.InitialFrontDistanceAlongWind
-                                  + settings.PrevailingWindSpeed * clampedTime;
-            var alongWind = worldX * windDirection.x + worldZ * windDirection.y;
-            var unwrappedDistance = alongWind - centerAlongWind + broadShape * halfWidth * 0.42;
+            var alongWind = advectedX * frontDirection.x + advectedZ * frontDirection.y;
+            var unwrappedDistance = alongWind
+                                    - settings.InitialFrontDistanceAlongWind
+                                    + broadShape * halfWidth * 0.42;
             var signedDistance = RepeatSigned(unwrappedDistance, settings.WeatherFrontSpacing);
             var normalizedFrontDistance = signedDistance / halfWidth;
             var cloudEnvelope = 1.0 - SmoothStep(0.72, 1.48, Math.Abs(normalizedFrontDistance));
@@ -107,9 +120,21 @@ namespace Steppe.Weather
             var water = Saturate(cloudEnvelope * saturation * (0.72 + shapedCloud * 0.28));
             var rain = SmoothStep(settings.RainWaterThreshold, 0.96, water)
                        * SmoothStep(0.52, 0.92, coverage);
+            var leadingEdge = 1.0 - SmoothStep(
+                0.18,
+                0.92,
+                Math.Abs(normalizedFrontDistance - 0.34));
+            var stormGust = Saturate(
+                cloudEnvelope
+                * leadingEdge
+                * (0.58 + water * 0.42));
+            var surfaceWind = wind.SurfaceVelocity
+                              + frontDirection * (settings.StormGustSpeed * (float)stormGust);
 
             return new SteppeWeatherSample(
-                windVelocity,
+                wind.CloudVelocity,
+                surfaceWind,
+                stormGust,
                 signedDistance,
                 coverage,
                 water,

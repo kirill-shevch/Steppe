@@ -39,6 +39,7 @@ namespace Steppe.Time
         public SteppeSeason Season { get; }
     }
 
+    [DefaultExecutionOrder(-200)]
     public sealed class SteppeTimeSystem : MonoBehaviour
     {
         private static readonly float[] DebugMultipliers = { 1f, 10f, 100f };

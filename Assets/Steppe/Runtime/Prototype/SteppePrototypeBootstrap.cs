@@ -1,3 +1,4 @@
+using Steppe.Ecology;
 using Steppe.Player;
 using Steppe.Rendering;
 using Steppe.Settings;
@@ -100,6 +101,15 @@ namespace Steppe.Prototype
             var weatherSystem = gameObject.AddComponent<SteppeWeatherSystem>();
             weatherSystem.Configure(runtimeSettings, timeSystem, floatingOrigin, camera.transform, workScheduler);
 
+            var ecologySystem = gameObject.AddComponent<SteppeEcologySystem>();
+            ecologySystem.Configure(
+                runtimeSettings,
+                timeSystem,
+                weatherSystem,
+                floatingOrigin,
+                camera.transform,
+                workScheduler);
+
             var cloudObject = new GameObject("Cloud Layer");
             cloudObject.transform.SetParent(worldSpaceObject.transform, false);
             var cloudLayer = cloudObject.AddComponent<SteppeCloudLayer>();
@@ -146,6 +156,7 @@ namespace Steppe.Prototype
                 camera.transform,
                 timeSystem,
                 weatherSystem,
+                ecologySystem,
                 grassRenderer,
                 workScheduler);
 

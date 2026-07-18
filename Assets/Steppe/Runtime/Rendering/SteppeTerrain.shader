@@ -6,6 +6,9 @@ Shader "Steppe/Terrain Surface"
         _Smoothness("Smoothness", Range(0, 1)) = 0.05
         _FarVegetationDetail("Far Vegetation Detail", Range(0, 0.3)) = 0.12
         _FarWindGustContrast("Far Wind Gust Contrast", Range(0, 0.2)) = 0.075
+        _WetDarkening("Wet Soil Darkening", Range(0, 0.75)) = 0.46
+        _WetSmoothness("Wet Soil Smoothness", Range(0, 1)) = 0.72
+        _CrustLightening("Dry Crust Lightening", Range(0, 0.25)) = 0.08
     }
 
     SubShader
@@ -27,12 +30,16 @@ Shader "Steppe/Terrain Surface"
             #include "Packages/com.unity.render-pipelines.universal/ShaderLibrary/Core.hlsl"
             #include "Packages/com.unity.render-pipelines.universal/ShaderLibrary/Lighting.hlsl"
             #include "Assets/Steppe/Runtime/Rendering/SteppeWindField.hlsl"
+            #include "Assets/Steppe/Runtime/Rendering/SteppeEcologyField.hlsl"
 
             CBUFFER_START(UnityPerMaterial)
                 half4 _BaseColor;
                 half _Smoothness;
                 half _FarVegetationDetail;
                 half _FarWindGustContrast;
+                half _WetDarkening;
+                half _WetSmoothness;
+                half _CrustLightening;
             CBUFFER_END
 
             float4 _SteppeWorldOriginXZ;
@@ -74,11 +81,12 @@ Shader "Steppe/Terrain Surface"
                 half diffuse = saturate(dot(normal, mainLight.direction));
                 half3 ambient = SampleSH(normal);
                 half3 lighting = ambient + mainLight.color * diffuse * mainLight.shadowAttenuation;
-                float2 canonicalXZ = input.positionWS.xz + _SteppeWorldOriginXZ.xy;
+                float2 canonicalXZ = input.positionWS.xz + _SteppeWorldOriginXZ.xz;
                 half broadVariation = SteppeWindValueNoise(canonicalXZ / 38.0) - 0.5h;
                 half tuftVariation = SteppeWindValueNoise(canonicalXZ / 6.5) - 0.5h;
                 half vegetationSignal = saturate(
                     0.42h + (input.color.g - input.color.r) * 2.8h);
+                SteppeEcologyFieldSample ecology = SampleSteppeEcologyField(canonicalXZ);
                 SteppeWindFieldSample wind = SampleSteppeWindField(
                     canonicalXZ,
                     vegetationSignal,
@@ -90,7 +98,27 @@ Shader "Steppe/Terrain Surface"
                                    + (0.5h - wind.broad)
                                    * _FarWindGustContrast
                                    * vegetationSignal;
-                half3 color = input.color.rgb * fieldDetail * lighting;
+                half soilSignal = saturate(1.0h - vegetationSignal * 0.86h);
+                half wetness = smoothstep(0.005h, 0.12h, ecology.surfaceWater)
+                               * lerp(0.38h, 1.0h, soilSignal);
+                half crust = ecology.surfaceCrust
+                             * soilSignal
+                             * (1.0h - wetness);
+                half3 albedo = input.color.rgb * fieldDetail;
+                albedo *= 1.0h - wetness * _WetDarkening;
+                albedo = lerp(albedo, albedo * half3(0.86h, 0.93h, 1.0h), wetness * 0.24h);
+                albedo *= 1.0h + crust * _CrustLightening;
+                half3 color = albedo * lighting;
+
+                half smoothness = saturate(_Smoothness + wetness * _WetSmoothness);
+                half3 viewDirection = SafeNormalize(_WorldSpaceCameraPos - input.positionWS);
+                half3 halfDirection = SafeNormalize(mainLight.direction + viewDirection);
+                half specularPower = lerp(12.0h, 150.0h, smoothness);
+                half specular = pow(saturate(dot(normal, halfDirection)), specularPower)
+                                * smoothness
+                                * lerp(0.06h, 0.30h, wetness)
+                                * mainLight.shadowAttenuation;
+                color += mainLight.color * specular;
                 color = MixFog(color, input.fogFactor);
                 return half4(color, 1.0h);
             }

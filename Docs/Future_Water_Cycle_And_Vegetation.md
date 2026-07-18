@@ -2,9 +2,9 @@
 
 ## Status
 
-Deferred. This task is explicitly separate from P3 cloud presentation and P4 grass
-rendering/wind response. Current clouds may contain water and report rain intensity,
-but they do not yet participate in a persistent water cycle and do not change plants.
+In progress. P7 implements persistent surface/root water and soil crust; P8 publishes
+that state to terrain and grass through one canonical GPU map. Dynamic plant growth,
+greening, curing and dormancy remain separate later milestones.
 
 ## Goal
 
@@ -52,12 +52,15 @@ plant state.
 
 ## Rendering output
 
-A small world-anchored state texture will eventually be sampled by both grass and terrain:
+A small world-anchored state texture is now sampled by both grass and terrain (P8):
 
 - R: immediate surface wetness;
-- G: live biomass/height;
+- G: live biomass relative to the immutable local vegetation capacity;
 - B: greenness versus cured material;
-- A: frost/dormancy.
+- A: dry soil crust.
+
+Snow, frost and dormancy require a later map/packing extension rather than silently
+reusing the soil-crust channel.
 
 The future gate is: soil darkens during rain, greening follows later, the effect remains
 after the cloud passes, and a hot dry interval reverses it gradually.

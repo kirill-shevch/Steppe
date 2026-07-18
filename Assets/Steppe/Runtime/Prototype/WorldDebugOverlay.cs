@@ -1,3 +1,4 @@
+using Steppe.Ecology;
 using Steppe.Player;
 using Steppe.Rendering;
 using Steppe.Settings;
@@ -23,6 +24,7 @@ namespace Steppe.Prototype
         private SteppeTimeSystem timeSystem;
         private SteppeClimateModel climateModel;
         private SteppeWeatherSystem weatherSystem;
+        private SteppeEcologySystem ecologySystem;
         private SteppeGrassRenderer grassRenderer;
         private WorldWorkScheduler workScheduler;
         private bool visible = true;
@@ -35,6 +37,7 @@ namespace Steppe.Prototype
             Transform focusTransform,
             SteppeTimeSystem clock,
             SteppeWeatherSystem weather,
+            SteppeEcologySystem ecology,
             SteppeGrassRenderer grass,
             WorldWorkScheduler scheduler)
         {
@@ -45,6 +48,7 @@ namespace Steppe.Prototype
             focus = focusTransform;
             timeSystem = clock;
             weatherSystem = weather;
+            ecologySystem = ecology;
             grassRenderer = grass;
             workScheduler = scheduler;
             terrainGenerator = new TerrainHeightGenerator(settings);
@@ -82,20 +86,44 @@ namespace Steppe.Prototype
             chunkStreamer.GetLodCounts(out var near, out var middle, out var far);
 
             const float width = 470f;
-            const float height = 372f;
+            const float height = 438f;
             var area = new Rect(12f, 12f, width, height);
             GUI.Box(area, GUIContent.none);
 
             GUILayout.BeginArea(new Rect(area.x + 12f, area.y + 10f, width - 24f, height - 20f));
-            GUILayout.Label("STEPPE - P4 VEGETATION RENDERER");
+            GUILayout.Label("STEPPE - P8 ECOLOGY STATE MAP");
             GUILayout.Label($"World XZ: {worldPosition.X:F1}, {worldPosition.Z:F1} m    Altitude: {worldPosition.Y:F1} m");
             GUILayout.Label($"Biome: {surface.DominantBiome}    Climate: {surface.MeanAnnualPrecipitationMm:F0} mm/y, {surface.MeanAnnualTemperatureC:F1} C");
             GUILayout.Label($"Mix: meadow {surface.Biomes.Meadow:P0} / feather {surface.Biomes.FeatherGrass:P0} / dry {surface.Biomes.Dry:P0} / desert {surface.Biomes.Desert:P0}");
             GUILayout.Label($"Cover: {surface.VegetationPotential:P0}    Dust: {surface.DustPotential:P0}    Wind coherence: {surface.WindCoherence:P0}");
             GUILayout.Label($"Year {time.Year + 1}, day {time.DayOfYear:F1}/{settings.DaysPerYear}    {time.Hour:00.00} h    {time.Season}");
             GUILayout.Label($"Air: {climate.AirTemperatureC:F1} C    Sun: {solar.ElevationDegrees:F1} deg    Clock: x{timeSystem.DebugMultiplier:F0}{(timeSystem.IsPaused ? " PAUSED" : string.Empty)}");
-            GUILayout.Label($"Wind: {weather.Wind.x:F1}, {weather.Wind.y:F1} m/s    Clouds: {weather.CloudCoverage:P0}    Water: {weather.CloudWater:P0}    Rain: {weather.RainIntensity:P0}");
-            GUILayout.Label($"Weather map: {(weatherSystem.IsWeatherMapReady ? $"ready v{weatherSystem.MapRevision}" : "building")}    Max clouds: {weatherSystem.MapMaximumCoverage:P0}    Max water: {weatherSystem.MapMaximumWater:P0}    Max rain: {weatherSystem.MapMaximumRain:P0}");
+            GUILayout.Label(
+                $"Wind surface: {weather.SurfaceWind.x:F1}, {weather.SurfaceWind.y:F1} m/s    "
+                + $"cloud: {weather.CloudWind.x:F1}, {weather.CloudWind.y:F1} m/s    gust: {weather.StormGust:P0}");
+            GUILayout.Label($"Clouds: {weather.CloudCoverage:P0}    Water: {weather.CloudWater:P0}    Rain: {weather.RainIntensity:P0}");
+            GUILayout.Label($"Weather map: {(weatherSystem.IsWeatherMapReady ? $"ready v{weatherSystem.MapRevision}" : "building")}    Max clouds: {weatherSystem.MapMaximumCoverage:P0}    Max water: {weatherSystem.MapMaximumWater:P0}    Max rain: {weatherSystem.MapMaximumRain:P0}    Max gust: {weatherSystem.MapMaximumGust:P0}");
+            if (ecologySystem != null && ecologySystem.TryGetState(worldPosition.X, worldPosition.Z, out var ecology))
+            {
+                var lagHours = System.Math.Max(
+                    0.0,
+                    ecologySystem.TargetSimulationSeconds - ecology.LastSimulationSeconds) / 3600.0;
+                GUILayout.Label(
+                    $"Soil: surface {ecology.SurfaceWater:P0} / root {ecology.RootWater:P0} / crust {ecology.SurfaceCrust:P0}    "
+                    + $"Eco: {ecologySystem.StoredCellCount} stored / {ecologySystem.ActiveCellCount} active / {ecologySystem.PendingCellCount} queued / {lagHours:F1}h lag");
+            }
+            else if (ecologySystem != null)
+            {
+                GUILayout.Label(
+                    $"Soil: reconstructing    Eco: {ecologySystem.StoredCellCount} stored / {ecologySystem.ActiveCellCount} active / {ecologySystem.PendingCellCount} queued");
+            }
+            if (ecologySystem != null)
+            {
+                GUILayout.Label(
+                    $"Eco map: {(ecologySystem.IsStateMapReady ? $"ready v{ecologySystem.MapRevision}" : "building")}    "
+                    + $"{ecologySystem.StateMap.width}x{ecologySystem.StateMap.height} / {ecologySystem.MapWorldSize / 1000f:F1} km    "
+                    + $"max wet {ecologySystem.MapMaximumSurfaceWater:P0} / crust {ecologySystem.MapMaximumCrust:P0}");
+            }
             GUILayout.Label($"Chunk: {chunkStreamer.CenterCoordinate}    Origin XZ: {floatingOrigin.OriginX:F0}, {floatingOrigin.OriginZ:F0}");
             GUILayout.Label($"Chunks: {chunkStreamer.LoadedCount} loaded / {chunkStreamer.PendingCount} queued    LOD: {near}/{middle}/{far}");
             GUILayout.Label(grassRenderer != null && grassRenderer.IsRendering

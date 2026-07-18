@@ -34,6 +34,7 @@ Shader "Steppe/Grass Indirect"
             #include "Packages/com.unity.render-pipelines.universal/ShaderLibrary/Core.hlsl"
             #include "Packages/com.unity.render-pipelines.universal/ShaderLibrary/Lighting.hlsl"
             #include "Assets/Steppe/Runtime/Rendering/SteppeWindField.hlsl"
+            #include "Assets/Steppe/Runtime/Rendering/SteppeEcologyField.hlsl"
             #define UNITY_INDIRECT_DRAW_ARGS IndirectDrawIndexedArgs
             #include "UnityIndirect.cginc"
 
@@ -112,7 +113,9 @@ Shader "Steppe/Grass Indirect"
                     input.normalOS.x * sine + input.normalOS.z * cosine);
 
                 float2 rootPosition = _SteppeGrassCellOrigin.xz + instance.positionHeight.xz;
-                float2 canonicalRoot = rootPosition + _SteppeWorldOriginXZ.xy;
+                float2 canonicalRoot = rootPosition + _SteppeWorldOriginXZ.xz;
+                SteppeEcologyFieldSample ecology = SampleSteppeEcologyFieldLevel(canonicalRoot, 0.0);
+                float dynamicHeight = instance.positionHeight.w * ecology.biomass;
                 SteppeWindFieldSample wind = SampleSteppeWindField(
                     canonicalRoot,
                     instance.parameters.z,
@@ -167,8 +170,8 @@ Shader "Steppe/Grass Indirect"
                 float2 leanDirection = totalLeanRatio > 0.0001
                     ? leanVector / totalLeanRatio
                     : wind.direction;
-                float2 bendDistance = instance.positionHeight.w * leanVector * bendProfile;
-                float verticalDrop = instance.positionHeight.w
+                float2 bendDistance = dynamicHeight * leanVector * bendProfile;
+                float verticalDrop = dynamicHeight
                                      * (1.0 - sqrt(max(0.01, 1.0 - totalLeanRatio * totalLeanRatio)))
                                      * bendProfile;
 
@@ -177,7 +180,7 @@ Shader "Steppe/Grass Indirect"
                                    + rotatedPosition * instance.colorWidth.w
                                    + bendDistance;
                 worldPosition.y = instance.positionHeight.y
-                                  + assetPosition.y * instance.positionHeight.w
+                                  + assetPosition.y * dynamicHeight
                                   - verticalDrop;
 
                 float bendAngle = asin(totalLeanRatio) * bendProfile;
@@ -194,10 +197,10 @@ Shader "Steppe/Grass Indirect"
                 output.gust = wind.broad;
 
                 float distanceToCamera = distance(worldPosition.xz, _WorldSpaceCameraPos.xz);
-                output.visibility = 1.0h - smoothstep(
+                output.visibility = min(ecology.biomass, 1.0h - smoothstep(
                     _GrassFullDensityRadius,
                     _GrassDrawRadius,
-                    distanceToCamera);
+                    distanceToCamera));
                 output.randomThreshold = instance.parameters.w;
                 output.fogFactor = ComputeFogFactor(output.positionCS.z);
                 return output;

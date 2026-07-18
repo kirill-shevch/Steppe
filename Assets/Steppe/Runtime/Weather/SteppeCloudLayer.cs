@@ -65,10 +65,10 @@ namespace Steppe.Weather
                 weatherSystem.MapCenterX,
                 0.0,
                 weatherSystem.MapCenterZ);
-            var elapsedSinceMap = weatherSystem.WeatherSeconds - weatherSystem.PublishedMapWeatherSeconds;
-            var wind = weatherSystem.Model.WindVelocity;
-            var mapAdvection = wind * (float)elapsedSinceMap;
-            var noiseAdvection = wind * (float)weatherSystem.WeatherSeconds;
+            var currentWind = weatherSystem.Model.SampleWind(weatherSystem.WeatherSeconds);
+            var publishedWind = weatherSystem.Model.SampleWind(weatherSystem.PublishedMapWeatherSeconds);
+            var mapAdvection = currentWind.CloudAdvection - publishedWind.CloudAdvection;
+            var noiseAdvection = currentWind.CloudAdvection;
 
             Shader.SetGlobalFloat(ActiveId, 1f);
             Shader.SetGlobalTexture(WeatherMapId, weatherSystem.WeatherMap);
@@ -78,7 +78,7 @@ namespace Steppe.Weather
             Shader.SetGlobalFloat(WeatherMapWorldSizeId, weatherSystem.MapWorldSize);
             Shader.SetGlobalVector(
                 WeatherMapAdvectionLocalId,
-                new Vector4(mapAdvection.x, mapAdvection.y, 0f, 0f));
+                new Vector4((float)mapAdvection.X, (float)mapAdvection.Z, 0f, 0f));
             Shader.SetGlobalTexture(NoiseId, cloudNoise);
             Shader.SetGlobalVector(
                 NoiseWorldPhaseId,
@@ -90,8 +90,8 @@ namespace Steppe.Weather
             Shader.SetGlobalVector(
                 NoiseAdvectionLocalId,
                 new Vector4(
-                    PositiveModulo(noiseAdvection.x, NoiseHorizontalScale),
-                    PositiveModulo(noiseAdvection.y, NoiseHorizontalScale),
+                    PositiveModulo(noiseAdvection.X, NoiseHorizontalScale),
+                    PositiveModulo(noiseAdvection.Z, NoiseHorizontalScale),
                     0f,
                     0f));
             Shader.SetGlobalVector(

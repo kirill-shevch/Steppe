@@ -66,6 +66,17 @@ namespace Steppe.Settings
         [SerializeField, Min(0.1f)] private float prevailingWindSpeed = 8f;
         [Tooltip("Weather deliberately remains readable while the seasonal debug clock runs at x100.")]
         [SerializeField, Min(0f)] private float weatherSecondsPerRealSecond = 1f;
+        [Tooltip("Duration of one smoothly blended large-scale wind regime on the atmosphere timeline.")]
+        [SerializeField, Min(30f)] private float windRegimeDuration = 240f;
+        [Tooltip("Maximum turn away from the prevailing direction before seasonal modulation.")]
+        [SerializeField, Range(0f, 120f)] private float windDirectionVariationDegrees = 72f;
+        [SerializeField, Range(0f, 0.9f)] private float windSpeedVariation = 0.48f;
+        [Tooltip("Surface air is slowed by ground drag relative to the cloud-bearing flow.")]
+        [SerializeField, Range(0.2f, 1f)] private float surfaceWindSpeedRatio = 0.74f;
+        [Tooltip("Additional surface-level turning relative to the cloud flow.")]
+        [SerializeField, Range(0f, 45f)] private float surfaceWindDirectionVariationDegrees = 18f;
+        [Tooltip("Peak extra surface speed produced on the leading edge of a wet front.")]
+        [SerializeField, Range(0f, 20f)] private float stormGustSpeed = 7.5f;
         [Tooltip("The first wet front starts north of the prototype camera and drifts south with the wind.")]
         [SerializeField] private float initialFrontDistanceAlongWind = -4400f;
         [SerializeField, Min(250f)] private float frontHalfWidth = 5200f;
@@ -88,6 +99,24 @@ namespace Steppe.Settings
         [SerializeField, Range(0f, 1f)] private float rainWindInfluence = 0.55f;
         [SerializeField, Min(100)] private int rainMaxParticles = 6000;
         [SerializeField, Min(10f)] private float rainMaximumEmissionRate = 3000f;
+
+        [Header("Persistent ecology")]
+        [Tooltip("Canonical size of one persistent soil cell. It is independent of terrain and grass streaming chunks.")]
+        [SerializeField, Min(32f)] private float ecologyCellSize = 128f;
+        [Tooltip("Fixed canonical simulation step. Thirty game minutes keeps rain tracks spatially continuous.")]
+        [SerializeField, Min(60f)] private float ecologySimulationStepSeconds = 1800f;
+        [Tooltip("Newly visited cells reconstruct this much recent weather before joining the live simulation.")]
+        [SerializeField, Min(0f)] private float ecologyWarmupSimulationSeconds = 21600f;
+        [Tooltip("Normalized surface-water input produced by one hour of maximum rain.")]
+        [SerializeField, Range(0.01f, 1f)] private float ecologyRainStoragePerHour = 0.2f;
+        [Tooltip("Maximum normalized surface-water loss per warm, bright and windy hour.")]
+        [SerializeField, Range(0.001f, 0.2f)] private float ecologySurfaceEvaporationPerHour = 0.025f;
+        [Tooltip("Slow hourly loss from the root layer through drainage and plant use.")]
+        [SerializeField, Range(0.0001f, 0.05f)] private float ecologyRootWaterLossPerHour = 0.0035f;
+        [Tooltip("One texel represents one ecology cell. 128 cells cover 16.4 km with the default cell size.")]
+        [SerializeField, Range(32, 256)] private int ecologyStateMapResolution = 128;
+        [Tooltip("Minimum real-time interval between CPU state changes and one batched GPU upload.")]
+        [SerializeField, Min(0.05f)] private float ecologyStateMapUploadInterval = 0.25f;
 
         [Header("P4 wind presentation")]
         [Tooltip("Distance between the broad dark/silver gust bands visible across feather grass.")]
@@ -158,6 +187,15 @@ namespace Steppe.Settings
         public float PrevailingWindDirectionDegrees => prevailingWindDirectionDegrees;
         public float PrevailingWindSpeed => prevailingWindSpeed;
         public float WeatherSecondsPerRealSecond => weatherSecondsPerRealSecond;
+        public float WindRegimeDuration => Mathf.Max(30f, windRegimeDuration);
+        public float WindDirectionVariationDegrees => Mathf.Clamp(windDirectionVariationDegrees, 0f, 120f);
+        public float WindSpeedVariation => Mathf.Clamp(windSpeedVariation, 0f, 0.9f);
+        public float SurfaceWindSpeedRatio => Mathf.Clamp(surfaceWindSpeedRatio, 0.2f, 1f);
+        public float SurfaceWindDirectionVariationDegrees => Mathf.Clamp(
+            surfaceWindDirectionVariationDegrees,
+            0f,
+            45f);
+        public float StormGustSpeed => Mathf.Clamp(stormGustSpeed, 0f, 20f);
         public float InitialFrontDistanceAlongWind => initialFrontDistanceAlongWind;
         public float FrontHalfWidth => frontHalfWidth;
         public float WeatherFrontSpacing => Mathf.Max(
@@ -176,6 +214,31 @@ namespace Steppe.Settings
         public float RainWindInfluence => Mathf.Clamp01(rainWindInfluence);
         public int RainMaxParticles => Mathf.Max(100, rainMaxParticles);
         public float RainMaximumEmissionRate => Mathf.Max(10f, rainMaximumEmissionRate);
+        public float EcologyCellSize => Mathf.Max(32f, ecologyCellSize);
+        public float EcologySimulationStepSeconds => Mathf.Max(60f, ecologySimulationStepSeconds);
+        public float EcologyWarmupSimulationSeconds => Mathf.Max(0f, ecologyWarmupSimulationSeconds);
+        public float EcologyRainStoragePerHour => Mathf.Clamp(ecologyRainStoragePerHour, 0.01f, 1f);
+        public float EcologySurfaceEvaporationPerHour => Mathf.Clamp(
+            ecologySurfaceEvaporationPerHour,
+            0.001f,
+            0.2f);
+        public float EcologyRootWaterLossPerHour => Mathf.Clamp(
+            ecologyRootWaterLossPerHour,
+            0.0001f,
+            0.05f);
+        public float EcologyActiveRadius => (FarRadius + 1) * ChunkSize;
+        public int EcologyStateMapResolution
+        {
+            get
+            {
+                var configured = Mathf.ClosestPowerOfTwo(ecologyStateMapResolution);
+                var activeDiameterInCells = Mathf.CeilToInt(EcologyActiveRadius / EcologyCellSize) * 2 + 4;
+                var required = Mathf.NextPowerOfTwo(activeDiameterInCells);
+                return Mathf.Clamp(Mathf.Max(configured, required), 32, 256);
+            }
+        }
+        public float EcologyStateMapUploadInterval => Mathf.Max(0.05f, ecologyStateMapUploadInterval);
+        public float EcologyStateMapWorldSize => EcologyStateMapResolution * EcologyCellSize;
         public float WindGustWavelength => Mathf.Max(80f, windGustWavelength);
         public float WindGustCrossScale => Mathf.Max(WindGustWavelength, windGustCrossScale);
         public float WindFineScale => Mathf.Max(8f, windFineScale);

@@ -14,6 +14,9 @@ namespace Steppe.Weather
         private static readonly int WindTimeId = Shader.PropertyToID("_SteppeWindTime");
         private static readonly int WindAnimationTimeId = Shader.PropertyToID("_SteppeWindAnimationTime");
         private static readonly int GustScalesId = Shader.PropertyToID("_SteppeGustScales");
+        private static readonly int SurfaceWindAdvectionId = Shader.PropertyToID("_SteppeSurfaceWindAdvection");
+        private static readonly int WindFieldBasisId = Shader.PropertyToID("_SteppeWindFieldBasis");
+        private static readonly int WindRegimeId = Shader.PropertyToID("_SteppeWindRegime");
 
         private SteppeWorldSettings settings;
         private SteppeTimeSystem timeSystem;
@@ -23,7 +26,6 @@ namespace Steppe.Weather
         private SteppeWeatherModel model;
         private Texture2D weatherMap;
         private Color32[] weatherPixels;
-        private double weatherSeconds;
         private double windAnimationSeconds;
         private double mapCenterX;
         private double mapCenterZ;
@@ -37,10 +39,13 @@ namespace Steppe.Weather
         private float buildMaximumCoverage;
         private float buildMaximumWater;
         private float buildMaximumRain;
+        private float buildMaximumGust;
 
         public SteppeWeatherModel Model => model;
         public Texture2D WeatherMap => weatherMap;
-        public double WeatherSeconds => weatherSeconds;
+        public double WeatherSeconds => settings != null && timeSystem != null
+            ? SteppeWeatherTime.FromSimulationSeconds(settings, timeSystem.ElapsedSimulationSeconds)
+            : 0.0;
         public double WindAnimationSeconds => windAnimationSeconds;
         public double MapCenterX => mapCenterX;
         public double MapCenterZ => mapCenterZ;
@@ -51,6 +56,8 @@ namespace Steppe.Weather
         public float MapMaximumCoverage { get; private set; }
         public float MapMaximumWater { get; private set; }
         public float MapMaximumRain { get; private set; }
+        public float MapMaximumGust { get; private set; }
+        public SteppeWindRegimeSample CurrentWind { get; private set; }
         public SteppeWeatherSample CurrentAtFocus { get; private set; }
         public bool HasPendingWorldWork => mapBuildInProgress;
 
@@ -67,13 +74,13 @@ namespace Steppe.Weather
             focus = focusTransform != null ? focusTransform : throw new ArgumentNullException(nameof(focusTransform));
             workScheduler = scheduler != null ? scheduler : throw new ArgumentNullException(nameof(scheduler));
             model = new SteppeWeatherModel(settings);
-            weatherSeconds = 0.0;
             windAnimationSeconds = 0.0;
             CreateWeatherMap();
             var focusWorld = floatingOrigin.LocalToWorld(focus.position);
             mapCenterX = focusWorld.X;
             mapCenterZ = focusWorld.Z;
-            CurrentAtFocus = model.Sample(focusWorld.X, focusWorld.Z, weatherSeconds);
+            CurrentWind = model.SampleWind(WeatherSeconds);
+            CurrentAtFocus = model.Sample(focusWorld.X, focusWorld.Z, WeatherSeconds);
             PublishWindShaderState();
             BeginWeatherMapBuild(focusWorld.X, focusWorld.Z);
             workScheduler.Register(this);
@@ -86,7 +93,7 @@ namespace Steppe.Weather
                 throw new InvalidOperationException("The weather system has not been configured.");
             }
 
-            return model.Sample(worldX, worldZ, weatherSeconds);
+            return model.Sample(worldX, worldZ, WeatherSeconds);
         }
 
         private void Update()
@@ -98,18 +105,15 @@ namespace Steppe.Weather
 
             if (!timeSystem.IsPaused)
             {
-                weatherSeconds += UnityEngine.Time.deltaTime
-                                  * settings.WeatherSecondsPerRealSecond
-                                  * timeSystem.DebugMultiplier;
-                // Broad weather still follows the exact debug multiplier. Local grass
-                // oscillation uses a compressed multiplier so x100 remains readable
-                // instead of aliasing into frame-to-frame noise.
+                // Canonical weather time comes from SteppeTimeSystem. This presentation
+                // clock remains separate so x100 does not alias blade sway into noise.
                 windAnimationSeconds += UnityEngine.Time.deltaTime
                                         * Mathf.Pow(timeSystem.DebugMultiplier, 0.35f);
             }
 
             var focusWorld = floatingOrigin.LocalToWorld(focus.position);
-            CurrentAtFocus = model.Sample(focusWorld.X, focusWorld.Z, weatherSeconds);
+            CurrentWind = model.SampleWind(WeatherSeconds);
+            CurrentAtFocus = model.Sample(focusWorld.X, focusWorld.Z, WeatherSeconds);
             PublishWindShaderState();
 
             if (mapBuildInProgress)
@@ -133,7 +137,7 @@ namespace Steppe.Weather
             var resolution = settings.WeatherMapResolution;
             weatherMap = new Texture2D(resolution, resolution, TextureFormat.RGBA32, false, true)
             {
-                name = "Steppe P3 Weather Map (coverage, water, rain)",
+                name = "Steppe Weather Map (coverage, water, rain, gust)",
                 hideFlags = HideFlags.DontSave,
                 wrapMode = TextureWrapMode.Clamp,
                 filterMode = FilterMode.Bilinear,
@@ -146,11 +150,12 @@ namespace Steppe.Weather
         {
             buildCenterX = centerX;
             buildCenterZ = centerZ;
-            buildWeatherSeconds = weatherSeconds;
+            buildWeatherSeconds = WeatherSeconds;
             nextMapBuildRow = 0;
             buildMaximumCoverage = 0f;
             buildMaximumWater = 0f;
             buildMaximumRain = 0f;
+            buildMaximumGust = 0f;
             mapBuildInProgress = true;
         }
 
@@ -179,11 +184,12 @@ namespace Steppe.Weather
                     buildMaximumCoverage = Mathf.Max(buildMaximumCoverage, (float)sample.CloudCoverage);
                     buildMaximumWater = Mathf.Max(buildMaximumWater, (float)sample.CloudWater);
                     buildMaximumRain = Mathf.Max(buildMaximumRain, (float)sample.RainIntensity);
+                    buildMaximumGust = Mathf.Max(buildMaximumGust, (float)sample.StormGust);
                     weatherPixels[z * resolution + x] = new Color32(
                         ToByte(sample.CloudCoverage),
                         ToByte(sample.CloudWater),
                         ToByte(sample.RainIntensity),
-                        255);
+                        ToByte(sample.StormGust));
                 }
             }
 
@@ -201,6 +207,7 @@ namespace Steppe.Weather
             MapMaximumCoverage = buildMaximumCoverage;
             MapMaximumWater = buildMaximumWater;
             MapMaximumRain = buildMaximumRain;
+            MapMaximumGust = buildMaximumGust;
             MapRevision++;
             mapBuildInProgress = false;
             secondsUntilMapUpdate = settings.WeatherMapUpdateInterval;
@@ -213,15 +220,27 @@ namespace Steppe.Weather
 
         private void PublishWindShaderState()
         {
-            var velocity = model.WindVelocity;
+            var velocity = CurrentAtFocus.SurfaceWind;
             var speed = velocity.magnitude;
             Shader.SetGlobalVector(WindVelocityId, new Vector4(
                 velocity.x,
                 velocity.y,
                 speed,
                 Mathf.Clamp01(speed / 12f)));
-            Shader.SetGlobalFloat(WindTimeId, (float)weatherSeconds);
+            Shader.SetGlobalFloat(WindTimeId, (float)WeatherSeconds);
             Shader.SetGlobalFloat(WindAnimationTimeId, (float)windAnimationSeconds);
+            Shader.SetGlobalVector(SurfaceWindAdvectionId, new Vector4(
+                (float)CurrentWind.SurfaceAdvection.X,
+                (float)CurrentWind.SurfaceAdvection.Z,
+                0f,
+                0f));
+            var basis = model.FrontDirection;
+            Shader.SetGlobalVector(WindFieldBasisId, new Vector4(basis.x, basis.y, 0f, 0f));
+            Shader.SetGlobalVector(WindRegimeId, new Vector4(
+                CurrentWind.Gustiness,
+                (float)CurrentAtFocus.StormGust,
+                0f,
+                0f));
             Shader.SetGlobalVector(GustScalesId, new Vector4(
                 settings.WindGustWavelength,
                 settings.WindGustCrossScale,

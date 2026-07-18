@@ -1,5 +1,6 @@
 using System.Collections;
 using NUnit.Framework;
+using Steppe.Ecology;
 using Steppe.Player;
 using Steppe.Prototype;
 using Steppe.Rendering;
@@ -29,6 +30,8 @@ namespace Steppe.Tests
             var streamer = Object.FindAnyObjectByType<TerrainChunkStreamer>();
             var grass = Object.FindAnyObjectByType<SteppeGrassRenderer>();
             var timeSystem = Object.FindAnyObjectByType<SteppeTimeSystem>();
+            var weatherSystem = Object.FindAnyObjectByType<SteppeWeatherSystem>();
+            var ecologySystem = Object.FindAnyObjectByType<SteppeEcologySystem>();
             var workScheduler = Object.FindAnyObjectByType<WorldWorkScheduler>();
 
             Assert.That(cameraController, Is.Not.Null);
@@ -40,14 +43,49 @@ namespace Steppe.Tests
             Assert.That(Object.FindAnyObjectByType<SteppeWeatherSystem>(), Is.Not.Null);
             Assert.That(Object.FindAnyObjectByType<SteppeCloudLayer>(), Is.Not.Null);
             Assert.That(Object.FindAnyObjectByType<SteppeRainPresentation>(), Is.Not.Null);
+            Assert.That(ecologySystem, Is.Not.Null);
             Assert.That(Object.FindAnyObjectByType<SteppeGrassRenderer>(), Is.Not.Null);
             Assert.That(workScheduler, Is.Not.Null);
-            Assert.That(workScheduler.RegisteredSourceCount, Is.GreaterThanOrEqualTo(3));
+            Assert.That(workScheduler.RegisteredSourceCount, Is.GreaterThanOrEqualTo(4));
             Assert.That(workScheduler.TotalStepsExecuted, Is.GreaterThan(0));
+            Assert.That(ecologySystem.ActiveCellCount, Is.GreaterThan(0));
+            Assert.That(ecologySystem.StoredCellCount, Is.GreaterThan(0));
+            Assert.That(ecologySystem.IsStateMapReady, Is.True);
+            Assert.That(ecologySystem.StateMap, Is.Not.Null);
+            Assert.That(ecologySystem.StateMap.width, Is.EqualTo(128));
+            Assert.That(ecologySystem.StateMap.height, Is.EqualTo(128));
+            Assert.That(Shader.GetGlobalTexture("_SteppeEcologyStateMap"), Is.SameAs(ecologySystem.StateMap));
+            var ecologyMapParameters = Shader.GetGlobalVector("_SteppeEcologyMapParameters");
+            Assert.That(ecologyMapParameters.x, Is.EqualTo(ecologySystem.StateMap.width));
+            Assert.That(ecologyMapParameters.y, Is.EqualTo(1f));
+            Assert.That(ecologyMapParameters.w, Is.EqualTo(65536f));
+            var focusWorld = Object.FindAnyObjectByType<FloatingOriginSystem>()
+                .LocalToWorld(cameraController.transform.position);
+            Assert.That(ecologySystem.TryGetState(focusWorld.X, focusWorld.Z, out var focusEcology), Is.True);
+            Assert.That(focusEcology.RootWater, Is.InRange(0.0, 1.0));
+            for (var frame = 0; frame < 40 && ecologySystem.MapRevision < 2; frame++)
+            {
+                yield return null;
+            }
+            Assert.That(ecologySystem.MapRevision, Is.GreaterThanOrEqualTo(2));
+            Assert.That(
+                ecologySystem.TryGetMapPixelCoordinate(ecologySystem.CenterCoordinate, out var mapX, out var mapZ),
+                Is.True);
+            var mapPixel = ecologySystem.StateMap.GetPixels32()[mapZ * ecologySystem.StateMap.width + mapX];
+            Assert.That(
+                SteppeEcologyMapEncoding.Decode(mapPixel.r),
+                Is.EqualTo(focusEcology.SurfaceWater).Within(2.0 / 255.0));
+            Assert.That(
+                SteppeEcologyMapEncoding.Decode(mapPixel.a),
+                Is.EqualTo(focusEcology.SurfaceCrust).Within(2.0 / 255.0));
             Assert.That(GameObject.Find("Steppe Sun"), Is.Not.Null);
             Assert.That(GameObject.Find("Steppe Moon"), Is.Not.Null);
             Assert.That(RenderSettings.skybox, Is.Not.Null);
             Assert.That(RenderSettings.skybox.shader.name, Is.EqualTo("Steppe/Skybox"));
+            Assert.That(Shader.Find("Steppe/Terrain Surface"), Is.Not.Null);
+            Assert.That(Shader.Find("Steppe/Terrain Surface").isSupported, Is.True);
+            Assert.That(Shader.Find("Steppe/Grass Indirect"), Is.Not.Null);
+            Assert.That(Shader.Find("Steppe/Grass Indirect").isSupported, Is.True);
             Assert.That(timeSystem.DebugMultiplier, Is.EqualTo(1f));
             Assert.That(GameObject.Find("Cloud Layer"), Is.Not.Null);
             Assert.That(GameObject.Find("Rain Volume"), Is.Not.Null);
@@ -65,17 +103,75 @@ namespace Steppe.Tests
                 Assert.That(new Vector2(wind.x, wind.y).magnitude, Is.GreaterThan(0.1f));
                 Assert.That(wind.z, Is.EqualTo(new Vector2(wind.x, wind.y).magnitude).Within(0.001f));
                 Assert.That(
+                    Vector2.Distance(new Vector2(wind.x, wind.y), weatherSystem.CurrentAtFocus.SurfaceWind),
+                    Is.LessThan(0.001f));
+                Assert.That(
                     Shader.GetGlobalFloat("_SteppeWindTime"),
-                    Is.EqualTo((float)Object.FindAnyObjectByType<SteppeWeatherSystem>().WeatherSeconds).Within(0.05f));
+                    Is.EqualTo((float)weatherSystem.WeatherSeconds).Within(0.05f));
                 Assert.That(Shader.GetGlobalFloat("_SteppeWindAnimationTime"), Is.GreaterThan(0f));
                 Assert.That(
                     Shader.GetGlobalFloat("_SteppeWindAnimationTime"),
-                    Is.EqualTo((float)Object.FindAnyObjectByType<SteppeWeatherSystem>().WindAnimationSeconds).Within(0.01f));
+                    Is.EqualTo((float)weatherSystem.WindAnimationSeconds).Within(0.01f));
+                var windAdvection = Shader.GetGlobalVector("_SteppeSurfaceWindAdvection");
+                Assert.That(windAdvection.x, Is.EqualTo((float)weatherSystem.CurrentWind.SurfaceAdvection.X).Within(0.01f));
+                Assert.That(windAdvection.y, Is.EqualTo((float)weatherSystem.CurrentWind.SurfaceAdvection.Z).Within(0.01f));
+                Assert.That(Shader.GetGlobalVector("_SteppeWindFieldBasis").magnitude, Is.GreaterThan(0.9f));
             }
             else
             {
                 Assert.That(Object.FindAnyObjectByType<SteppeLegacyVegetationRenderer>(), Is.Not.Null);
             }
+        }
+
+        [UnityTest]
+        public IEnumerator WeatherTimeTracksCanonicalClockAfterManualAdvance()
+        {
+            if (Object.FindAnyObjectByType<SteppePrototypeBootstrap>() == null)
+            {
+                new GameObject("P1 Canonical Time Test Bootstrap").AddComponent<SteppePrototypeBootstrap>();
+            }
+
+            yield return null;
+
+            var timeSystem = Object.FindAnyObjectByType<SteppeTimeSystem>();
+            var weatherSystem = Object.FindAnyObjectByType<SteppeWeatherSystem>();
+            timeSystem.AdvanceSimulationSeconds(12345.678);
+
+            yield return null;
+
+            Assert.That(weatherSystem.WeatherSeconds, Is.GreaterThan(0.0));
+            Assert.That(
+                Shader.GetGlobalFloat("_SteppeWindTime"),
+                Is.EqualTo((float)weatherSystem.WeatherSeconds).Within(0.05f));
+        }
+
+        [UnityTest]
+        public IEnumerator EcologyRetainsARecordAfterItLeavesTheActiveHorizon()
+        {
+            if (Object.FindAnyObjectByType<SteppePrototypeBootstrap>() == null)
+            {
+                new GameObject("P7 Persistence Test Bootstrap").AddComponent<SteppePrototypeBootstrap>();
+            }
+
+            var ecology = Object.FindAnyObjectByType<SteppeEcologySystem>();
+            var cameraController = Object.FindAnyObjectByType<FlyCameraController>();
+            var oldCoordinate = ecology.CenterCoordinate;
+            var oldMapOrigin = ecology.MapOriginCoordinate;
+            for (var frame = 0; frame < 10 && !ecology.TryGetState(oldCoordinate, out _); frame++)
+            {
+                yield return null;
+            }
+
+            Assert.That(ecology.TryGetState(oldCoordinate, out var before), Is.True);
+            cameraController.transform.position += Vector3.right * 12000f;
+            yield return null;
+            yield return null;
+
+            Assert.That(ecology.IsActive(oldCoordinate), Is.False);
+            Assert.That(ecology.TryGetState(oldCoordinate, out var after), Is.True);
+            Assert.That(after.LastSimulationSeconds, Is.EqualTo(before.LastSimulationSeconds));
+            Assert.That(ecology.MapOriginCoordinate, Is.Not.EqualTo(oldMapOrigin));
+            Assert.That(Shader.GetGlobalTexture("_SteppeEcologyStateMap"), Is.SameAs(ecology.StateMap));
         }
 
         [UnityTest]
@@ -132,6 +228,7 @@ namespace Steppe.Tests
             Assert.That(weather.MapMaximumCoverage, Is.GreaterThan(0.7f));
             Assert.That(weather.MapMaximumWater, Is.GreaterThan(0.7f));
             Assert.That(weather.MapMaximumRain, Is.GreaterThan(0.01f));
+            Assert.That(weather.MapMaximumGust, Is.GreaterThan(0.2f));
             Assert.That(clouds.IsReady, Is.True);
             Assert.That(clouds.GetComponent<MeshRenderer>(), Is.Null, "Volumetric clouds must not use a visible dome mesh");
             Assert.That(clouds.GetComponent<MeshFilter>(), Is.Null, "Volumetric clouds must not use a carrier mesh");
