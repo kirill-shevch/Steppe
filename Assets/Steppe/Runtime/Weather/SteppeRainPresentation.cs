@@ -1,5 +1,7 @@
 using System;
 using Steppe.Settings;
+using Steppe.Time;
+using Steppe.World;
 using UnityEngine;
 using UnityEngine.Rendering;
 
@@ -16,6 +18,9 @@ namespace Steppe.Weather
         private SteppeWorldSettings settings;
         private SteppeWeatherSystem weatherSystem;
         private Transform focus;
+        private SteppeTimeSystem timeSystem;
+        private FloatingOriginSystem floatingOrigin;
+        private SteppeLocalClimateSampler climateSampler;
         private ParticleSystem rainParticles;
         private Material rainMaterial;
         private bool ownsMaterial;
@@ -24,16 +29,23 @@ namespace Steppe.Weather
         public ParticleSystem Particles => rainParticles;
         public ParticleSystemRenderer Renderer { get; private set; }
         public float DisplayedIntensity => displayedIntensity;
+        public double CurrentAirTemperatureC { get; private set; }
+        public float CurrentRainFraction { get; private set; } = 1f;
 
         public void Configure(
             SteppeWorldSettings worldSettings,
             SteppeWeatherSystem weather,
+            SteppeTimeSystem clock,
+            FloatingOriginSystem origin,
             Transform focusTransform,
             Material material = null)
         {
             settings = worldSettings != null ? worldSettings : throw new ArgumentNullException(nameof(worldSettings));
             weatherSystem = weather != null ? weather : throw new ArgumentNullException(nameof(weather));
+            timeSystem = clock != null ? clock : throw new ArgumentNullException(nameof(clock));
+            floatingOrigin = origin != null ? origin : throw new ArgumentNullException(nameof(origin));
             focus = focusTransform != null ? focusTransform : throw new ArgumentNullException(nameof(focusTransform));
+            climateSampler = new SteppeLocalClimateSampler(settings);
 
             rainParticles = GetComponent<ParticleSystem>();
             if (rainParticles == null)
@@ -119,14 +131,26 @@ namespace Steppe.Weather
 
         private void Update()
         {
-            if (settings == null || weatherSystem == null || focus == null || rainParticles == null)
+            if (settings == null
+                || weatherSystem == null
+                || timeSystem == null
+                || floatingOrigin == null
+                || focus == null
+                || rainParticles == null)
             {
                 return;
             }
 
             transform.position = focus.position + Vector3.up * settings.RainSpawnHeight;
 
-            var targetIntensity = Mathf.Clamp01((float)weatherSystem.CurrentAtFocus.RainIntensity);
+            var focusWorld = floatingOrigin.LocalToWorld(focus.position);
+            CurrentAirTemperatureC = climateSampler.SampleTemperature(
+                focusWorld.X,
+                focusWorld.Z,
+                timeSystem.Current);
+            CurrentRainFraction = (float)SteppePrecipitationPhase.RainFraction(CurrentAirTemperatureC);
+            var targetIntensity = Mathf.Clamp01(
+                (float)weatherSystem.CurrentAtFocus.RainIntensity * CurrentRainFraction);
             var response = targetIntensity > displayedIntensity ? 1.8f : 0.75f;
             displayedIntensity = Mathf.MoveTowards(
                 displayedIntensity,

@@ -52,10 +52,11 @@ namespace Steppe.Settings
         [Header("World time and clear-sky climate")]
         [Tooltip("One game day lasts twenty real minutes at the default value.")]
         [SerializeField, Min(1f)] private float simulationSecondsPerRealSecond = 72f;
-        [Tooltip("Temporary test year: four seasons of approximately three game days each.")]
-        [SerializeField, Range(4, 365)] private int daysPerYear = 12;
+        [Tooltip("Length of one biological season. Four equal seasons form the canonical year.")]
+        [SerializeField, Range(1, 90)] private int daysPerSeason = 15;
         [SerializeField, Range(-66f, 66f)] private float latitudeDegrees = 48f;
-        [SerializeField, Range(0f, 364f)] private float startingDayOfYear = 2f;
+        [Tooltip("Day 10 preserves the former early-spring starting phase in the new 60-day year.")]
+        [SerializeField, Range(0f, 359f)] private float startingDayOfYear = 10f;
         [SerializeField, Range(0f, 24f)] private float startingHour = 8f;
         [SerializeField, Min(0f)] private float seasonalTemperatureAmplitude = 14f;
         [SerializeField, Min(0f)] private float diurnalTemperatureAmplitude = 6f;
@@ -118,6 +119,44 @@ namespace Steppe.Settings
         [Tooltip("Minimum real-time interval between CPU state changes and one batched GPU upload.")]
         [SerializeField, Min(0.05f)] private float ecologyStateMapUploadInterval = 0.25f;
 
+        [Header("P10 vegetation phenology")]
+        [SerializeField, Range(0.05f, 4f)] private float vegetationGreeningPerDay = 1.35f;
+        [SerializeField, Range(0.05f, 4f)] private float vegetationCuringPerDay = 0.72f;
+        [SerializeField, Range(0.005f, 1f)] private float vegetationBiomassGrowthPerDay = 0.12f;
+        [Tooltip("Daily decomposition rate of cured standing material under favourable conditions.")]
+        [SerializeField, Range(0.001f, 0.25f)] private float vegetationDryBiomassDecayPerDay = 0.025f;
+        [Tooltip("Additional collapse of dry stems under persistent wind, snow load and thaw.")]
+        [SerializeField, Range(0f, 0.25f)] private float vegetationLodgingPerDay = 0.018f;
+
+        [Header("P11 snow and freezing")]
+        [Tooltip("Normalized snow-water storage produced by one hour of maximum cold precipitation.")]
+        [SerializeField, Range(0.01f, 1f)] private float snowStoragePerHour = 0.18f;
+        [SerializeField, Range(0.001f, 0.25f)] private float snowMeltPerHour = 0.04f;
+        [SerializeField, Range(0.005f, 0.5f)] private float soilFreezePerHour = 0.075f;
+        [SerializeField, Range(0.005f, 0.5f)] private float soilThawPerHour = 0.12f;
+        [SerializeField, Min(20f)] private float snowEmissionArea = 180f;
+        [SerializeField, Min(5f)] private float snowSpawnHeight = 36f;
+        [SerializeField, Min(0.5f)] private float snowFallSpeed = 4.2f;
+        [SerializeField, Range(0f, 1.5f)] private float snowWindInfluence = 0.82f;
+        [SerializeField, Min(100)] private int snowMaxParticles = 5000;
+        [SerializeField, Min(10f)] private float snowMaximumEmissionRate = 1800f;
+
+        [Header("P9 wind-driven dust")]
+        [Tooltip("Radius of the camera-local dust source field. Authoritative soil state remains world anchored.")]
+        [SerializeField, Min(40f)] private float dustEmissionRadius = 240f;
+        [Tooltip("Stable spacing used to quantize dust source points in canonical world space.")]
+        [SerializeField, Min(2f)] private float dustSourceSpacing = 12f;
+        [SerializeField, Min(0f)] private float dustSpawnHeight = 0.22f;
+        [SerializeField, Min(100)] private int dustMaxParticles = 3600;
+        [Tooltip("Maximum dry-ground source attempts per second. Soil and wind decide which attempts emit.")]
+        [SerializeField, Min(10f)] private float dustMaximumCandidateRate = 520f;
+        [Tooltip("Minimum wind speed for completely bare, dry and uncrusted soil.")]
+        [SerializeField, Range(1f, 20f)] private float dustBaseWindThreshold = 5.5f;
+        [Tooltip("Wind speed at which an exposed dust source reaches its full response.")]
+        [SerializeField, Range(4f, 30f)] private float dustFullEmissionWindSpeed = 16f;
+        [Tooltip("Fraction of surface wind inherited by airborne dust.")]
+        [SerializeField, Range(0.2f, 1.5f)] private float dustWindVelocityRatio = 0.82f;
+
         [Header("P4 wind presentation")]
         [Tooltip("Distance between the broad dark/silver gust bands visible across feather grass.")]
         [SerializeField, Min(80f)] private float windGustWavelength = 420f;
@@ -153,6 +192,22 @@ namespace Steppe.Settings
         [SerializeField, Min(5f)] private float initialCameraHeight = 120f;
         [SerializeField, Min(1000f)] private float cameraFarClip = 20000f;
 
+        [Header("Physical player")]
+        [SerializeField, Min(0.25f)] private float playerBallRadius = 1.25f;
+        [SerializeField, Min(1f)] private float playerBallMass = 18f;
+        [SerializeField, Min(1f)] private float playerDriveAcceleration = 24f;
+        [SerializeField, Min(1f)] private float playerMaximumSpeed = 22f;
+        [SerializeField, Min(2f)] private float playerCameraDistance = 10f;
+        [SerializeField, Min(0.5f)] private float playerCameraHeight = 2.8f;
+
+        [Header("Physical tracks")]
+        [SerializeField, Min(0.5f)] private float trackCellSize = 1.5f;
+        [SerializeField, Range(128, 512)] private int trackMapResolution = 512;
+        [SerializeField, Min(0.02f)] private float trackMapUploadInterval = 0.1f;
+        [SerializeField, Min(0.1f)] private float maximumMudSinkDepth = 0.22f;
+        [SerializeField, Min(0.1f)] private float maximumSnowSinkDepth = 0.42f;
+        [SerializeField, Min(0.01f)] private float maximumTrackRutDepth = 0.12f;
+
         public int WorldSeed => worldSeed;
         public int GeneratorVersion => generatorVersion;
         public TerrainOverrideMap TerrainOverrides => terrainOverrides;
@@ -178,7 +233,8 @@ namespace Steppe.Settings
         public float GrassFullDensityRadius => Mathf.Max(16f, grassFullDensityRadius);
         public float GrassDrawRadius => Mathf.Max(grassDrawRadius, GrassFullDensityRadius + GrassCellSize);
         public float SimulationSecondsPerRealSecond => simulationSecondsPerRealSecond;
-        public int DaysPerYear => daysPerYear;
+        public int DaysPerSeason => Mathf.Clamp(daysPerSeason, 1, 90);
+        public int DaysPerYear => DaysPerSeason * 4;
         public float LatitudeDegrees => latitudeDegrees;
         public float StartingDayOfYear => Mathf.Repeat(startingDayOfYear, DaysPerYear);
         public float StartingHour => Mathf.Repeat(startingHour, 24f);
@@ -239,6 +295,37 @@ namespace Steppe.Settings
         }
         public float EcologyStateMapUploadInterval => Mathf.Max(0.05f, ecologyStateMapUploadInterval);
         public float EcologyStateMapWorldSize => EcologyStateMapResolution * EcologyCellSize;
+        public float VegetationGreeningPerDay => Mathf.Clamp(vegetationGreeningPerDay, 0.05f, 4f);
+        public float VegetationCuringPerDay => Mathf.Clamp(vegetationCuringPerDay, 0.05f, 4f);
+        public float VegetationBiomassGrowthPerDay => Mathf.Clamp(
+            vegetationBiomassGrowthPerDay,
+            0.005f,
+            1f);
+        public float VegetationDryBiomassDecayPerDay => Mathf.Clamp(
+            vegetationDryBiomassDecayPerDay,
+            0.001f,
+            0.25f);
+        public float VegetationLodgingPerDay => Mathf.Clamp(vegetationLodgingPerDay, 0f, 0.25f);
+        public float SnowStoragePerHour => Mathf.Clamp(snowStoragePerHour, 0.01f, 1f);
+        public float SnowMeltPerHour => Mathf.Clamp(snowMeltPerHour, 0.001f, 0.25f);
+        public float SoilFreezePerHour => Mathf.Clamp(soilFreezePerHour, 0.005f, 0.5f);
+        public float SoilThawPerHour => Mathf.Clamp(soilThawPerHour, 0.005f, 0.5f);
+        public float SnowEmissionArea => Mathf.Max(20f, snowEmissionArea);
+        public float SnowSpawnHeight => Mathf.Max(5f, snowSpawnHeight);
+        public float SnowFallSpeed => Mathf.Max(0.5f, snowFallSpeed);
+        public float SnowWindInfluence => Mathf.Clamp(snowWindInfluence, 0f, 1.5f);
+        public int SnowMaxParticles => Mathf.Max(100, snowMaxParticles);
+        public float SnowMaximumEmissionRate => Mathf.Max(10f, snowMaximumEmissionRate);
+        public float DustEmissionRadius => Mathf.Max(40f, dustEmissionRadius);
+        public float DustSourceSpacing => Mathf.Max(2f, dustSourceSpacing);
+        public float DustSpawnHeight => Mathf.Max(0f, dustSpawnHeight);
+        public int DustMaxParticles => Mathf.Max(100, dustMaxParticles);
+        public float DustMaximumCandidateRate => Mathf.Max(10f, dustMaximumCandidateRate);
+        public float DustBaseWindThreshold => Mathf.Clamp(dustBaseWindThreshold, 1f, 20f);
+        public float DustFullEmissionWindSpeed => Mathf.Max(
+            DustBaseWindThreshold + 0.5f,
+            Mathf.Clamp(dustFullEmissionWindSpeed, 4f, 30f));
+        public float DustWindVelocityRatio => Mathf.Clamp(dustWindVelocityRatio, 0.2f, 1.5f);
         public float WindGustWavelength => Mathf.Max(80f, windGustWavelength);
         public float WindGustCrossScale => Mathf.Max(WindGustWavelength, windGustCrossScale);
         public float WindFineScale => Mathf.Max(8f, windFineScale);
@@ -259,6 +346,19 @@ namespace Steppe.Settings
         public float MouseSensitivity => mouseSensitivity;
         public float InitialCameraHeight => initialCameraHeight;
         public float CameraFarClip => cameraFarClip;
+        public float PlayerBallRadius => Mathf.Max(0.25f, playerBallRadius);
+        public float PlayerBallMass => Mathf.Max(1f, playerBallMass);
+        public float PlayerDriveAcceleration => Mathf.Max(1f, playerDriveAcceleration);
+        public float PlayerMaximumSpeed => Mathf.Max(1f, playerMaximumSpeed);
+        public float PlayerCameraDistance => Mathf.Max(2f, playerCameraDistance);
+        public float PlayerCameraHeight => Mathf.Max(0.5f, playerCameraHeight);
+        public float TrackCellSize => Mathf.Max(0.5f, trackCellSize);
+        public int TrackMapResolution => Mathf.Clamp(Mathf.ClosestPowerOfTwo(trackMapResolution), 128, 512);
+        public float TrackMapWorldSize => TrackCellSize * TrackMapResolution;
+        public float TrackMapUploadInterval => Mathf.Max(0.02f, trackMapUploadInterval);
+        public float MaximumMudSinkDepth => Mathf.Max(0.1f, maximumMudSinkDepth);
+        public float MaximumSnowSinkDepth => Mathf.Max(0.1f, maximumSnowSinkDepth);
+        public float MaximumTrackRutDepth => Mathf.Max(0.01f, maximumTrackRutDepth);
 
         public static SteppeWorldSettings CreateRuntimeDefaults()
         {

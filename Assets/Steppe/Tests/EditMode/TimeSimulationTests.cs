@@ -31,12 +31,27 @@ namespace Steppe.Tests
             var nextYear = SteppeTimeSystem.CreateSnapshot(settings, settings.DaysPerYear * 86400.0);
 
             Assert.That(start.Hour, Is.EqualTo(settings.StartingHour).Within(0.000001));
+            Assert.That(settings.DaysPerSeason, Is.EqualTo(15));
+            Assert.That(settings.DaysPerYear, Is.EqualTo(60));
             Assert.That(start.DayOfYear, Is.EqualTo(settings.StartingDayOfYear + settings.StartingHour / 24.0).Within(0.000001));
             Assert.That(start.Season, Is.EqualTo(SteppeSeason.Spring));
             Assert.That(nextDay.DayOfYear, Is.EqualTo(start.DayOfYear + 1.0).Within(0.000001));
             Assert.That(nextDay.Hour, Is.EqualTo(start.Hour).Within(0.000001));
             Assert.That(nextYear.DayOfYear, Is.EqualTo(start.DayOfYear).Within(0.000001));
             Assert.That(nextYear.Year, Is.EqualTo(start.Year + 1));
+        }
+
+        [Test]
+        public void FourSeasonWindowsEachSpanFifteenDays()
+        {
+            Assert.That(SnapshotAtCanonicalDay(7.49).Season, Is.EqualTo(SteppeSeason.Winter));
+            Assert.That(SnapshotAtCanonicalDay(7.51).Season, Is.EqualTo(SteppeSeason.Spring));
+            Assert.That(SnapshotAtCanonicalDay(22.49).Season, Is.EqualTo(SteppeSeason.Spring));
+            Assert.That(SnapshotAtCanonicalDay(22.51).Season, Is.EqualTo(SteppeSeason.Summer));
+            Assert.That(SnapshotAtCanonicalDay(37.49).Season, Is.EqualTo(SteppeSeason.Summer));
+            Assert.That(SnapshotAtCanonicalDay(37.51).Season, Is.EqualTo(SteppeSeason.Autumn));
+            Assert.That(SnapshotAtCanonicalDay(52.49).Season, Is.EqualTo(SteppeSeason.Autumn));
+            Assert.That(SnapshotAtCanonicalDay(52.51).Season, Is.EqualTo(SteppeSeason.Winter));
         }
 
         [Test]
@@ -84,6 +99,18 @@ namespace Steppe.Tests
             Assert.That(warm.AirTemperatureC, Is.GreaterThan(cold.AirTemperatureC + 10.0));
             Assert.That(warm.Biome, Is.EqualTo(surface.DominantBiome));
             Assert.That(cold.Biome, Is.EqualTo(surface.DominantBiome));
+        }
+
+        private SteppeTimeSnapshot SnapshotAtCanonicalDay(double dayOfYear)
+        {
+            var start = settings.StartingDayOfYear + settings.StartingHour / 24.0;
+            var forwardDays = dayOfYear - start;
+            if (forwardDays < 0.0)
+            {
+                forwardDays += settings.DaysPerYear;
+            }
+
+            return SteppeTimeSystem.CreateSnapshot(settings, forwardDays * 86400.0);
         }
     }
 }

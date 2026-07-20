@@ -82,6 +82,17 @@ namespace Steppe.Terrain
             }
         }
 
+        public bool HasPhysicsSurfaceAt(double worldX, double worldZ)
+        {
+            if (settings == null)
+            {
+                return false;
+            }
+
+            var coordinate = ChunkCoordinate.FromWorld(worldX, worldZ, settings.ChunkSize);
+            return loaded.TryGetValue(coordinate, out var chunk) && chunk.HasPhysicsCollider;
+        }
+
         private void Update()
         {
             if (settings == null || floatingOrigin == null || focus == null || worldSpaceRoot == null)

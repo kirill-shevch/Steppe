@@ -18,8 +18,11 @@ namespace Steppe.Prototype
         [SerializeField] private Material vegetationMaterial;
         [SerializeField] private Material grassMaterial;
         [SerializeField] private Material rainMaterial;
+        [SerializeField] private Material dustMaterial;
+        [SerializeField] private Material snowMaterial;
 
         private SteppeWorldSettings runtimeSettings;
+        private Material runtimeBallMaterial;
         private bool initialized;
 
         [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.AfterSceneLoad)]
@@ -57,21 +60,39 @@ namespace Steppe.Prototype
                 cameraObject.tag = "MainCamera";
             }
 
-            var cameraController = camera.GetComponent<FlyCameraController>();
-            if (cameraController == null)
+            var existingFlyController = camera.GetComponent<FlyCameraController>();
+            if (existingFlyController != null)
             {
-                const float initialZ = -64f;
-                var initialGroundHeight = (float)new TerrainHeightGenerator(runtimeSettings).SampleHeight(0.0, initialZ);
-                var initialHeight = Mathf.Max(runtimeSettings.InitialCameraHeight, initialGroundHeight + 60f);
-                camera.transform.position = new Vector3(0f, initialHeight, initialZ);
-                camera.transform.rotation = Quaternion.Euler(12f, 0f, 0f);
-                cameraController = camera.gameObject.AddComponent<FlyCameraController>();
+                existingFlyController.enabled = false;
             }
 
-            cameraController.Configure(
-                runtimeSettings.CameraMoveSpeed,
-                runtimeSettings.CameraBoostMultiplier,
-                runtimeSettings.MouseSensitivity);
+            const float initialX = 32f;
+            const float initialZ = -64f;
+            var initialGroundHeight = (float)new TerrainHeightGenerator(runtimeSettings).SampleHeight(initialX, initialZ);
+            var playerObject = new GameObject("Steppe Player Ball");
+            playerObject.transform.SetParent(transform, false);
+            playerObject.transform.position = new Vector3(
+                initialX,
+                initialGroundHeight + runtimeSettings.PlayerBallRadius + 3f,
+                initialZ);
+            var playerCollider = playerObject.AddComponent<SphereCollider>();
+            playerCollider.radius = runtimeSettings.PlayerBallRadius;
+            var playerBody = playerObject.AddComponent<Rigidbody>();
+            playerBody.isKinematic = true;
+
+            var ballVisual = GameObject.CreatePrimitive(PrimitiveType.Sphere);
+            ballVisual.name = "Ball Visual";
+            ballVisual.transform.SetParent(playerObject.transform, false);
+            ballVisual.transform.localScale = Vector3.one * (runtimeSettings.PlayerBallRadius * 2f);
+            var visualCollider = ballVisual.GetComponent<Collider>();
+            visualCollider.enabled = false;
+            Destroy(visualCollider);
+            runtimeBallMaterial = CreateBallMaterial();
+            ballVisual.GetComponent<MeshRenderer>().sharedMaterial = runtimeBallMaterial;
+
+            camera.transform.position = playerObject.transform.position
+                                        + new Vector3(0f, runtimeSettings.PlayerCameraHeight, -runtimeSettings.PlayerCameraDistance);
+            camera.transform.rotation = Quaternion.Euler(16f, 0f, 0f);
             camera.nearClipPlane = 0.1f;
             camera.farClipPlane = runtimeSettings.CameraFarClip;
             camera.clearFlags = CameraClearFlags.Skybox;
@@ -90,7 +111,7 @@ namespace Steppe.Prototype
 
             var floatingOrigin = gameObject.AddComponent<FloatingOriginSystem>();
             floatingOrigin.Configure(
-                camera.transform,
+                playerObject.transform,
                 worldSpaceObject.transform,
                 runtimeSettings.FloatingOriginThreshold,
                 runtimeSettings.ChunkSize);
@@ -99,7 +120,7 @@ namespace Steppe.Prototype
             workScheduler.Configure(runtimeSettings.WorldWorkBudgetMilliseconds);
 
             var weatherSystem = gameObject.AddComponent<SteppeWeatherSystem>();
-            weatherSystem.Configure(runtimeSettings, timeSystem, floatingOrigin, camera.transform, workScheduler);
+            weatherSystem.Configure(runtimeSettings, timeSystem, floatingOrigin, playerObject.transform, workScheduler);
 
             var ecologySystem = gameObject.AddComponent<SteppeEcologySystem>();
             ecologySystem.Configure(
@@ -107,8 +128,39 @@ namespace Steppe.Prototype
                 timeSystem,
                 weatherSystem,
                 floatingOrigin,
-                camera.transform,
+                playerObject.transform,
                 workScheduler);
+
+            var ballController = playerObject.AddComponent<SteppeBallController>();
+            ballController.Configure(
+                runtimeSettings,
+                floatingOrigin,
+                ecologySystem,
+                camera.transform,
+                ballVisual.transform);
+            var cameraController = camera.GetComponent<SteppeBallCameraController>();
+            if (cameraController == null)
+            {
+                cameraController = camera.gameObject.AddComponent<SteppeBallCameraController>();
+            }
+            cameraController.Configure(runtimeSettings, playerObject.transform, floatingOrigin);
+
+            var trackSystem = gameObject.AddComponent<SteppeTrackSystem>();
+            trackSystem.Configure(
+                runtimeSettings,
+                timeSystem,
+                floatingOrigin,
+                playerObject.transform,
+                ballController);
+
+            var atmospherePresentation = gameObject.AddComponent<SteppeAtmospherePresentation>();
+            atmospherePresentation.Configure(
+                runtimeSettings,
+                timeSystem,
+                weatherSystem,
+                ecologySystem,
+                floatingOrigin,
+                playerObject.transform);
 
             var cloudObject = new GameObject("Cloud Layer");
             cloudObject.transform.SetParent(worldSpaceObject.transform, false);
@@ -118,18 +170,46 @@ namespace Steppe.Prototype
             var rainObject = new GameObject("Rain Volume");
             rainObject.transform.SetParent(worldSpaceObject.transform, false);
             var rainPresentation = rainObject.AddComponent<SteppeRainPresentation>();
-            rainPresentation.Configure(runtimeSettings, weatherSystem, camera.transform, rainMaterial);
+            rainPresentation.Configure(
+                runtimeSettings,
+                weatherSystem,
+                timeSystem,
+                floatingOrigin,
+                camera.transform,
+                rainMaterial);
+
+            var snowObject = new GameObject("Snow Volume");
+            snowObject.transform.SetParent(worldSpaceObject.transform, false);
+            var snowPresentation = snowObject.AddComponent<SteppeSnowPresentation>();
+            snowPresentation.Configure(
+                runtimeSettings,
+                weatherSystem,
+                timeSystem,
+                floatingOrigin,
+                camera.transform,
+                snowMaterial);
+
+            var dustObject = new GameObject("Dust Field");
+            dustObject.transform.SetParent(worldSpaceObject.transform, false);
+            var dustPresentation = dustObject.AddComponent<SteppeDustPresentation>();
+            dustPresentation.Configure(
+                runtimeSettings,
+                weatherSystem,
+                ecologySystem,
+                floatingOrigin,
+                camera.transform,
+                dustMaterial);
 
             var grassObject = new GameObject("Grass Field");
             grassObject.transform.SetParent(worldSpaceObject.transform, false);
             var grassRenderer = grassObject.AddComponent<SteppeGrassRenderer>();
-            grassRenderer.Configure(runtimeSettings, floatingOrigin, camera.transform, workScheduler, grassMaterial);
+            grassRenderer.Configure(runtimeSettings, floatingOrigin, playerObject.transform, workScheduler, grassMaterial);
 
             var chunkStreamer = gameObject.AddComponent<TerrainChunkStreamer>();
             chunkStreamer.Configure(
                 runtimeSettings,
                 floatingOrigin,
-                camera.transform,
+                playerObject.transform,
                 worldSpaceObject.transform,
                 workScheduler,
                 terrainMaterial);
@@ -152,16 +232,19 @@ namespace Steppe.Prototype
                 runtimeSettings,
                 floatingOrigin,
                 chunkStreamer,
-                cameraController,
-                camera.transform,
+                ballController,
+                trackSystem,
+                playerObject.transform,
                 timeSystem,
                 weatherSystem,
                 ecologySystem,
+                dustPresentation,
+                snowPresentation,
                 grassRenderer,
                 workScheduler);
 
             var biomeNavigator = gameObject.AddComponent<BiomeDebugNavigator>();
-            biomeNavigator.Configure(runtimeSettings, floatingOrigin, camera.transform);
+            biomeNavigator.Configure(runtimeSettings, floatingOrigin, playerObject.transform, ballController);
 
             Application.targetFrameRate = 60;
         }
@@ -223,6 +306,39 @@ namespace Steppe.Prototype
             RenderSettings.ambientMode = UnityEngine.Rendering.AmbientMode.Skybox;
         }
 
+        private static Material CreateBallMaterial()
+        {
+            var shader = Shader.Find("Universal Render Pipeline/Lit")
+                         ?? Shader.Find("Universal Render Pipeline/Simple Lit")
+                         ?? Shader.Find("Standard");
+            if (shader == null)
+            {
+                throw new System.InvalidOperationException("No supported player-ball shader was found.");
+            }
+
+            var material = new Material(shader)
+            {
+                name = "Steppe Player Ball Material",
+                hideFlags = HideFlags.DontSave
+            };
+            var color = new Color(0.18f, 0.22f, 0.24f, 1f);
+            if (material.HasProperty("_BaseColor"))
+            {
+                material.SetColor("_BaseColor", color);
+            }
+            else if (material.HasProperty("_Color"))
+            {
+                material.SetColor("_Color", color);
+            }
+
+            if (material.HasProperty("_Smoothness"))
+            {
+                material.SetFloat("_Smoothness", 0.34f);
+            }
+
+            return material;
+        }
+
         private void OnDestroy()
         {
             if (settings == null && runtimeSettings != null)
@@ -234,6 +350,18 @@ namespace Steppe.Prototype
                 else
                 {
                     DestroyImmediate(runtimeSettings);
+                }
+            }
+
+            if (runtimeBallMaterial != null)
+            {
+                if (Application.isPlaying)
+                {
+                    Destroy(runtimeBallMaterial);
+                }
+                else
+                {
+                    DestroyImmediate(runtimeBallMaterial);
                 }
             }
         }

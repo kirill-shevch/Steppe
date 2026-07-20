@@ -35,6 +35,7 @@ Shader "Steppe/Grass Indirect"
             #include "Packages/com.unity.render-pipelines.universal/ShaderLibrary/Lighting.hlsl"
             #include "Assets/Steppe/Runtime/Rendering/SteppeWindField.hlsl"
             #include "Assets/Steppe/Runtime/Rendering/SteppeEcologyField.hlsl"
+            #include "Assets/Steppe/Runtime/Rendering/SteppeTrackField.hlsl"
             #define UNITY_INDIRECT_DRAW_ARGS IndirectDrawIndexedArgs
             #include "UnityIndirect.cginc"
 
@@ -85,6 +86,8 @@ Shader "Steppe/Grass Indirect"
                 half fogFactor : TEXCOORD5;
                 float2 uv : TEXCOORD6;
                 half gust : TEXCOORD7;
+                half greenFraction : TEXCOORD8;
+                half snowCoverage : TEXCOORD9;
             };
 
             float3 RotateAroundAxis(float3 value, float3 axis, float angle)
@@ -115,7 +118,14 @@ Shader "Steppe/Grass Indirect"
                 float2 rootPosition = _SteppeGrassCellOrigin.xz + instance.positionHeight.xz;
                 float2 canonicalRoot = rootPosition + _SteppeWorldOriginXZ.xz;
                 SteppeEcologyFieldSample ecology = SampleSteppeEcologyFieldLevel(canonicalRoot, 0.0);
-                float dynamicHeight = instance.positionHeight.w * ecology.biomass;
+                SteppeTrackFieldSample track = SampleSteppeTrackFieldLevel(canonicalRoot, 0.0);
+                half snowCoverage = smoothstep(0.015h, 0.22h, ecology.snowWater);
+                float snowLoad = snowCoverage * (1.0h - ecology.snowCompaction * 0.35h);
+                float standingHeight = instance.positionHeight.w
+                                       * ecology.biomass
+                                       * (1.0 - snowLoad * 0.16);
+                float dynamicHeight = standingHeight
+                                      * lerp(1.0, 0.20, track.vegetationFlattening);
                 SteppeWindFieldSample wind = SampleSteppeWindField(
                     canonicalRoot,
                     instance.parameters.z,
@@ -126,6 +136,7 @@ Shader "Steppe/Grass Indirect"
                     0.28,
                     1.0,
                     smoothstep(0.05, 0.85, instance.parameters.z));
+                flexibility *= lerp(1.0, 0.42, ecology.frozenFraction);
 
                 // Broad gusts establish the average down-wind posture. A separate local
                 // response clock makes every plant continually flex around that posture,
@@ -171,6 +182,13 @@ Shader "Steppe/Grass Indirect"
                     ? leanVector / totalLeanRatio
                     : wind.direction;
                 float2 bendDistance = dynamicHeight * leanVector * bendProfile;
+                float trackAngle = SteppeWindValueNoise(canonicalRoot / 2.15h) * 6.2831853;
+                float2 trackDirection = float2(cos(trackAngle), sin(trackAngle));
+                float2 trackLay = trackDirection
+                                  * standingHeight
+                                  * track.vegetationFlattening
+                                  * 0.58
+                                  * bendProfile;
                 float verticalDrop = dynamicHeight
                                      * (1.0 - sqrt(max(0.01, 1.0 - totalLeanRatio * totalLeanRatio)))
                                      * bendProfile;
@@ -178,7 +196,8 @@ Shader "Steppe/Grass Indirect"
                 float3 worldPosition;
                 worldPosition.xz = rootPosition
                                    + rotatedPosition * instance.colorWidth.w
-                                   + bendDistance;
+                                   + bendDistance
+                                   + trackLay;
                 worldPosition.y = instance.positionHeight.y
                                   + assetPosition.y * dynamicHeight
                                   - verticalDrop;
@@ -195,6 +214,8 @@ Shader "Steppe/Grass Indirect"
                 output.heightAlongBlade = normalizedHeight;
                 output.uv = input.uv;
                 output.gust = wind.broad;
+                output.greenFraction = ecology.greenFraction;
+                output.snowCoverage = snowCoverage;
 
                 float distanceToCamera = distance(worldPosition.xz, _WorldSpaceCameraPos.xz);
                 output.visibility = min(ecology.biomass, 1.0h - smoothstep(
@@ -228,7 +249,16 @@ Shader "Steppe/Grass Indirect"
                               * _SilverStrength
                               * lerp(0.62h, 1.24h, input.gust);
                 half gustTone = lerp(1.02h, 0.94h, input.gust);
-                half3 color = input.color * rootFactor * lighting * gustTone
+                half3 curedColor = input.color * half3(1.08h, 0.98h, 0.76h);
+                half3 livingColor = input.color * half3(0.82h, 1.16h, 0.70h);
+                half3 phenologyColor = lerp(curedColor, livingColor, input.greenFraction);
+                half snowOnBlade = input.snowCoverage
+                                   * smoothstep(0.46h, 0.94h, input.heightAlongBlade);
+                phenologyColor = lerp(
+                    phenologyColor,
+                    half3(0.84h, 0.89h, 0.92h),
+                    snowOnBlade * 0.78h);
+                half3 color = phenologyColor * rootFactor * lighting * gustTone
                               + silver * mainLight.color;
                 color = MixFog(color, input.fogFactor);
                 return half4(color, 1.0h);

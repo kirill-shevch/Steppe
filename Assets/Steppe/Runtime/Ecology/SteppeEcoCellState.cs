@@ -1,3 +1,5 @@
+using System;
+
 namespace Steppe.Ecology
 {
     /// <summary>
@@ -33,6 +35,8 @@ namespace Steppe.Ecology
         public double RootWater { get; }
         public double Biomass { get; }
         public double GreenFraction { get; }
+        public double LiveBiomass => Biomass * GreenFraction;
+        public double DryBiomass => Math.Max(0.0, Biomass - LiveBiomass);
         public double SurfaceCrust { get; }
         public double SnowWater { get; }
         public double SnowCompaction { get; }

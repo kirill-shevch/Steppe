@@ -1,4 +1,5 @@
 using System;
+using Steppe.Player;
 using Steppe.Settings;
 using Steppe.Surface;
 using Steppe.Terrain;
@@ -20,17 +21,20 @@ namespace Steppe.Prototype
         private SteppeWorldSettings settings;
         private FloatingOriginSystem floatingOrigin;
         private Transform focus;
+        private SteppeBallController ballController;
         private TerrainHeightGenerator terrainGenerator;
         private SteppeSurfaceGenerator surfaceGenerator;
 
         public void Configure(
             SteppeWorldSettings worldSettings,
             FloatingOriginSystem origin,
-            Transform focusTransform)
+            Transform focusTransform,
+            SteppeBallController playerBall = null)
         {
             settings = worldSettings;
             floatingOrigin = origin;
             focus = focusTransform;
+            ballController = playerBall;
             terrainGenerator = new TerrainHeightGenerator(settings);
             surfaceGenerator = new SteppeSurfaceGenerator(settings);
         }
@@ -71,7 +75,15 @@ namespace Steppe.Prototype
 
             hasBookmark[index] = true;
             var target = bookmarks[index];
-            focus.position = floatingOrigin.WorldToLocal(target.X, target.Y, target.Z);
+            var localTarget = floatingOrigin.WorldToLocal(target.X, target.Y, target.Z);
+            if (ballController != null)
+            {
+                ballController.Teleport(localTarget);
+            }
+            else
+            {
+                focus.position = localTarget;
+            }
         }
 
         private bool TryFindRepresentative(SteppeBiome targetBiome, out WorldPosition target)
@@ -108,13 +120,20 @@ namespace Steppe.Prototype
 
         private bool TryCandidate(double worldX, double worldZ, SteppeBiome targetBiome, out WorldPosition target)
         {
-            var height = terrainGenerator.SampleHeight(worldX, worldZ);
-            var normal = terrainGenerator.SampleNormal(worldX, worldZ, 2.0);
-            var surface = surfaceGenerator.Sample(worldX, worldZ, height, normal.y);
+            // Search points are deliberately offset from exact 512 m chunk seams so
+            // a teleported physical sphere cannot balance between two mesh colliders.
+            var candidateX = worldX + settings.ChunkSize * 0.37;
+            var candidateZ = worldZ + settings.ChunkSize * 0.23;
+            var height = terrainGenerator.SampleHeight(candidateX, candidateZ);
+            var normal = terrainGenerator.SampleNormal(candidateX, candidateZ, 2.0);
+            var surface = surfaceGenerator.Sample(candidateX, candidateZ, height, normal.y);
             if (surface.DominantBiome == targetBiome
                 && GetWeight(surface.Biomes, targetBiome) >= RepresentativeWeight)
             {
-                target = new WorldPosition(worldX, height + settings.InitialCameraHeight, worldZ);
+                target = new WorldPosition(
+                    candidateX,
+                    height + settings.PlayerBallRadius + 2.0,
+                    candidateZ);
                 return true;
             }
 

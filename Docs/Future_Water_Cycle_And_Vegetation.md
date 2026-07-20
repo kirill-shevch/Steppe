@@ -2,9 +2,10 @@
 
 ## Status
 
-In progress. P7 implements persistent surface/root water and soil crust; P8 publishes
-that state to terrain and grass through one canonical GPU map. Dynamic plant growth,
-greening, curing and dormancy remain separate later milestones.
+Implemented through P11. P7 stores persistent soil memory, P8 publishes it to the GPU,
+P9 derives wind-driven dust, P10 advances biomass and greenness, and P11 adds snowfall,
+snow storage, melt and frozen soil. Disk serialization and traversal resistance remain
+later milestones.
 
 ## Goal
 
@@ -59,8 +60,9 @@ A small world-anchored state texture is now sampled by both grass and terrain (P
 - B: greenness versus cured material;
 - A: dry soil crust.
 
-Snow, frost and dormancy require a later map/packing extension rather than silently
+Snow, compaction and frozen soil use a separate cryosphere map rather than silently
 reusing the soil-crust channel.
 
-The future gate is: soil darkens during rain, greening follows later, the effect remains
-after the cloud passes, and a hot dry interval reverses it gradually.
+The implemented gate is: soil darkens during rain, greening follows later, the effect
+remains after the cloud passes, and a hot dry interval reverses it gradually. Cold
+precipitation accumulates as snow and a thaw releases that stored water.

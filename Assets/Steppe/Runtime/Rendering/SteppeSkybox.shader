@@ -19,6 +19,8 @@ Shader "Steppe/Skybox"
             float _SteppeDaylight;
             float _SteppeNightAmount;
             float _SteppeMoonVisibility;
+            float _SteppeHeatHaze;
+            float _SteppeWindAnimationTime;
             float4 _SteppeSunDirection;
             float4 _SteppeMoonDirection;
 
@@ -61,6 +63,17 @@ Shader "Steppe/Skybox"
                 half3 daySky = lerp(dayHorizon, dayZenith, upperSky);
                 half3 nightSky = lerp(nightHorizon, nightZenith, upperSky);
                 half3 color = lerp(nightSky, daySky, saturate(_SteppeDaylight));
+
+                // Hot, dry air becomes a restless mirage band at the horizon.
+                // This is a world signal, not a screen-space UI indicator.
+                float horizonBand = exp(-abs(direction.y) * 42.0);
+                float heatWave = sin(direction.x * 310.0 + _SteppeWindAnimationTime * 5.8)
+                                 * sin(direction.z * 227.0 - _SteppeWindAnimationTime * 4.1);
+                color += half3(0.12, 0.075, 0.025)
+                         * heatWave
+                         * horizonBand
+                         * saturate(_SteppeHeatHaze)
+                         * saturate(_SteppeDaylight);
 
                 float sunDot = saturate(dot(direction, normalize(_SteppeSunDirection.xyz)));
                 float twilight = pow(sunDot, 28.0) * horizon;

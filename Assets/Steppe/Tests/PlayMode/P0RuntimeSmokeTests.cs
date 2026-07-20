@@ -16,7 +16,7 @@ namespace Steppe.Tests
     public sealed class P0RuntimeSmokeTests
     {
         [UnityTest]
-        public IEnumerator PrototypeCreatesFlyingCameraAndStreamsTerrain()
+        public IEnumerator PrototypeCreatesPhysicalBallAndStreamsTerrain()
         {
             if (Object.FindAnyObjectByType<SteppePrototypeBootstrap>() == null)
             {
@@ -26,15 +26,54 @@ namespace Steppe.Tests
             yield return null;
             yield return null;
 
-            var cameraController = Object.FindAnyObjectByType<FlyCameraController>();
+            var ballController = Object.FindAnyObjectByType<SteppeBallController>();
+            var cameraController = Object.FindAnyObjectByType<SteppeBallCameraController>();
+            var tracks = Object.FindAnyObjectByType<SteppeTrackSystem>();
             var streamer = Object.FindAnyObjectByType<TerrainChunkStreamer>();
             var grass = Object.FindAnyObjectByType<SteppeGrassRenderer>();
             var timeSystem = Object.FindAnyObjectByType<SteppeTimeSystem>();
             var weatherSystem = Object.FindAnyObjectByType<SteppeWeatherSystem>();
             var ecologySystem = Object.FindAnyObjectByType<SteppeEcologySystem>();
+            var dust = Object.FindAnyObjectByType<SteppeDustPresentation>();
+            var snow = Object.FindAnyObjectByType<SteppeSnowPresentation>();
             var workScheduler = Object.FindAnyObjectByType<WorldWorkScheduler>();
 
             Assert.That(cameraController, Is.Not.Null);
+            Assert.That(ballController, Is.Not.Null);
+            Assert.That(ballController.GetComponent<SphereCollider>(), Is.Not.Null);
+            Assert.That(ballController.GetComponent<Rigidbody>(), Is.Not.Null);
+            Assert.That(tracks, Is.Not.Null);
+            Assert.That(tracks.StateMap, Is.Not.Null);
+            Assert.That(tracks.StateMap.width, Is.EqualTo(512));
+            Assert.That(Shader.GetGlobalTexture("_SteppeTrackStateMap"), Is.SameAs(tracks.StateMap));
+            var originSystem = Object.FindAnyObjectByType<FloatingOriginSystem>();
+            var initialBallWorld = originSystem.LocalToWorld(ballController.transform.position);
+            for (var frame = 0;
+                 frame < 120 && !streamer.HasPhysicsSurfaceAt(initialBallWorld.X, initialBallWorld.Z);
+                 frame++)
+            {
+                yield return null;
+            }
+            streamer.GetLodCounts(out var nearPhysicsLod, out var middlePhysicsLod, out var farPhysicsLod);
+            Assert.That(
+                streamer.HasPhysicsSurfaceAt(initialBallWorld.X, initialBallWorld.Z),
+                Is.True,
+                $"The near terrain chunk never exposed a physics collider. world={initialBallWorld}, "
+                + $"center={streamer.CenterCoordinate}, loaded={streamer.LoadedCount}, "
+                + $"lod={nearPhysicsLod}/{middlePhysicsLod}/{farPhysicsLod}, "
+                + $"meshColliders={Object.FindObjectsByType<MeshCollider>(FindObjectsInactive.Include).Length}");
+            for (var frame = 0; frame < 40 && ballController.Body.isKinematic; frame++)
+            {
+                yield return new WaitForFixedUpdate();
+            }
+            Assert.That(ballController.Body.isKinematic, Is.False, "Ball never attached to a streamed terrain collider.");
+            Assert.That(Object.FindObjectsByType<MeshCollider>().Length, Is.GreaterThan(0));
+            ballController.Body.linearVelocity = Vector3.forward * 3f;
+            for (var fixedStep = 0; fixedStep < 5; fixedStep++)
+            {
+                yield return new WaitForFixedUpdate();
+            }
+            Assert.That(tracks.StoredTrackCellCount, Is.GreaterThan(0), "Rolling ball did not leave a canonical track.");
             Assert.That(streamer, Is.Not.Null);
             Assert.That(streamer.LoadedCount, Is.GreaterThan(0));
             Assert.That(Object.FindAnyObjectByType<BiomeDebugNavigator>(), Is.Not.Null);
@@ -44,6 +83,8 @@ namespace Steppe.Tests
             Assert.That(Object.FindAnyObjectByType<SteppeCloudLayer>(), Is.Not.Null);
             Assert.That(Object.FindAnyObjectByType<SteppeRainPresentation>(), Is.Not.Null);
             Assert.That(ecologySystem, Is.Not.Null);
+            Assert.That(dust, Is.Not.Null);
+            Assert.That(snow, Is.Not.Null);
             Assert.That(Object.FindAnyObjectByType<SteppeGrassRenderer>(), Is.Not.Null);
             Assert.That(workScheduler, Is.Not.Null);
             Assert.That(workScheduler.RegisteredSourceCount, Is.GreaterThanOrEqualTo(4));
@@ -54,13 +95,19 @@ namespace Steppe.Tests
             Assert.That(ecologySystem.StateMap, Is.Not.Null);
             Assert.That(ecologySystem.StateMap.width, Is.EqualTo(128));
             Assert.That(ecologySystem.StateMap.height, Is.EqualTo(128));
+            Assert.That(ecologySystem.CryosphereMap, Is.Not.Null);
+            Assert.That(ecologySystem.CryosphereMap.width, Is.EqualTo(128));
+            Assert.That(ecologySystem.CryosphereMap.height, Is.EqualTo(128));
             Assert.That(Shader.GetGlobalTexture("_SteppeEcologyStateMap"), Is.SameAs(ecologySystem.StateMap));
+            Assert.That(
+                Shader.GetGlobalTexture("_SteppeCryosphereStateMap"),
+                Is.SameAs(ecologySystem.CryosphereMap));
             var ecologyMapParameters = Shader.GetGlobalVector("_SteppeEcologyMapParameters");
             Assert.That(ecologyMapParameters.x, Is.EqualTo(ecologySystem.StateMap.width));
             Assert.That(ecologyMapParameters.y, Is.EqualTo(1f));
             Assert.That(ecologyMapParameters.w, Is.EqualTo(65536f));
             var focusWorld = Object.FindAnyObjectByType<FloatingOriginSystem>()
-                .LocalToWorld(cameraController.transform.position);
+                .LocalToWorld(ballController.transform.position);
             Assert.That(ecologySystem.TryGetState(focusWorld.X, focusWorld.Z, out var focusEcology), Is.True);
             Assert.That(focusEcology.RootWater, Is.InRange(0.0, 1.0));
             for (var frame = 0; frame < 40 && ecologySystem.MapRevision < 2; frame++)
@@ -71,13 +118,27 @@ namespace Steppe.Tests
             Assert.That(
                 ecologySystem.TryGetMapPixelCoordinate(ecologySystem.CenterCoordinate, out var mapX, out var mapZ),
                 Is.True);
-            var mapPixel = ecologySystem.StateMap.GetPixels32()[mapZ * ecologySystem.StateMap.width + mapX];
+            SteppeEcoCellState mappedEcology = default;
+            Color32 mapPixel = default;
+            for (var frame = 0; frame < 80; frame++)
+            {
+                Assert.That(ecologySystem.TryGetState(ecologySystem.CenterCoordinate, out mappedEcology), Is.True);
+                mapPixel = ecologySystem.StateMap.GetPixels32()[mapZ * ecologySystem.StateMap.width + mapX];
+                if (System.Math.Abs(
+                        SteppeEcologyMapEncoding.Decode(mapPixel.r) - mappedEcology.SurfaceWater)
+                    <= 2.0 / 255.0)
+                {
+                    break;
+                }
+
+                yield return null;
+            }
             Assert.That(
                 SteppeEcologyMapEncoding.Decode(mapPixel.r),
-                Is.EqualTo(focusEcology.SurfaceWater).Within(2.0 / 255.0));
+                Is.EqualTo(mappedEcology.SurfaceWater).Within(2.0 / 255.0));
             Assert.That(
                 SteppeEcologyMapEncoding.Decode(mapPixel.a),
-                Is.EqualTo(focusEcology.SurfaceCrust).Within(2.0 / 255.0));
+                Is.EqualTo(mappedEcology.SurfaceCrust).Within(2.0 / 255.0));
             Assert.That(GameObject.Find("Steppe Sun"), Is.Not.Null);
             Assert.That(GameObject.Find("Steppe Moon"), Is.Not.Null);
             Assert.That(RenderSettings.skybox, Is.Not.Null);
@@ -86,9 +147,23 @@ namespace Steppe.Tests
             Assert.That(Shader.Find("Steppe/Terrain Surface").isSupported, Is.True);
             Assert.That(Shader.Find("Steppe/Grass Indirect"), Is.Not.Null);
             Assert.That(Shader.Find("Steppe/Grass Indirect").isSupported, Is.True);
+            Assert.That(Shader.Find("Steppe/Dust Wisp"), Is.Not.Null);
+            Assert.That(Shader.Find("Steppe/Dust Wisp").isSupported, Is.True);
+            Assert.That(dust.Particles, Is.Not.Null);
+            Assert.That(dust.Particles.main.simulationSpace, Is.EqualTo(ParticleSystemSimulationSpace.World));
+            Assert.That(dust.Renderer.renderMode, Is.EqualTo(ParticleSystemRenderMode.Stretch));
+            Assert.That(dust.Renderer.sharedMaterial.shader.name, Is.EqualTo("Steppe/Dust Wisp"));
+            Assert.That(Shader.Find("Steppe/Snow Flake"), Is.Not.Null);
+            Assert.That(Shader.Find("Steppe/Snow Flake").isSupported, Is.True);
+            Assert.That(snow.Particles, Is.Not.Null);
+            Assert.That(snow.Particles.main.simulationSpace, Is.EqualTo(ParticleSystemSimulationSpace.World));
+            Assert.That(snow.Renderer.renderMode, Is.EqualTo(ParticleSystemRenderMode.Billboard));
+            Assert.That(snow.Renderer.sharedMaterial.shader.name, Is.EqualTo("Steppe/Snow Flake"));
             Assert.That(timeSystem.DebugMultiplier, Is.EqualTo(1f));
             Assert.That(GameObject.Find("Cloud Layer"), Is.Not.Null);
             Assert.That(GameObject.Find("Rain Volume"), Is.Not.Null);
+            Assert.That(GameObject.Find("Dust Field"), Is.Not.Null);
+            Assert.That(GameObject.Find("Snow Volume"), Is.Not.Null);
             Assert.That(GameObject.Find("Grass Field"), Is.Not.Null);
             Assert.That(cameraController.GetComponent<Collider>(), Is.Null);
             Assert.That(cameraController.GetComponent<Rigidbody>(), Is.Null);
@@ -154,7 +229,7 @@ namespace Steppe.Tests
             }
 
             var ecology = Object.FindAnyObjectByType<SteppeEcologySystem>();
-            var cameraController = Object.FindAnyObjectByType<FlyCameraController>();
+            var ballController = Object.FindAnyObjectByType<SteppeBallController>();
             var oldCoordinate = ecology.CenterCoordinate;
             var oldMapOrigin = ecology.MapOriginCoordinate;
             for (var frame = 0; frame < 10 && !ecology.TryGetState(oldCoordinate, out _); frame++)
@@ -163,9 +238,11 @@ namespace Steppe.Tests
             }
 
             Assert.That(ecology.TryGetState(oldCoordinate, out var before), Is.True);
-            cameraController.transform.position += Vector3.right * 12000f;
-            yield return null;
-            yield return null;
+            ballController.Teleport(ballController.transform.position + Vector3.right * 12000f);
+            for (var frame = 0; frame < 20 && ecology.IsActive(oldCoordinate); frame++)
+            {
+                yield return null;
+            }
 
             Assert.That(ecology.IsActive(oldCoordinate), Is.False);
             Assert.That(ecology.TryGetState(oldCoordinate, out var after), Is.True);

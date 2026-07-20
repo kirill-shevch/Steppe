@@ -21,6 +21,7 @@ namespace Steppe.Ecology
         private const double TimeEpsilon = 0.001;
         private const double ShaderCoordinatePeriod = 65536.0;
         private static readonly int StateMapId = Shader.PropertyToID("_SteppeEcologyStateMap");
+        private static readonly int CryosphereMapId = Shader.PropertyToID("_SteppeCryosphereStateMap");
         private static readonly int MapOriginSizeId = Shader.PropertyToID("_SteppeEcologyMapOriginSize");
         private static readonly int MapParametersId = Shader.PropertyToID("_SteppeEcologyMapParameters");
 
@@ -58,6 +59,8 @@ namespace Steppe.Ecology
         private double targetSimulationSeconds;
         private Texture2D stateMap;
         private Color32[] statePixels;
+        private Texture2D cryosphereMap;
+        private Color32[] cryospherePixels;
         private EcoCellCoordinate mapOriginCoordinate;
         private bool hasMapOrigin;
         private bool stateMapDirty;
@@ -69,12 +72,15 @@ namespace Steppe.Ecology
         public double TargetSimulationSeconds => targetSimulationSeconds;
         public EcoCellCoordinate CenterCoordinate => centerCoordinate;
         public Texture2D StateMap => stateMap;
+        public Texture2D CryosphereMap => cryosphereMap;
         public bool IsStateMapReady => MapRevision > 0;
         public int MapRevision { get; private set; }
         public EcoCellCoordinate MapOriginCoordinate => mapOriginCoordinate;
         public float MapWorldSize => settings != null ? settings.EcologyStateMapWorldSize : 0f;
         public float MapMaximumSurfaceWater { get; private set; }
         public float MapMaximumCrust { get; private set; }
+        public float MapMaximumSnow { get; private set; }
+        public float MapMaximumFrozen { get; private set; }
         public bool HasPendingWorldWork => priorityWorkQueue.Count > 0 || workQueue.Count > 0;
 
         public void Configure(
@@ -123,6 +129,23 @@ namespace Steppe.Ecology
                 return true;
             }
 
+            state = default;
+            return false;
+        }
+
+        public bool TryGetCell(
+            EcoCellCoordinate coordinate,
+            out SurfaceSample surface,
+            out SteppeEcoCellState state)
+        {
+            if (records.TryGetValue(coordinate, out var record))
+            {
+                surface = record.Surface;
+                state = record.State;
+                return true;
+            }
+
+            surface = default;
             state = default;
             return false;
         }
@@ -393,6 +416,15 @@ namespace Steppe.Ecology
                 anisoLevel = 1
             };
             statePixels = new Color32[resolution * resolution];
+            cryosphereMap = new Texture2D(resolution, resolution, TextureFormat.RGBA32, false, true)
+            {
+                name = "Steppe Cryosphere State Map (snow, compaction, frozen)",
+                hideFlags = HideFlags.DontSave,
+                wrapMode = TextureWrapMode.Clamp,
+                filterMode = FilterMode.Bilinear,
+                anisoLevel = 1
+            };
+            cryospherePixels = new Color32[resolution * resolution];
         }
 
         private void EnsureStateMapCoverage()
@@ -429,9 +461,17 @@ namespace Steppe.Ecology
                     var coordinate = new EcoCellCoordinate(
                         mapOriginCoordinate.X + x,
                         mapOriginCoordinate.Z + z);
-                    statePixels[z * resolution + x] = records.TryGetValue(coordinate, out var record)
-                        ? SteppeEcologyMapEncoding.Encode(record.State, record.Surface)
-                        : SteppeEcologyMapEncoding.Neutral;
+                    var pixelIndex = z * resolution + x;
+                    if (records.TryGetValue(coordinate, out var record))
+                    {
+                        statePixels[pixelIndex] = SteppeEcologyMapEncoding.Encode(record.State, record.Surface);
+                        cryospherePixels[pixelIndex] = SteppeCryosphereMapEncoding.Encode(record.State);
+                    }
+                    else
+                    {
+                        statePixels[pixelIndex] = SteppeEcologyMapEncoding.Neutral;
+                        cryospherePixels[pixelIndex] = SteppeCryosphereMapEncoding.Neutral;
+                    }
                 }
             }
 
@@ -446,30 +486,42 @@ namespace Steppe.Ecology
                 return;
             }
 
-            statePixels[z * settings.EcologyStateMapResolution + x] =
-                SteppeEcologyMapEncoding.Encode(record.State, record.Surface);
+            var pixelIndex = z * settings.EcologyStateMapResolution + x;
+            statePixels[pixelIndex] = SteppeEcologyMapEncoding.Encode(record.State, record.Surface);
+            cryospherePixels[pixelIndex] = SteppeCryosphereMapEncoding.Encode(record.State);
             stateMapDirty = true;
         }
 
         private void UploadStateMap()
         {
-            if (stateMap == null || statePixels == null)
+            if (stateMap == null
+                || statePixels == null
+                || cryosphereMap == null
+                || cryospherePixels == null)
             {
                 return;
             }
 
             var maximumWater = 0f;
             var maximumCrust = 0f;
+            var maximumSnow = 0f;
+            var maximumFrozen = 0f;
             for (var index = 0; index < statePixels.Length; index++)
             {
                 maximumWater = Mathf.Max(maximumWater, statePixels[index].r / 255f);
                 maximumCrust = Mathf.Max(maximumCrust, statePixels[index].a / 255f);
+                maximumSnow = Mathf.Max(maximumSnow, cryospherePixels[index].r / 255f);
+                maximumFrozen = Mathf.Max(maximumFrozen, cryospherePixels[index].b / 255f);
             }
 
             stateMap.SetPixels32(statePixels);
             stateMap.Apply(false, false);
+            cryosphereMap.SetPixels32(cryospherePixels);
+            cryosphereMap.Apply(false, false);
             MapMaximumSurfaceWater = maximumWater;
             MapMaximumCrust = maximumCrust;
+            MapMaximumSnow = maximumSnow;
+            MapMaximumFrozen = maximumFrozen;
             MapRevision++;
             stateMapDirty = false;
             secondsUntilStateMapUpload = settings.EcologyStateMapUploadInterval;
@@ -482,6 +534,7 @@ namespace Steppe.Ecology
             var originZ = mapOriginCoordinate.Z * (double)settings.EcologyCellSize;
             var worldSize = settings.EcologyStateMapWorldSize;
             Shader.SetGlobalTexture(StateMapId, stateMap);
+            Shader.SetGlobalTexture(CryosphereMapId, cryosphereMap);
             Shader.SetGlobalVector(MapOriginSizeId, new Vector4(
                 PositiveModulo(originX, ShaderCoordinatePeriod),
                 PositiveModulo(originZ, ShaderCoordinatePeriod),
@@ -506,18 +559,22 @@ namespace Steppe.Ecology
                 workScheduler.Unregister(this);
             }
             Shader.SetGlobalVector(MapParametersId, Vector4.zero);
-            if (stateMap == null)
-            {
-                return;
-            }
-
-            if (Application.isPlaying)
+            if (stateMap != null && Application.isPlaying)
             {
                 Destroy(stateMap);
             }
-            else
+            else if (stateMap != null)
             {
                 DestroyImmediate(stateMap);
+            }
+
+            if (cryosphereMap != null && Application.isPlaying)
+            {
+                Destroy(cryosphereMap);
+            }
+            else if (cryosphereMap != null)
+            {
+                DestroyImmediate(cryosphereMap);
             }
         }
     }
