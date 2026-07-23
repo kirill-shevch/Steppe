@@ -21,7 +21,7 @@ namespace Steppe.Prototype
         private SteppeWorldSettings settings;
         private FloatingOriginSystem floatingOrigin;
         private Transform focus;
-        private SteppeBallController ballController;
+        private ISteppeTravelFocus travelFocus;
         private TerrainHeightGenerator terrainGenerator;
         private SteppeSurfaceGenerator surfaceGenerator;
 
@@ -29,12 +29,12 @@ namespace Steppe.Prototype
             SteppeWorldSettings worldSettings,
             FloatingOriginSystem origin,
             Transform focusTransform,
-            SteppeBallController playerBall = null)
+            ISteppeTravelFocus traveller = null)
         {
             settings = worldSettings;
             floatingOrigin = origin;
             focus = focusTransform;
-            ballController = playerBall;
+            travelFocus = traveller;
             terrainGenerator = new TerrainHeightGenerator(settings);
             surfaceGenerator = new SteppeSurfaceGenerator(settings);
         }
@@ -76,9 +76,9 @@ namespace Steppe.Prototype
             hasBookmark[index] = true;
             var target = bookmarks[index];
             var localTarget = floatingOrigin.WorldToLocal(target.X, target.Y, target.Z);
-            if (ballController != null)
+            if (travelFocus != null)
             {
-                ballController.Teleport(localTarget);
+                travelFocus.Teleport(localTarget);
             }
             else
             {

@@ -10,7 +10,7 @@ namespace Steppe.Player
 {
     [DisallowMultipleComponent]
     [RequireComponent(typeof(Rigidbody), typeof(SphereCollider))]
-    public sealed class SteppeBallController : MonoBehaviour
+    public sealed class SteppeBallController : MonoBehaviour, ISteppeTravelFocus
     {
         private SteppeWorldSettings settings;
         private FloatingOriginSystem floatingOrigin;
@@ -24,8 +24,10 @@ namespace Steppe.Player
         private bool physicsStarted;
 
         public Rigidbody Body => body;
+        public Transform FocusTransform => transform;
         public bool IsGrounded => physicsStarted && UnityEngine.Time.fixedTime - lastGroundContactTime < 0.12f;
         public float Speed => body != null ? new Vector2(body.linearVelocity.x, body.linearVelocity.z).magnitude : 0f;
+        public float TrackRadius => settings != null ? settings.PlayerBallRadius * 1.12f : 1.4f;
         public SteppeTraversalState CurrentSurface { get; private set; }
 
         public void Configure(

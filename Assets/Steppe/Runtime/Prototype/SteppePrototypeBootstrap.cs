@@ -1,3 +1,4 @@
+using Steppe.Caravan;
 using Steppe.Ecology;
 using Steppe.Player;
 using Steppe.Rendering;
@@ -22,7 +23,6 @@ namespace Steppe.Prototype
         [SerializeField] private Material snowMaterial;
 
         private SteppeWorldSettings runtimeSettings;
-        private Material runtimeBallMaterial;
         private bool initialized;
 
         [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.AfterSceneLoad)]
@@ -69,30 +69,24 @@ namespace Steppe.Prototype
             const float initialX = 32f;
             const float initialZ = -64f;
             var initialGroundHeight = (float)new TerrainHeightGenerator(runtimeSettings).SampleHeight(initialX, initialZ);
-            var playerObject = new GameObject("Steppe Player Ball");
-            playerObject.transform.SetParent(transform, false);
-            playerObject.transform.position = new Vector3(
+            var caravanRig = CaravanDemoFactory.Create(new Vector3(
                 initialX,
-                initialGroundHeight + runtimeSettings.PlayerBallRadius + 3f,
-                initialZ);
-            var playerCollider = playerObject.AddComponent<SphereCollider>();
-            playerCollider.radius = runtimeSettings.PlayerBallRadius;
-            var playerBody = playerObject.AddComponent<Rigidbody>();
-            playerBody.isKinematic = true;
+                initialGroundHeight + 1.05f,
+                initialZ));
+            var initialWind = new SteppeWeatherModel(runtimeSettings)
+                .SampleWind(0.0)
+                .SurfaceVelocity;
+            var initialDownwind = new Vector3(initialWind.x, 0f, initialWind.y);
+            if (initialDownwind.sqrMagnitude > 0.01f)
+            {
+                caravanRig.Root.transform.rotation = Quaternion.LookRotation(
+                    initialDownwind.normalized,
+                    Vector3.up);
+            }
+            caravanRig.Root.transform.SetParent(transform, true);
 
-            var ballVisual = GameObject.CreatePrimitive(PrimitiveType.Sphere);
-            ballVisual.name = "Ball Visual";
-            ballVisual.transform.SetParent(playerObject.transform, false);
-            ballVisual.transform.localScale = Vector3.one * (runtimeSettings.PlayerBallRadius * 2f);
-            var visualCollider = ballVisual.GetComponent<Collider>();
-            visualCollider.enabled = false;
-            Destroy(visualCollider);
-            runtimeBallMaterial = CreateBallMaterial();
-            ballVisual.GetComponent<MeshRenderer>().sharedMaterial = runtimeBallMaterial;
-
-            camera.transform.position = playerObject.transform.position
-                                        + new Vector3(0f, runtimeSettings.PlayerCameraHeight, -runtimeSettings.PlayerCameraDistance);
-            camera.transform.rotation = Quaternion.Euler(16f, 0f, 0f);
+            camera.transform.position = caravanRig.Root.transform.position + new Vector3(0f, 2.2f, -3f);
+            camera.transform.rotation = Quaternion.identity;
             camera.nearClipPlane = 0.1f;
             camera.farClipPlane = runtimeSettings.CameraFarClip;
             camera.clearFlags = CameraClearFlags.Skybox;
@@ -111,7 +105,7 @@ namespace Steppe.Prototype
 
             var floatingOrigin = gameObject.AddComponent<FloatingOriginSystem>();
             floatingOrigin.Configure(
-                playerObject.transform,
+                caravanRig.Root.transform,
                 worldSpaceObject.transform,
                 runtimeSettings.FloatingOriginThreshold,
                 runtimeSettings.ChunkSize);
@@ -120,7 +114,7 @@ namespace Steppe.Prototype
             workScheduler.Configure(runtimeSettings.WorldWorkBudgetMilliseconds);
 
             var weatherSystem = gameObject.AddComponent<SteppeWeatherSystem>();
-            weatherSystem.Configure(runtimeSettings, timeSystem, floatingOrigin, playerObject.transform, workScheduler);
+            weatherSystem.Configure(runtimeSettings, timeSystem, floatingOrigin, caravanRig.Root.transform, workScheduler);
 
             var ecologySystem = gameObject.AddComponent<SteppeEcologySystem>();
             ecologySystem.Configure(
@@ -128,30 +122,40 @@ namespace Steppe.Prototype
                 timeSystem,
                 weatherSystem,
                 floatingOrigin,
-                playerObject.transform,
+                caravanRig.Root.transform,
                 workScheduler);
 
-            var ballController = playerObject.AddComponent<SteppeBallController>();
-            ballController.Configure(
+            var environment = new CaravanEnvironmentSampler(
                 runtimeSettings,
                 floatingOrigin,
-                ecologySystem,
-                camera.transform,
-                ballVisual.transform);
-            var cameraController = camera.GetComponent<SteppeBallCameraController>();
-            if (cameraController == null)
+                weatherSystem,
+                ecologySystem);
+            caravanRig.Configure(runtimeSettings, floatingOrigin, environment);
+
+            var existingBallCamera = camera.GetComponent<SteppeBallCameraController>();
+            if (existingBallCamera != null)
             {
-                cameraController = camera.gameObject.AddComponent<SteppeBallCameraController>();
+                existingBallCamera.enabled = false;
             }
-            cameraController.Configure(runtimeSettings, playerObject.transform, floatingOrigin);
+
+            var playerObject = new GameObject("Steppe Caravan Keeper");
+            playerObject.transform.SetParent(transform, true);
+            playerObject.transform.position = caravanRig.PlayerSpawn.position;
+            playerObject.AddComponent<CharacterController>();
+            var firstPerson = playerObject.AddComponent<CaravanFirstPersonController>();
+            firstPerson.Configure(runtimeSettings, floatingOrigin, caravanRig.Chassis, camera);
+            var buildMode = playerObject.AddComponent<CaravanBuildModeController>();
+            buildMode.Configure(camera, firstPerson, caravanRig.Chassis, caravanRig.MountGrid);
+            var interactor = playerObject.AddComponent<CaravanPlayerInteractor>();
+            interactor.Configure(camera, firstPerson, buildMode);
 
             var trackSystem = gameObject.AddComponent<SteppeTrackSystem>();
             trackSystem.Configure(
                 runtimeSettings,
                 timeSystem,
                 floatingOrigin,
-                playerObject.transform,
-                ballController);
+                caravanRig.Root.transform,
+                caravanRig.Chassis);
 
             var atmospherePresentation = gameObject.AddComponent<SteppeAtmospherePresentation>();
             atmospherePresentation.Configure(
@@ -160,7 +164,7 @@ namespace Steppe.Prototype
                 weatherSystem,
                 ecologySystem,
                 floatingOrigin,
-                playerObject.transform);
+                caravanRig.Root.transform);
 
             var cloudObject = new GameObject("Cloud Layer");
             cloudObject.transform.SetParent(worldSpaceObject.transform, false);
@@ -203,13 +207,13 @@ namespace Steppe.Prototype
             var grassObject = new GameObject("Grass Field");
             grassObject.transform.SetParent(worldSpaceObject.transform, false);
             var grassRenderer = grassObject.AddComponent<SteppeGrassRenderer>();
-            grassRenderer.Configure(runtimeSettings, floatingOrigin, playerObject.transform, workScheduler, grassMaterial);
+            grassRenderer.Configure(runtimeSettings, floatingOrigin, caravanRig.Root.transform, workScheduler, grassMaterial);
 
             var chunkStreamer = gameObject.AddComponent<TerrainChunkStreamer>();
             chunkStreamer.Configure(
                 runtimeSettings,
                 floatingOrigin,
-                playerObject.transform,
+                caravanRig.Root.transform,
                 worldSpaceObject.transform,
                 workScheduler,
                 terrainMaterial);
@@ -232,9 +236,9 @@ namespace Steppe.Prototype
                 runtimeSettings,
                 floatingOrigin,
                 chunkStreamer,
-                ballController,
+                caravanRig.Chassis,
                 trackSystem,
-                playerObject.transform,
+                caravanRig.Root.transform,
                 timeSystem,
                 weatherSystem,
                 ecologySystem,
@@ -244,7 +248,11 @@ namespace Steppe.Prototype
                 workScheduler);
 
             var biomeNavigator = gameObject.AddComponent<BiomeDebugNavigator>();
-            biomeNavigator.Configure(runtimeSettings, floatingOrigin, playerObject.transform, ballController);
+            biomeNavigator.Configure(
+                runtimeSettings,
+                floatingOrigin,
+                caravanRig.Root.transform,
+                caravanRig.Chassis);
 
             Application.targetFrameRate = 60;
         }
@@ -306,39 +314,6 @@ namespace Steppe.Prototype
             RenderSettings.ambientMode = UnityEngine.Rendering.AmbientMode.Skybox;
         }
 
-        private static Material CreateBallMaterial()
-        {
-            var shader = Shader.Find("Universal Render Pipeline/Lit")
-                         ?? Shader.Find("Universal Render Pipeline/Simple Lit")
-                         ?? Shader.Find("Standard");
-            if (shader == null)
-            {
-                throw new System.InvalidOperationException("No supported player-ball shader was found.");
-            }
-
-            var material = new Material(shader)
-            {
-                name = "Steppe Player Ball Material",
-                hideFlags = HideFlags.DontSave
-            };
-            var color = new Color(0.18f, 0.22f, 0.24f, 1f);
-            if (material.HasProperty("_BaseColor"))
-            {
-                material.SetColor("_BaseColor", color);
-            }
-            else if (material.HasProperty("_Color"))
-            {
-                material.SetColor("_Color", color);
-            }
-
-            if (material.HasProperty("_Smoothness"))
-            {
-                material.SetFloat("_Smoothness", 0.34f);
-            }
-
-            return material;
-        }
-
         private void OnDestroy()
         {
             if (settings == null && runtimeSettings != null)
@@ -353,17 +328,6 @@ namespace Steppe.Prototype
                 }
             }
 
-            if (runtimeBallMaterial != null)
-            {
-                if (Application.isPlaying)
-                {
-                    Destroy(runtimeBallMaterial);
-                }
-                else
-                {
-                    DestroyImmediate(runtimeBallMaterial);
-                }
-            }
         }
     }
 }

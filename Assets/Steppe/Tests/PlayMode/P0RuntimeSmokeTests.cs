@@ -1,5 +1,6 @@
 using System.Collections;
 using NUnit.Framework;
+using Steppe.Caravan;
 using Steppe.Ecology;
 using Steppe.Player;
 using Steppe.Prototype;
@@ -15,8 +16,8 @@ namespace Steppe.Tests
 {
     public sealed class P0RuntimeSmokeTests
     {
-        [UnityTest]
-        public IEnumerator PrototypeCreatesPhysicalBallAndStreamsTerrain()
+        [UnityTest, Order(-100)]
+        public IEnumerator PrototypeCreatesPhysicalCaravanKeeperAndStreamsTerrain()
         {
             if (Object.FindAnyObjectByType<SteppePrototypeBootstrap>() == null)
             {
@@ -26,8 +27,13 @@ namespace Steppe.Tests
             yield return null;
             yield return null;
 
-            var ballController = Object.FindAnyObjectByType<SteppeBallController>();
-            var cameraController = Object.FindAnyObjectByType<SteppeBallCameraController>();
+            var caravan = Object.FindAnyObjectByType<CaravanChassisController>();
+            var firstPerson = Object.FindAnyObjectByType<CaravanFirstPersonController>();
+            var sail = Object.FindAnyObjectByType<CaravanSailModule>();
+            var buildMode = Object.FindAnyObjectByType<CaravanBuildModeController>();
+            var controlStations = Object.FindObjectsByType<CaravanControlStation>(
+                FindObjectsInactive.Include,
+                FindObjectsSortMode.None);
             var tracks = Object.FindAnyObjectByType<SteppeTrackSystem>();
             var streamer = Object.FindAnyObjectByType<TerrainChunkStreamer>();
             var grass = Object.FindAnyObjectByType<SteppeGrassRenderer>();
@@ -38,16 +44,47 @@ namespace Steppe.Tests
             var snow = Object.FindAnyObjectByType<SteppeSnowPresentation>();
             var workScheduler = Object.FindAnyObjectByType<WorldWorkScheduler>();
 
-            Assert.That(cameraController, Is.Not.Null);
-            Assert.That(ballController, Is.Not.Null);
-            Assert.That(ballController.GetComponent<SphereCollider>(), Is.Not.Null);
-            Assert.That(ballController.GetComponent<Rigidbody>(), Is.Not.Null);
+            Assert.That(firstPerson, Is.Not.Null);
+            Assert.That(caravan, Is.Not.Null);
+            Assert.That(sail, Is.Not.Null);
+            Assert.That(buildMode, Is.Not.Null);
+            Assert.That(controlStations, Has.Length.EqualTo(2));
+            var steeringStation = System.Array.Find(
+                controlStations,
+                station => station.Kind == CaravanControlKind.Steering);
+            var trimStation = System.Array.Find(
+                controlStations,
+                station => station.Kind == CaravanControlKind.SailTrim);
+            Assert.That(steeringStation, Is.Not.Null);
+            Assert.That(trimStation, Is.Not.Null);
+            Assert.That(
+                steeringStation.transform.Find("Control Visual/Wheel Rim 1"),
+                Is.Not.Null);
+            Assert.That(
+                trimStation.transform.Find("Control Visual/Trim Handle"),
+                Is.Not.Null);
+            Assert.That(steeringStation.transform.Find("Focus Indicator"), Is.Not.Null);
+            Assert.That(trimStation.transform.Find("Focus Indicator"), Is.Not.Null);
+            Assert.That(firstPerson.GetComponent<CharacterController>(), Is.Not.Null);
+            Assert.That(caravan.GetComponent<Rigidbody>(), Is.Not.Null);
+            Assert.That(caravan.Body.mass, Is.EqualTo(1370f).Within(0.1f));
+            Assert.That(caravan.Body.centerOfMass.y, Is.LessThan(-0.4f));
+            Assert.That(sail.Module.MassKilograms, Is.EqualTo(90f).Within(0.1f));
+            Assert.That(Object.FindObjectsByType<WheelCollider>().Length, Is.EqualTo(4));
+            var initialSurfaceWind = new Vector3(
+                weatherSystem.CurrentAtFocus.SurfaceWind.x,
+                0f,
+                weatherSystem.CurrentAtFocus.SurfaceWind.y).normalized;
+            Assert.That(
+                Vector3.Dot(caravan.transform.forward, initialSurfaceWind),
+                Is.GreaterThan(0.9f),
+                "The demo caravan must spawn bow-downwind, with its stern facing the wind.");
             Assert.That(tracks, Is.Not.Null);
             Assert.That(tracks.StateMap, Is.Not.Null);
             Assert.That(tracks.StateMap.width, Is.EqualTo(512));
             Assert.That(Shader.GetGlobalTexture("_SteppeTrackStateMap"), Is.SameAs(tracks.StateMap));
             var originSystem = Object.FindAnyObjectByType<FloatingOriginSystem>();
-            var initialBallWorld = originSystem.LocalToWorld(ballController.transform.position);
+            var initialBallWorld = originSystem.LocalToWorld(caravan.transform.position);
             for (var frame = 0;
                  frame < 120 && !streamer.HasPhysicsSurfaceAt(initialBallWorld.X, initialBallWorld.Z);
                  frame++)
@@ -62,18 +99,48 @@ namespace Steppe.Tests
                 + $"center={streamer.CenterCoordinate}, loaded={streamer.LoadedCount}, "
                 + $"lod={nearPhysicsLod}/{middlePhysicsLod}/{farPhysicsLod}, "
                 + $"meshColliders={Object.FindObjectsByType<MeshCollider>(FindObjectsInactive.Include).Length}");
-            for (var frame = 0; frame < 40 && ballController.Body.isKinematic; frame++)
+            for (var frame = 0; frame < 40 && caravan.Body.isKinematic; frame++)
             {
                 yield return new WaitForFixedUpdate();
             }
-            Assert.That(ballController.Body.isKinematic, Is.False, "Ball never attached to a streamed terrain collider.");
+            Assert.That(caravan.Body.isKinematic, Is.False, "Caravan never attached to a streamed terrain collider.");
             Assert.That(Object.FindObjectsByType<MeshCollider>().Length, Is.GreaterThan(0));
-            ballController.Body.linearVelocity = Vector3.forward * 3f;
-            for (var fixedStep = 0; fixedStep < 5; fixedStep++)
+
+            var surfaceWind = new Vector3(
+                weatherSystem.CurrentAtFocus.SurfaceWind.x,
+                0f,
+                weatherSystem.CurrentAtFocus.SurfaceWind.y);
+            Assert.That(surfaceWind.magnitude, Is.GreaterThan(0.5f));
+            caravan.Body.linearVelocity = Vector3.zero;
+            caravan.Body.angularVelocity = Vector3.zero;
+            caravan.Body.rotation = Quaternion.LookRotation(surfaceWind.normalized, Vector3.up);
+            sail.SetTrimDegrees(0f);
+            Physics.SyncTransforms();
+            var naturalMotionStart = caravan.transform.position;
+            for (var fixedStep = 0; fixedStep < 60; fixedStep++)
             {
                 yield return new WaitForFixedUpdate();
             }
-            Assert.That(tracks.StoredTrackCellCount, Is.GreaterThan(0), "Rolling ball did not leave a canonical track.");
+            Assert.That(
+                Vector3.ProjectOnPlane(
+                    caravan.transform.position - naturalMotionStart,
+                    Vector3.up).magnitude,
+                Is.GreaterThan(0.1f),
+                $"A cleanly trimmed demo sail did not move the chassis from rest. "
+                + $"wind={surfaceWind}, force={sail.CurrentForce.Force}, "
+                + $"load={sail.CurrentForce.NormalizedLoad:F3}, "
+                + $"velocity={caravan.Body.linearVelocity}");
+            Assert.That(
+                Vector3.Dot(caravan.transform.up, Vector3.up),
+                Is.GreaterThan(0.995f),
+                "The chassis rolled or pitched despite its stable demo constraints.");
+
+            caravan.Body.linearVelocity = Vector3.forward * 3f;
+            for (var fixedStep = 0; fixedStep < 20; fixedStep++)
+            {
+                yield return new WaitForFixedUpdate();
+            }
+            Assert.That(tracks.StoredTrackCellCount, Is.GreaterThan(0), "The caravan did not leave a canonical track.");
             Assert.That(streamer, Is.Not.Null);
             Assert.That(streamer.LoadedCount, Is.GreaterThan(0));
             Assert.That(Object.FindAnyObjectByType<BiomeDebugNavigator>(), Is.Not.Null);
@@ -107,7 +174,7 @@ namespace Steppe.Tests
             Assert.That(ecologyMapParameters.y, Is.EqualTo(1f));
             Assert.That(ecologyMapParameters.w, Is.EqualTo(65536f));
             var focusWorld = Object.FindAnyObjectByType<FloatingOriginSystem>()
-                .LocalToWorld(ballController.transform.position);
+                .LocalToWorld(caravan.transform.position);
             Assert.That(ecologySystem.TryGetState(focusWorld.X, focusWorld.Z, out var focusEcology), Is.True);
             Assert.That(focusEcology.RootWater, Is.InRange(0.0, 1.0));
             for (var frame = 0; frame < 40 && ecologySystem.MapRevision < 2; frame++)
@@ -165,8 +232,8 @@ namespace Steppe.Tests
             Assert.That(GameObject.Find("Dust Field"), Is.Not.Null);
             Assert.That(GameObject.Find("Snow Volume"), Is.Not.Null);
             Assert.That(GameObject.Find("Grass Field"), Is.Not.Null);
-            Assert.That(cameraController.GetComponent<Collider>(), Is.Null);
-            Assert.That(cameraController.GetComponent<Rigidbody>(), Is.Null);
+            Assert.That(firstPerson.ViewCamera.GetComponent<Collider>(), Is.Null);
+            Assert.That(firstPerson.ViewCamera.GetComponent<Rigidbody>(), Is.Null);
             if (grass.IsRendering)
             {
                 Assert.That(grass.LoadedCellCount, Is.GreaterThan(0));
@@ -221,6 +288,71 @@ namespace Steppe.Tests
         }
 
         [UnityTest]
+        public IEnumerator BuildModeMovesTheSailThroughTheSingleItemBuffer()
+        {
+            if (Object.FindAnyObjectByType<SteppePrototypeBootstrap>() == null)
+            {
+                new GameObject("Caravan Build Test Bootstrap").AddComponent<SteppePrototypeBootstrap>();
+            }
+
+            yield return null;
+            var caravan = Object.FindAnyObjectByType<CaravanChassisController>();
+            var sail = Object.FindAnyObjectByType<CaravanSailModule>();
+            var build = Object.FindAnyObjectByType<CaravanBuildModeController>();
+            Assert.That(caravan, Is.Not.Null);
+            Assert.That(sail, Is.Not.Null);
+            Assert.That(build, Is.Not.Null);
+
+            caravan.Body.linearVelocity = Vector3.zero;
+            Assert.That(build.TryEnterBuildMode(), Is.True);
+            Assert.That(build.TryHoldModule(sail.Module), Is.True);
+            Assert.That(build.HeldModule, Is.SameAs(sail.Module));
+            Assert.That(sail.gameObject.activeSelf, Is.False);
+
+            var destination = new CaravanGridPlacement(0, 5, 2, 2, 1);
+            Assert.That(build.TryPlaceHeldModule(destination), Is.True);
+            Assert.That(sail.gameObject.activeSelf, Is.True);
+            Assert.That(build.HeldModule, Is.Null);
+            Assert.That(sail.transform.parent, Is.SameAs(caravan.transform));
+            build.ExitBuildMode();
+            yield return null;
+        }
+
+        [UnityTest]
+        public IEnumerator FirstPersonKeeperFollowsASettledMovingDeck()
+        {
+            if (Object.FindAnyObjectByType<SteppePrototypeBootstrap>() == null)
+            {
+                new GameObject("Caravan Keeper Test Bootstrap").AddComponent<SteppePrototypeBootstrap>();
+            }
+
+            var caravan = Object.FindAnyObjectByType<CaravanChassisController>();
+            var keeper = Object.FindAnyObjectByType<CaravanFirstPersonController>();
+            Assert.That(caravan, Is.Not.Null);
+            Assert.That(keeper, Is.Not.Null);
+            caravan.Body.isKinematic = true;
+            caravan.Body.linearVelocity = Vector3.zero;
+            var character = keeper.GetComponent<CharacterController>();
+            character.enabled = false;
+            keeper.transform.position = caravan.transform.TransformPoint(0f, 0.06f, -2.55f);
+            character.enabled = true;
+            Physics.SyncTransforms();
+            for (var frame = 0; frame < 30 && !keeper.IsOnCaravan; frame++)
+            {
+                yield return null;
+            }
+            Assert.That(keeper.IsOnCaravan, Is.True);
+
+            var relativeBefore = caravan.transform.InverseTransformPoint(keeper.transform.position);
+            caravan.Body.position += new Vector3(0.8f, 0f, 0.35f);
+            Physics.SyncTransforms();
+            yield return null;
+            var relativeAfter = caravan.transform.InverseTransformPoint(keeper.transform.position);
+            Assert.That(Vector3.Distance(relativeAfter, relativeBefore), Is.LessThan(0.08f));
+            caravan.Body.isKinematic = !caravan.PhysicsStarted;
+        }
+
+        [UnityTest]
         public IEnumerator EcologyRetainsARecordAfterItLeavesTheActiveHorizon()
         {
             if (Object.FindAnyObjectByType<SteppePrototypeBootstrap>() == null)
@@ -229,7 +361,7 @@ namespace Steppe.Tests
             }
 
             var ecology = Object.FindAnyObjectByType<SteppeEcologySystem>();
-            var ballController = Object.FindAnyObjectByType<SteppeBallController>();
+            var caravan = Object.FindAnyObjectByType<CaravanChassisController>();
             var oldCoordinate = ecology.CenterCoordinate;
             var oldMapOrigin = ecology.MapOriginCoordinate;
             for (var frame = 0; frame < 10 && !ecology.TryGetState(oldCoordinate, out _); frame++)
@@ -238,7 +370,7 @@ namespace Steppe.Tests
             }
 
             Assert.That(ecology.TryGetState(oldCoordinate, out var before), Is.True);
-            ballController.Teleport(ballController.transform.position + Vector3.right * 12000f);
+            caravan.Teleport(caravan.transform.position + Vector3.right * 12000f);
             for (var frame = 0; frame < 20 && ecology.IsActive(oldCoordinate); frame++)
             {
                 yield return null;
