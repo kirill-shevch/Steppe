@@ -31,7 +31,6 @@ namespace Steppe.Caravan
         private void Update()
         {
             var keyboard = Keyboard.current;
-            var mouse = Mouse.current;
             if (keyboard == null || viewCamera == null || firstPerson == null)
             {
                 return;
@@ -59,8 +58,7 @@ namespace Steppe.Caravan
                 var keyboardDelta = 0f;
                 if (keyboard.aKey.isPressed) keyboardDelta -= UnityEngine.Time.deltaTime * 0.65f;
                 if (keyboard.dKey.isPressed) keyboardDelta += UnityEngine.Time.deltaTime * 0.65f;
-                var mouseDelta = mouse != null ? mouse.delta.ReadValue().x * 0.003f : 0f;
-                activeStation.Adjust(keyboardDelta + mouseDelta);
+                activeStation.Adjust(keyboardDelta);
                 return;
             }
 

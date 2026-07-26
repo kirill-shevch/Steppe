@@ -46,39 +46,28 @@ namespace Steppe.Tests
 
             Assert.That(firstPerson, Is.Not.Null);
             Assert.That(caravan, Is.Not.Null);
-            Assert.That(sail, Is.Not.Null);
+            Assert.That(sail, Is.Null);
             Assert.That(buildMode, Is.Not.Null);
-            Assert.That(controlStations, Has.Length.EqualTo(2));
+            Assert.That(controlStations, Has.Length.EqualTo(1));
             var steeringStation = System.Array.Find(
                 controlStations,
                 station => station.Kind == CaravanControlKind.Steering);
-            var trimStation = System.Array.Find(
-                controlStations,
-                station => station.Kind == CaravanControlKind.SailTrim);
             Assert.That(steeringStation, Is.Not.Null);
-            Assert.That(trimStation, Is.Not.Null);
             Assert.That(
                 steeringStation.transform.Find("Control Visual/Wheel Rim 1"),
                 Is.Not.Null);
-            Assert.That(
-                trimStation.transform.Find("Control Visual/Trim Handle"),
-                Is.Not.Null);
             Assert.That(steeringStation.transform.Find("Focus Indicator"), Is.Not.Null);
-            Assert.That(trimStation.transform.Find("Focus Indicator"), Is.Not.Null);
             Assert.That(firstPerson.GetComponent<CharacterController>(), Is.Not.Null);
             Assert.That(caravan.GetComponent<Rigidbody>(), Is.Not.Null);
-            Assert.That(caravan.Body.mass, Is.EqualTo(1370f).Within(0.1f));
-            Assert.That(caravan.Body.centerOfMass.y, Is.LessThan(-0.4f));
-            Assert.That(sail.Module.MassKilograms, Is.EqualTo(90f).Within(0.1f));
-            Assert.That(Object.FindObjectsByType<WheelCollider>().Length, Is.EqualTo(4));
-            var initialSurfaceWind = new Vector3(
-                weatherSystem.CurrentAtFocus.SurfaceWind.x,
-                0f,
-                weatherSystem.CurrentAtFocus.SurfaceWind.y).normalized;
+            Assert.That(caravan.Body.mass, Is.EqualTo(1280f).Within(0.1f));
+            Assert.That(caravan.DefaultDriveEnabled, Is.True);
+            Assert.That(Object.FindObjectsByType<WheelCollider>().Length, Is.EqualTo(0));
+            Assert.That(caravan.GetComponent("VPVehicleController"), Is.Not.Null);
             Assert.That(
-                Vector3.Dot(caravan.transform.forward, initialSurfaceWind),
-                Is.GreaterThan(0.9f),
-                "The demo caravan must spawn bow-downwind, with its stern facing the wind.");
+                System.Array.FindAll(
+                    caravan.GetComponentsInChildren<MonoBehaviour>(true),
+                    component => component.GetType().Name == "VPWheelCollider"),
+                Has.Length.EqualTo(4));
             Assert.That(tracks, Is.Not.Null);
             Assert.That(tracks.StateMap, Is.Not.Null);
             Assert.That(tracks.StateMap.width, Is.EqualTo(512));
@@ -106,15 +95,8 @@ namespace Steppe.Tests
             Assert.That(caravan.Body.isKinematic, Is.False, "Caravan never attached to a streamed terrain collider.");
             Assert.That(Object.FindObjectsByType<MeshCollider>().Length, Is.GreaterThan(0));
 
-            var surfaceWind = new Vector3(
-                weatherSystem.CurrentAtFocus.SurfaceWind.x,
-                0f,
-                weatherSystem.CurrentAtFocus.SurfaceWind.y);
-            Assert.That(surfaceWind.magnitude, Is.GreaterThan(0.5f));
             caravan.Body.linearVelocity = Vector3.zero;
             caravan.Body.angularVelocity = Vector3.zero;
-            caravan.Body.rotation = Quaternion.LookRotation(surfaceWind.normalized, Vector3.up);
-            sail.SetTrimDegrees(0f);
             Physics.SyncTransforms();
             var naturalMotionStart = caravan.transform.position;
             for (var fixedStep = 0; fixedStep < 60; fixedStep++)
@@ -126,14 +108,16 @@ namespace Steppe.Tests
                     caravan.transform.position - naturalMotionStart,
                     Vector3.up).magnitude,
                 Is.GreaterThan(0.1f),
-                $"A cleanly trimmed demo sail did not move the chassis from rest. "
-                + $"wind={surfaceWind}, force={sail.CurrentForce.Force}, "
-                + $"load={sail.CurrentForce.NormalizedLoad:F3}, "
-                + $"velocity={caravan.Body.linearVelocity}");
+                $"The default chassis drive did not move the caravan from rest. "
+                + $"drive={caravan.CurrentDriveForce:F1} N, "
+                + $"velocity={caravan.Body.linearVelocity}, "
+                + $"engine={caravan.VehicleEngineStarted}, "
+                + $"gear={caravan.VehicleEngagedGear}, "
+                + $"groundedWheels={caravan.GroundedWheelCount}");
             Assert.That(
                 Vector3.Dot(caravan.transform.up, Vector3.up),
-                Is.GreaterThan(0.995f),
-                "The chassis rolled or pitched despite its stable demo constraints.");
+                Is.GreaterThan(0.88f),
+                "The suspended chassis became unstable during straight-line driving.");
 
             caravan.Body.linearVelocity = Vector3.forward * 3f;
             for (var fixedStep = 0; fixedStep < 20; fixedStep++)
@@ -288,7 +272,7 @@ namespace Steppe.Tests
         }
 
         [UnityTest]
-        public IEnumerator BuildModeMovesTheSailThroughTheSingleItemBuffer()
+        public IEnumerator EmptyBuildModeCanBeEnteredWhenDefaultDriveIsDisabled()
         {
             if (Object.FindAnyObjectByType<SteppePrototypeBootstrap>() == null)
             {
@@ -297,25 +281,82 @@ namespace Steppe.Tests
 
             yield return null;
             var caravan = Object.FindAnyObjectByType<CaravanChassisController>();
-            var sail = Object.FindAnyObjectByType<CaravanSailModule>();
             var build = Object.FindAnyObjectByType<CaravanBuildModeController>();
             Assert.That(caravan, Is.Not.Null);
-            Assert.That(sail, Is.Not.Null);
             Assert.That(build, Is.Not.Null);
 
+            caravan.SetDefaultDriveEnabled(false);
             caravan.Body.linearVelocity = Vector3.zero;
             Assert.That(build.TryEnterBuildMode(), Is.True);
-            Assert.That(build.TryHoldModule(sail.Module), Is.True);
-            Assert.That(build.HeldModule, Is.SameAs(sail.Module));
-            Assert.That(sail.gameObject.activeSelf, Is.False);
-
-            var destination = new CaravanGridPlacement(0, 5, 2, 2, 1);
-            Assert.That(build.TryPlaceHeldModule(destination), Is.True);
-            Assert.That(sail.gameObject.activeSelf, Is.True);
             Assert.That(build.HeldModule, Is.Null);
-            Assert.That(sail.transform.parent, Is.SameAs(caravan.transform));
             build.ExitBuildMode();
+            caravan.SetDefaultDriveEnabled(true);
             yield return null;
+        }
+
+        [UnityTest]
+        public IEnumerator ChassisMaintainsForwardGripDuringSustainedTurn()
+        {
+            if (Object.FindAnyObjectByType<SteppePrototypeBootstrap>() == null)
+            {
+                new GameObject("Caravan Handling Test Bootstrap").AddComponent<SteppePrototypeBootstrap>();
+            }
+
+            var caravan = Object.FindAnyObjectByType<CaravanChassisController>();
+            Assert.That(caravan, Is.Not.Null);
+            for (var frame = 0; frame < 60 && !caravan.PhysicsStarted; frame++)
+            {
+                yield return new WaitForFixedUpdate();
+            }
+            Assert.That(caravan.PhysicsStarted, Is.True);
+
+            caravan.SetDefaultDriveEnabled(true);
+            caravan.SetSteeringNormalized(0.82f);
+            caravan.Body.linearVelocity = Vector3.zero;
+            caravan.Body.angularVelocity = Vector3.zero;
+
+            var maximumSlipAngle = 0f;
+            var maximumSpeed = 0f;
+            var maximumYawSpeed = 0f;
+            var initialForward = caravan.transform.forward;
+            var accumulatedSlipAngle = 0f;
+            var measuredSteps = 0;
+            for (var fixedStep = 0; fixedStep < 300; fixedStep++)
+            {
+                yield return new WaitForFixedUpdate();
+                var planarVelocity = Vector3.ProjectOnPlane(caravan.Body.linearVelocity, Vector3.up);
+                maximumSpeed = Mathf.Max(maximumSpeed, planarVelocity.magnitude);
+                maximumYawSpeed = Mathf.Max(maximumYawSpeed, Mathf.Abs(caravan.Body.angularVelocity.y));
+                if (fixedStep < 60 || planarVelocity.magnitude < 0.35f)
+                {
+                    continue;
+                }
+
+                var slipAngle = Vector3.Angle(caravan.transform.forward, planarVelocity);
+                maximumSlipAngle = Mathf.Max(maximumSlipAngle, slipAngle);
+                accumulatedSlipAngle += slipAngle;
+                measuredSteps++;
+            }
+
+            caravan.SetSteeringNormalized(0f);
+            Assert.That(
+                measuredSteps,
+                Is.GreaterThan(30),
+                $"The chassis never reached a measurable turning speed. "
+                + $"peakSpeed={maximumSpeed:F2}, finalSpeed={caravan.Speed:F2}, "
+                + $"drive={caravan.CurrentDriveForce:F1} N, grounded={caravan.IsGrounded}, "
+                + $"resistance={caravan.CurrentSurface.Resistance:F2}, "
+                + $"peakYaw={maximumYawSpeed * Mathf.Rad2Deg:F1} deg/s, "
+                + $"headingDelta={Vector3.Angle(initialForward, caravan.transform.forward):F1} degrees, "
+                + $"inertia={caravan.Body.inertiaTensor}.");
+            Assert.That(
+                accumulatedSlipAngle / measuredSteps,
+                Is.LessThan(24f),
+                $"The chassis developed persistent side slip. Peak={maximumSlipAngle:F1} degrees.");
+            Assert.That(
+                maximumSlipAngle,
+                Is.LessThan(48f),
+                "The chassis rotated across its direction of travel during a sustained turn.");
         }
 
         [UnityTest]

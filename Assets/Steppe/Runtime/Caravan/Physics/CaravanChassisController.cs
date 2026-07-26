@@ -4,6 +4,7 @@ using Steppe.Settings;
 using Steppe.Terrain;
 using Steppe.World;
 using UnityEngine;
+using VehiclePhysics;
 
 namespace Steppe.Caravan
 {
@@ -15,12 +16,15 @@ namespace Steppe.Caravan
         private FloatingOriginSystem floatingOrigin;
         private CaravanEnvironmentSampler environment;
         private Rigidbody body;
-        private WheelCollider[] wheelColliders = Array.Empty<WheelCollider>();
-        private Transform[] wheelVisuals = Array.Empty<Transform>();
         private TerrainHeightGenerator terrain;
         private TerrainChunkStreamer terrainStreamer;
         private CaravanModule module;
+        private VPVehicleController vehicle;
+        private VPStandardInput vehicleInput;
+        private VPVehicleToolkit vehicleToolkit;
+        private VPWheelCollider[] wheels;
         private bool physicsStarted;
+        private bool defaultDriveEnabled = true;
         private float steeringNormalized;
 
         public Rigidbody Body => body;
@@ -29,14 +33,14 @@ namespace Steppe.Caravan
         {
             get
             {
-                if (!physicsStarted)
+                if (!physicsStarted || body == null || body.isKinematic || wheels == null)
                 {
                     return false;
                 }
 
-                for (var index = 0; index < wheelColliders.Length; index++)
+                for (var index = 0; index < wheels.Length; index++)
                 {
-                    if (wheelColliders[index] != null && wheelColliders[index].isGrounded)
+                    if (wheels[index] != null && wheels[index].visualGrounded)
                     {
                         return true;
                     }
@@ -53,29 +57,66 @@ namespace Steppe.Caravan
         public SteppeTraversalState CurrentSurface { get; private set; }
         public float SteeringNormalized => steeringNormalized;
         public bool PhysicsStarted => physicsStarted;
+        public bool DefaultDriveEnabled => defaultDriveEnabled;
+        public float CurrentDriveForce { get; private set; }
+        public bool VehicleEngineStarted => vehicleToolkit != null && vehicleToolkit.isEngineStarted;
+        public int VehicleEngagedGear => vehicleToolkit != null ? vehicleToolkit.engagedGear : 0;
+        public int GroundedWheelCount
+        {
+            get
+            {
+                var count = 0;
+                if (wheels == null)
+                {
+                    return count;
+                }
+
+                for (var index = 0; index < wheels.Length; index++)
+                {
+                    if (wheels[index] != null && wheels[index].visualGrounded)
+                    {
+                        count++;
+                    }
+                }
+
+                return count;
+            }
+        }
         public event Action<Vector3> Teleported;
 
         public void Configure(
             SteppeWorldSettings worldSettings,
             FloatingOriginSystem origin,
-            CaravanEnvironmentSampler environmentSampler,
-            WheelCollider[] wheels,
-            Transform[] visuals)
+            CaravanEnvironmentSampler environmentSampler)
         {
             settings = worldSettings != null ? worldSettings : throw new ArgumentNullException(nameof(worldSettings));
             floatingOrigin = origin != null ? origin : throw new ArgumentNullException(nameof(origin));
             environment = environmentSampler ?? throw new ArgumentNullException(nameof(environmentSampler));
-            wheelColliders = wheels ?? Array.Empty<WheelCollider>();
-            wheelVisuals = visuals ?? Array.Empty<Transform>();
             body = GetComponent<Rigidbody>();
+            vehicle = GetComponent<VPVehicleController>();
+            vehicleInput = GetComponent<VPStandardInput>();
+            vehicleToolkit = GetComponent<VPVehicleToolkit>();
+            wheels = GetComponentsInChildren<VPWheelCollider>(true);
+            if (vehicle == null || vehicleInput == null || vehicleToolkit == null
+                || wheels.Length != 4)
+            {
+                throw new InvalidOperationException(
+                    "The caravan chassis requires a configured VPP four-wheel physics core.");
+            }
+
             body.useGravity = true;
             body.isKinematic = true;
             body.interpolation = RigidbodyInterpolation.Interpolate;
             body.collisionDetectionMode = CollisionDetectionMode.ContinuousSpeculative;
-            body.linearDamping = 0.08f;
-            body.angularDamping = 1.15f;
-            body.maxAngularVelocity = 2.5f;
-            body.constraints = RigidbodyConstraints.FreezeRotationX | RigidbodyConstraints.FreezeRotationZ;
+            body.linearDamping = 0.02f;
+            body.angularDamping = 0.35f;
+            body.maxAngularVelocity = 4f;
+            body.constraints = RigidbodyConstraints.None;
+            vehicleInput.externalSteer = 0f;
+            vehicleInput.externalThrottle = 0f;
+            vehicleInput.externalBrake = 1f;
+            vehicleInput.externalHandbrake = 0f;
+            vehicleInput.enabled = false;
             terrain = new TerrainHeightGenerator(settings);
             module = GetComponent<CaravanModule>();
             RefreshMassProperties();
@@ -86,28 +127,24 @@ namespace Steppe.Caravan
             steeringNormalized = Mathf.Clamp(value, -1f, 1f);
         }
 
+        public void SetDefaultDriveEnabled(bool enabled)
+        {
+            defaultDriveEnabled = enabled;
+            if (!enabled)
+            {
+                CurrentDriveForce = 0f;
+            }
+        }
+
         public void ApplySailForce(Vector3 force, Vector3 applicationPoint)
         {
             if (body == null || body.isKinematic)
             {
-                SetSailRollingTorque(0f);
                 return;
             }
 
             var planarForce = Vector3.ProjectOnPlane(force, Vector3.up);
-            var forwardForceMagnitude = Vector3.Dot(planarForce, transform.forward);
-            var longitudinalForce = transform.forward * forwardForceMagnitude;
-            var lateralForce = planarForce - longitudinalForce;
-
-            // WheelCollider does not reliably turn a freely rolling wheel from a force
-            // applied to the chassis. Convert only the longitudinal part to the
-            // equivalent rolling torque: sum(torque / radius) == sail force.
-            SetSailRollingTorque(forwardForceMagnitude);
-            body.AddForceAtPosition(lateralForce, applicationPoint, ForceMode.Force);
-
-            var lever = applicationPoint - body.worldCenterOfMass;
-            var yawTorque = Vector3.Cross(lever, longitudinalForce).y;
-            body.AddTorque(Vector3.up * yawTorque, ForceMode.Force);
+            body.AddForceAtPosition(planarForce, applicationPoint, ForceMode.Force);
         }
 
         public void RefreshMassProperties()
@@ -136,8 +173,12 @@ namespace Steppe.Caravan
             }
 
             body.mass = totalMass;
-            body.centerOfMass = weightedCenter / totalMass;
             body.ResetInertiaTensor();
+            body.centerOfMass = weightedCenter / totalMass;
+            if (vehicle != null && vehicle.centerOfMass != null)
+            {
+                vehicle.centerOfMass.position = transform.TransformPoint(body.centerOfMass);
+            }
         }
 
         public void Teleport(Vector3 localPosition)
@@ -150,42 +191,24 @@ namespace Steppe.Caravan
                 return;
             }
 
-            body.linearVelocity = Vector3.zero;
-            body.angularVelocity = Vector3.zero;
-            body.position = localPosition;
-            body.rotation = Quaternion.identity;
-            transform.SetPositionAndRotation(localPosition, Quaternion.identity);
+            if (vehicle != null)
+            {
+                vehicle.HardReposition(localPosition, Quaternion.identity, true);
+            }
+            else
+            {
+                body.linearVelocity = Vector3.zero;
+                body.angularVelocity = Vector3.zero;
+                body.position = localPosition;
+                body.rotation = Quaternion.identity;
+                transform.SetPositionAndRotation(localPosition, Quaternion.identity);
+            }
             Physics.SyncTransforms();
             body.isKinematic = true;
             physicsStarted = false;
+            CurrentDriveForce = 0f;
             CurrentSurface = default;
             Teleported?.Invoke(localPosition - previousPosition);
-        }
-
-        private void SetSailRollingTorque(float forwardForce)
-        {
-            var wheelCount = 0;
-            for (var index = 0; index < wheelColliders.Length; index++)
-            {
-                if (wheelColliders[index] != null)
-                {
-                    wheelCount++;
-                }
-            }
-
-            if (wheelCount == 0)
-            {
-                return;
-            }
-
-            for (var index = 0; index < wheelColliders.Length; index++)
-            {
-                var wheel = wheelColliders[index];
-                if (wheel != null)
-                {
-                    wheel.motorTorque = forwardForce * wheel.radius / wheelCount;
-                }
-            }
         }
 
         private void FixedUpdate()
@@ -202,22 +225,40 @@ namespace Steppe.Caravan
             }
 
             UpdateSurfaceState();
-            ApplySteeringAndSurface();
+            ApplyVehicleInput();
         }
 
-        private void LateUpdate()
+        private void ApplyVehicleInput()
         {
-            var count = Mathf.Min(wheelColliders.Length, wheelVisuals.Length);
-            for (var index = 0; index < count; index++)
+            if (body.isKinematic || vehicleInput == null)
             {
-                if (wheelColliders[index] == null || wheelVisuals[index] == null)
-                {
-                    continue;
-                }
-
-                wheelColliders[index].GetWorldPose(out var position, out var rotation);
-                wheelVisuals[index].SetPositionAndRotation(position, rotation);
+                CurrentDriveForce = 0f;
+                return;
             }
+
+            var resistance = (float)CurrentSurface.Resistance;
+            var condition = module != null ? module.State.Efficiency : 1f;
+            var maximumSpeed = Mathf.Lerp(8.5f, 4.2f, resistance);
+            var throttle = defaultDriveEnabled && Speed < maximumSpeed
+                ? Mathf.Lerp(0.55f, 0.7f, resistance) * condition
+                : 0f;
+            if (vehicleToolkit.isEngineStarted && vehicleToolkit.engagedGear == 0)
+            {
+                vehicleToolkit.SetAutomaticModeD();
+                vehicleToolkit.SetGear(1);
+            }
+            vehicleInput.externalSteer = steeringNormalized;
+            vehicleInput.externalThrottle = throttle;
+            vehicleInput.externalBrake = defaultDriveEnabled
+                ? 0f
+                : (Speed > 0.15f ? 0.35f : 1f);
+            vehicleInput.externalHandbrake = 0f;
+            VPVehicleToolkit.SetSteering(vehicle, steeringNormalized);
+            VPVehicleToolkit.SetThrottle(vehicle, throttle);
+            VPVehicleToolkit.SetBrake(vehicle, vehicleInput.externalBrake);
+            VPVehicleToolkit.SetHandbrake(vehicle, 0f);
+            vehicle.tireFriction.frictionMultiplier = Mathf.Lerp(0.95f, 0.64f, resistance);
+            CurrentDriveForce = throttle * 1000f;
         }
 
         private void TryBeginPhysicsOnLoadedTerrain()
@@ -236,6 +277,8 @@ namespace Steppe.Caravan
             Physics.SyncTransforms();
             body.isKinematic = false;
             physicsStarted = true;
+            vehicleToolkit.StartEngine();
+            vehicleToolkit.SetAutomaticModeD();
         }
 
         private void UpdateSurfaceState()
@@ -261,50 +304,5 @@ namespace Steppe.Caravan
             }
         }
 
-        private void ApplySteeringAndSurface()
-        {
-            var steerAngle = steeringNormalized * 30f;
-            if (wheelColliders.Length > 0 && wheelColliders[0] != null)
-            {
-                wheelColliders[0].steerAngle = steerAngle;
-            }
-            if (wheelColliders.Length > 1 && wheelColliders[1] != null)
-            {
-                wheelColliders[1].steerAngle = steerAngle;
-            }
-
-            var resistance = (float)CurrentSurface.Resistance;
-            var sidewaysStiffness = Mathf.Lerp(1.65f, 0.48f, resistance);
-            for (var index = 0; index < wheelColliders.Length; index++)
-            {
-                var wheel = wheelColliders[index];
-                if (wheel == null)
-                {
-                    continue;
-                }
-
-                var sideways = wheel.sidewaysFriction;
-                sideways.stiffness = sidewaysStiffness;
-                wheel.sidewaysFriction = sideways;
-                var forward = wheel.forwardFriction;
-                forward.stiffness = Mathf.Lerp(1.25f, 0.7f, resistance);
-                wheel.forwardFriction = forward;
-            }
-
-            var planarVelocity = Vector3.ProjectOnPlane(body.linearVelocity, Vector3.up);
-            if (planarVelocity.sqrMagnitude > 0.001f)
-            {
-                body.AddForce(
-                    -planarVelocity * Mathf.Lerp(18f, 210f, resistance),
-                    ForceMode.Force);
-            }
-
-            var maximumSpeed = Mathf.Lerp(12f, 6.5f, resistance);
-            if (planarVelocity.magnitude > maximumSpeed)
-            {
-                var limited = planarVelocity.normalized * maximumSpeed;
-                body.linearVelocity = new Vector3(limited.x, body.linearVelocity.y, limited.z);
-            }
-        }
     }
 }

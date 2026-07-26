@@ -73,16 +73,6 @@ namespace Steppe.Prototype
                 initialX,
                 initialGroundHeight + 1.05f,
                 initialZ));
-            var initialWind = new SteppeWeatherModel(runtimeSettings)
-                .SampleWind(0.0)
-                .SurfaceVelocity;
-            var initialDownwind = new Vector3(initialWind.x, 0f, initialWind.y);
-            if (initialDownwind.sqrMagnitude > 0.01f)
-            {
-                caravanRig.Root.transform.rotation = Quaternion.LookRotation(
-                    initialDownwind.normalized,
-                    Vector3.up);
-            }
             caravanRig.Root.transform.SetParent(transform, true);
 
             camera.transform.position = caravanRig.Root.transform.position + new Vector3(0f, 2.2f, -3f);

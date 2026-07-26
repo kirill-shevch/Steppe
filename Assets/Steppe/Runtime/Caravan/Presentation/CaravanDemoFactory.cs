@@ -4,6 +4,7 @@ using Steppe.Settings;
 using Steppe.World;
 using UnityEngine;
 using UnityEngine.Rendering;
+using VehiclePhysics;
 
 namespace Steppe.Caravan
 {
@@ -13,55 +14,35 @@ namespace Steppe.Caravan
             GameObject root,
             CaravanChassisController chassis,
             CaravanModule chassisModule,
-            CaravanSailModule sail,
-            CaravanModule sailModule,
             CaravanMountGrid grid,
             Transform playerSpawn,
-            WheelCollider[] wheelColliders,
-            Transform[] wheelVisuals,
-            CaravanControlStation steeringStation,
-            CaravanControlStation sailStation)
+            CaravanControlStation steeringStation)
         {
             Root = root;
             Chassis = chassis;
             ChassisModule = chassisModule;
-            Sail = sail;
-            SailModule = sailModule;
             MountGrid = grid;
             PlayerSpawn = playerSpawn;
-            WheelColliders = wheelColliders;
-            WheelVisuals = wheelVisuals;
             SteeringStation = steeringStation;
-            SailStation = sailStation;
         }
 
         public GameObject Root { get; }
         public CaravanChassisController Chassis { get; }
         public CaravanModule ChassisModule { get; }
-        public CaravanSailModule Sail { get; }
-        public CaravanModule SailModule { get; }
         public CaravanMountGrid MountGrid { get; }
         public Transform PlayerSpawn { get; }
-        public WheelCollider[] WheelColliders { get; }
-        public Transform[] WheelVisuals { get; }
         public CaravanControlStation SteeringStation { get; }
-        public CaravanControlStation SailStation { get; }
 
         public void Configure(
             SteppeWorldSettings settings,
             FloatingOriginSystem floatingOrigin,
             CaravanEnvironmentSampler environment)
         {
-            Chassis.Configure(settings, floatingOrigin, environment, WheelColliders, WheelVisuals);
-            Sail.Configure(Chassis.Body, environment, Sail.transform.Find("Visual/Sail Pivot"), Sail.transform.Find("Visual/Sail Pivot/Cloth"));
+            Chassis.Configure(settings, floatingOrigin, environment);
             SteeringStation.ConfigureSteering(
                 Chassis,
                 SteeringStation.transform.Find("Control Visual"),
                 SteeringStation.transform.Find("Focus Indicator")?.gameObject);
-            SailStation.ConfigureSail(
-                Sail,
-                SailStation.transform.Find("Control Visual"),
-                SailStation.transform.Find("Focus Indicator")?.gameObject);
         }
     }
 
@@ -82,25 +63,19 @@ namespace Steppe.Caravan
             var darkMetal = CreateMaterial("Caravan Dark Metal", new Color(0.10f, 0.14f, 0.14f), 0.42f, materials);
             var deckMaterial = CreateMaterial("Caravan Deck", new Color(0.42f, 0.31f, 0.17f), 0.18f, materials);
             var rubber = CreateMaterial("Caravan Wheel", new Color(0.055f, 0.06f, 0.055f), 0.12f, materials);
-            var sailMaterial = CreateMaterial("Caravan Sail", new Color(0.73f, 0.69f, 0.47f), 0.08f, materials);
-            sailMaterial.doubleSidedGI = true;
-            if (sailMaterial.HasProperty("_Cull"))
-            {
-                sailMaterial.SetFloat("_Cull", (float)CullMode.Off);
-            }
             var ochre = CreateMaterial("Caravan Dust Gauge", new Color(0.86f, 0.48f, 0.12f), 0.2f, materials);
             var green = CreateMaterial("Caravan Condition Gauge", new Color(0.18f, 0.78f, 0.38f), 0.2f, materials);
             var blue = CreateMaterial("Caravan Load Gauge", new Color(0.17f, 0.57f, 0.92f), 0.2f, materials);
 
-            var root = new GameObject("Steppe Caravan");
-            root.transform.position = localPosition;
-            var body = root.AddComponent<Rigidbody>();
+            var root = CreatePhysicsRoot(localPosition, out var vehicle, out var vehicleInput);
+            var body = root.GetComponent<Rigidbody>();
             body.isKinematic = true;
             var materialOwner = root.AddComponent<CaravanGeneratedMaterialOwner>();
             materialOwner.Configure(materials);
             var chassis = root.AddComponent<CaravanChassisController>();
             var grid = root.AddComponent<CaravanMountGrid>();
             grid.Configure(4, 8, 1f, 0f);
+            CreateChassisCollider(root.transform);
 
             var chassisVisual = new GameObject("Chassis Visual");
             chassisVisual.transform.SetParent(root.transform, false);
@@ -134,14 +109,19 @@ namespace Steppe.Caravan
                 new Vector3(0f, -0.62f, 0f));
             chassisModule.State.SetForTests(0.24f, 0.91f, 0f);
 
-            var wheels = new WheelCollider[4];
-            var wheelVisuals = new Transform[4];
             var wheelPositions = new[]
             {
                 new Vector3(-2.08f, -0.48f, 2.72f),
                 new Vector3(2.08f, -0.48f, 2.72f),
                 new Vector3(-2.08f, -0.48f, -2.72f),
                 new Vector3(2.08f, -0.48f, -2.72f)
+            };
+            var physicsWheels = new[]
+            {
+                vehicle.axles[0].leftWheel,
+                vehicle.axles[0].rightWheel,
+                vehicle.axles[1].leftWheel,
+                vehicle.axles[1].rightWheel
             };
             for (var index = 0; index < wheelPositions.Length; index++)
             {
@@ -151,69 +131,7 @@ namespace Steppe.Caravan
                     wheelPositions[index],
                     rubber,
                     darkMetal,
-                    out wheels[index],
-                    out wheelVisuals[index]);
-            }
-
-            var sailRoot = new GameObject("Sail Module");
-            var sailVisual = new GameObject("Visual");
-            sailVisual.transform.SetParent(sailRoot.transform, false);
-            CreatePrimitive(
-                "Mast",
-                PrimitiveType.Cylinder,
-                sailVisual.transform,
-                new Vector3(-0.72f, 1.72f, 0f),
-                new Vector3(0.075f, 1.88f, 0.075f),
-                darkMetal,
-                false);
-            var sailPivot = new GameObject("Sail Pivot");
-            sailPivot.transform.SetParent(sailVisual.transform, false);
-            sailPivot.transform.localPosition = new Vector3(-0.66f, 1.72f, 0f);
-            CreatePrimitive(
-                "Top Spar",
-                PrimitiveType.Cube,
-                sailPivot.transform,
-                new Vector3(1.08f, 1.42f, 0f),
-                new Vector3(2.35f, 0.07f, 0.07f),
-                darkMetal,
-                false);
-            CreatePrimitive(
-                "Bottom Spar",
-                PrimitiveType.Cube,
-                sailPivot.transform,
-                new Vector3(1.08f, -1.32f, 0f),
-                new Vector3(2.35f, 0.07f, 0.07f),
-                darkMetal,
-                false);
-            var cloth = CreateSailCloth(sailPivot.transform, sailMaterial);
-
-            var sailCollider = sailRoot.AddComponent<BoxCollider>();
-            sailCollider.center = new Vector3(0.36f, 1.78f, 0f);
-            sailCollider.size = new Vector3(2.55f, 3.45f, 0.24f);
-            var sailDisplay = CreateStatusDisplay(
-                sailVisual.transform,
-                new Vector3(-0.74f, 0.42f, -0.18f),
-                Quaternion.Euler(0f, 90f, 0f),
-                darkMetal,
-                ochre,
-                green,
-                blue);
-            var sailModule = sailRoot.AddComponent<CaravanModule>();
-            sailModule.Configure(
-                "sail",
-                sailVisual.transform,
-                true,
-                2,
-                2,
-                sailDisplay,
-                90f,
-                new Vector3(0.65f, 1.45f, 0f));
-            sailModule.State.SetForTests(0.52f, 0.78f, 0f);
-            var sail = sailRoot.AddComponent<CaravanSailModule>();
-            var initialPlacement = new CaravanGridPlacement(1, 3, 2, 2, 0);
-            if (!grid.Register(sailModule, initialPlacement))
-            {
-                throw new InvalidOperationException("Could not place the initial demo sail.");
+                    physicsWheels[index]);
             }
 
             var steeringStation = CreateControlStation(
@@ -225,34 +143,135 @@ namespace Steppe.Caravan
                 darkMetal,
                 metal,
                 green);
-            var sailStation = CreateControlStation(
-                sailRoot.transform,
-                "Sail Trim",
-                new Vector3(-0.56f, 0.34f, -0.48f),
-                Quaternion.identity,
-                CaravanControlKind.SailTrim,
-                darkMetal,
-                metal,
-                ochre);
 
             var playerSpawn = new GameObject("Player Spawn").transform;
             playerSpawn.SetParent(root.transform, false);
             playerSpawn.localPosition = new Vector3(0f, 0.06f, -2.55f);
 
-            sailModule.RefreshRendererCache();
+            ConfigurePhysics(vehicle, vehicleInput, physicsWheels);
             chassisModule.RefreshRendererCache();
+            root.SetActive(true);
             return new CaravanDemoRig(
                 root,
                 chassis,
                 chassisModule,
-                sail,
-                sailModule,
                 grid,
                 playerSpawn,
-                wheels,
-                wheelVisuals,
-                steeringStation,
-                sailStation);
+                steeringStation);
+        }
+
+        private static GameObject CreatePhysicsRoot(
+            Vector3 localPosition,
+            out VPVehicleController vehicle,
+            out VPStandardInput vehicleInput)
+        {
+            var physicsAsset = Resources.Load<VppCaravanPhysicsAsset>(
+                "Caravan/VPP Caravan Physics Asset");
+            if (physicsAsset == null || physicsAsset.PhysicsPrefab == null)
+            {
+                throw new InvalidOperationException(
+                    "The VPP caravan physics prefab is missing from Resources/Caravan.");
+            }
+
+            var staging = new GameObject("VPP Caravan Staging");
+            staging.SetActive(false);
+            var root = UnityEngine.Object.Instantiate(
+                physicsAsset.PhysicsPrefab,
+                staging.transform,
+                false);
+            root.SetActive(false);
+            root.transform.SetParent(null, false);
+            UnityEngine.Object.Destroy(staging);
+            root.name = "Steppe Caravan";
+            root.transform.SetPositionAndRotation(localPosition, Quaternion.identity);
+            root.transform.localScale = Vector3.one;
+
+            vehicle = root.GetComponent<VPVehicleController>();
+            vehicleInput = root.GetComponent<VPStandardInput>();
+            if (vehicle == null || vehicleInput == null || vehicle.axles == null
+                || vehicle.axles.Length < 2)
+            {
+                UnityEngine.Object.Destroy(root);
+                throw new InvalidOperationException(
+                    "The selected VPP prefab does not contain a configured four-wheel vehicle.");
+            }
+
+            foreach (var renderer in root.GetComponentsInChildren<Renderer>(true))
+            {
+                renderer.enabled = false;
+            }
+            foreach (var source in root.GetComponentsInChildren<AudioSource>(true))
+            {
+                source.enabled = false;
+            }
+            foreach (var camera in root.GetComponentsInChildren<Camera>(true))
+            {
+                camera.enabled = false;
+            }
+            foreach (var collider in root.GetComponentsInChildren<Collider>(true))
+            {
+                collider.enabled = false;
+            }
+            foreach (var behaviour in root.GetComponentsInChildren<MonoBehaviour>(true))
+            {
+                if (behaviour is VPVehicleController
+                    || behaviour is VPStandardInput
+                    || behaviour is VPWheelCollider)
+                {
+                    continue;
+                }
+
+                behaviour.enabled = false;
+            }
+
+            if (root.GetComponent<VPVehicleToolkit>() == null)
+            {
+                root.AddComponent<VPVehicleToolkit>();
+            }
+
+            return root;
+        }
+
+        private static void CreateChassisCollider(Transform parent)
+        {
+            var collision = new GameObject("Chassis Collision");
+            collision.transform.SetParent(parent, false);
+            collision.transform.localPosition = new Vector3(0f, -0.15f, 0f);
+            var collider = collision.AddComponent<BoxCollider>();
+            collider.size = new Vector3(3.82f, 0.34f, 7.2f);
+        }
+
+        private static void ConfigurePhysics(
+            VPVehicleController vehicle,
+            VPStandardInput vehicleInput,
+            IReadOnlyList<VPWheelCollider> wheels)
+        {
+            vehicle.steering.maxSteerAngle = 32f;
+            vehicle.tireFriction.frictionMultiplier = 0.9f;
+            if (vehicle.centerOfMass != null)
+            {
+                vehicle.centerOfMass.position = vehicle.transform.TransformPoint(
+                    new Vector3(0f, -0.62f, 0f));
+            }
+
+            vehicleInput.disableSteerInput = true;
+            vehicleInput.disableThrottleInput = true;
+            vehicleInput.disableBrakeInput = true;
+            vehicleInput.disableHandbrakeInput = true;
+            vehicleInput.disableClutchInput = true;
+            vehicleInput.externalSteer = 0f;
+            vehicleInput.externalThrottle = 0f;
+            vehicleInput.externalBrake = 1f;
+            vehicleInput.externalHandbrake = 0f;
+
+            for (var index = 0; index < wheels.Count; index++)
+            {
+                var wheel = wheels[index];
+                wheel.mass = 75f;
+                wheel.radius = 0.58f;
+                wheel.center = Vector3.zero;
+                wheel.suspensionDistance = 0.38f;
+            }
         }
 
         private static void CreateDeck(Transform parent, Material deck, Material frame)
@@ -293,41 +312,16 @@ namespace Steppe.Caravan
             Vector3 localPosition,
             Material rubber,
             Material hub,
-            out WheelCollider wheel,
-            out Transform visual)
+            VPWheelCollider physicsWheel)
         {
-            var colliderObject = new GameObject($"Wheel Collider {index + 1}");
-            colliderObject.transform.SetParent(parent, false);
-            colliderObject.transform.localPosition = localPosition;
-            wheel = colliderObject.AddComponent<WheelCollider>();
-            wheel.radius = 0.58f;
-            wheel.mass = 32f;
-            wheel.suspensionDistance = 0.18f;
-            wheel.wheelDampingRate = 0.28f;
-            var spring = wheel.suspensionSpring;
-            spring.spring = 38000f;
-            spring.damper = 6500f;
-            spring.targetPosition = 0.52f;
-            wheel.suspensionSpring = spring;
-            wheel.ConfigureVehicleSubsteps(5f, 8, 12);
-            var forward = wheel.forwardFriction;
-            forward.extremumSlip = 0.42f;
-            forward.extremumValue = 1f;
-            forward.asymptoteSlip = 0.86f;
-            forward.asymptoteValue = 0.72f;
-            forward.stiffness = 1.2f;
-            wheel.forwardFriction = forward;
-            var sideways = wheel.sidewaysFriction;
-            sideways.extremumSlip = 0.24f;
-            sideways.extremumValue = 1f;
-            sideways.asymptoteSlip = 0.58f;
-            sideways.asymptoteValue = 0.78f;
-            sideways.stiffness = 1.55f;
-            wheel.sidewaysFriction = sideways;
+            physicsWheel.transform.SetParent(parent, false);
+            physicsWheel.transform.localPosition = localPosition;
+            physicsWheel.transform.localRotation = Quaternion.identity;
 
-            var visualRoot = new GameObject($"Wheel Visual {index + 1}");
-            visualRoot.transform.SetParent(parent, false);
-            visualRoot.transform.localPosition = localPosition;
+            var suspensionRoot = new GameObject($"Wheel Suspension Visual {index + 1}");
+            suspensionRoot.transform.SetParent(physicsWheel.transform, false);
+            var visualRoot = new GameObject($"Wheel Spin Visual {index + 1}");
+            visualRoot.transform.SetParent(suspensionRoot.transform, false);
             var tyre = CreatePrimitive(
                 "Tyre",
                 PrimitiveType.Cylinder,
@@ -346,7 +340,10 @@ namespace Steppe.Caravan
                 hub,
                 false);
             wheelHub.transform.localRotation = Quaternion.Euler(0f, 0f, 90f);
-            visual = visualRoot.transform;
+
+            physicsWheel.suspensionTransform = suspensionRoot.transform;
+            physicsWheel.wheelTransform = visualRoot.transform;
+            physicsWheel.caliperTransform = null;
         }
 
         private static CaravanControlStation CreateControlStation(
@@ -598,7 +595,6 @@ namespace Steppe.Caravan
             if (collider != null && !keepCollider)
             {
                 collider.enabled = false;
-                UnityEngine.Object.Destroy(collider);
             }
             var renderer = item.GetComponent<Renderer>();
             if (renderer != null)
@@ -647,11 +643,20 @@ namespace Steppe.Caravan
     internal sealed class CaravanGeneratedMaterialOwner : MonoBehaviour
     {
         private readonly List<Material> materials = new List<Material>();
+        private readonly List<PhysicsMaterial> physicsMaterials = new List<PhysicsMaterial>();
 
         public void Configure(IEnumerable<Material> generatedMaterials)
         {
             materials.Clear();
             materials.AddRange(generatedMaterials);
+        }
+
+        public void AddPhysicsMaterial(PhysicsMaterial material)
+        {
+            if (material != null)
+            {
+                physicsMaterials.Add(material);
+            }
         }
 
         private void OnDestroy()
@@ -664,6 +669,14 @@ namespace Steppe.Caravan
                 }
             }
             materials.Clear();
+            for (var index = 0; index < physicsMaterials.Count; index++)
+            {
+                if (physicsMaterials[index] != null)
+                {
+                    Destroy(physicsMaterials[index]);
+                }
+            }
+            physicsMaterials.Clear();
         }
     }
 }
