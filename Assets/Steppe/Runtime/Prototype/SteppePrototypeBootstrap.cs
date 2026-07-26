@@ -69,10 +69,22 @@ namespace Steppe.Prototype
             const float initialX = 32f;
             const float initialZ = -64f;
             var initialGroundHeight = (float)new TerrainHeightGenerator(runtimeSettings).SampleHeight(initialX, initialZ);
+            var initialWeather = new SteppeWeatherModel(runtimeSettings).Sample(
+                initialX,
+                initialZ,
+                0.0);
+            var initialWind = new Vector3(
+                initialWeather.SurfaceWind.x,
+                0f,
+                initialWeather.SurfaceWind.y);
+            var initialRotation = initialWind.sqrMagnitude > 0.001f
+                ? Quaternion.LookRotation(initialWind.normalized, Vector3.up)
+                : Quaternion.identity;
             var caravanRig = CaravanDemoFactory.Create(new Vector3(
                 initialX,
-                initialGroundHeight + 1.05f,
-                initialZ));
+                initialGroundHeight + 1.35f,
+                initialZ),
+                initialRotation);
             caravanRig.Root.transform.SetParent(transform, true);
 
             camera.transform.position = caravanRig.Root.transform.position + new Vector3(0f, 2.2f, -3f);
@@ -119,7 +131,8 @@ namespace Steppe.Prototype
                 runtimeSettings,
                 floatingOrigin,
                 weatherSystem,
-                ecologySystem);
+                ecologySystem,
+                timeSystem);
             caravanRig.Configure(runtimeSettings, floatingOrigin, environment);
 
             var existingBallCamera = camera.GetComponent<SteppeBallCameraController>();
@@ -130,7 +143,9 @@ namespace Steppe.Prototype
 
             var playerObject = new GameObject("Steppe Caravan Keeper");
             playerObject.transform.SetParent(transform, true);
-            playerObject.transform.position = caravanRig.PlayerSpawn.position;
+            playerObject.transform.SetPositionAndRotation(
+                caravanRig.PlayerSpawn.position,
+                caravanRig.PlayerSpawn.rotation);
             playerObject.AddComponent<CharacterController>();
             var firstPerson = playerObject.AddComponent<CaravanFirstPersonController>();
             firstPerson.Configure(runtimeSettings, floatingOrigin, caravanRig.Chassis, camera);
@@ -154,7 +169,8 @@ namespace Steppe.Prototype
                 weatherSystem,
                 ecologySystem,
                 floatingOrigin,
-                caravanRig.Root.transform);
+                caravanRig.Root.transform,
+                celestialPresentation);
 
             var cloudObject = new GameObject("Cloud Layer");
             cloudObject.transform.SetParent(worldSpaceObject.transform, false);

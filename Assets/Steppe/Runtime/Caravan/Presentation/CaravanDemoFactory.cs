@@ -14,24 +14,36 @@ namespace Steppe.Caravan
             GameObject root,
             CaravanChassisController chassis,
             CaravanModule chassisModule,
+            CaravanSailModule sail,
+            CaravanModule sailModule,
+            IReadOnlyList<CaravanModule> equipmentModules,
             CaravanMountGrid grid,
             Transform playerSpawn,
-            CaravanControlStation steeringStation)
+            CaravanControlStation steeringStation,
+            CaravanControlStation sailStation)
         {
             Root = root;
             Chassis = chassis;
             ChassisModule = chassisModule;
+            Sail = sail;
+            SailModule = sailModule;
+            EquipmentModules = equipmentModules;
             MountGrid = grid;
             PlayerSpawn = playerSpawn;
             SteeringStation = steeringStation;
+            SailStation = sailStation;
         }
 
         public GameObject Root { get; }
         public CaravanChassisController Chassis { get; }
         public CaravanModule ChassisModule { get; }
+        public CaravanSailModule Sail { get; }
+        public CaravanModule SailModule { get; }
+        public IReadOnlyList<CaravanModule> EquipmentModules { get; }
         public CaravanMountGrid MountGrid { get; }
         public Transform PlayerSpawn { get; }
         public CaravanControlStation SteeringStation { get; }
+        public CaravanControlStation SailStation { get; }
 
         public void Configure(
             SteppeWorldSettings settings,
@@ -39,10 +51,32 @@ namespace Steppe.Caravan
             CaravanEnvironmentSampler environment)
         {
             Chassis.Configure(settings, floatingOrigin, environment);
+            Sail.Configure(
+                Chassis.Body,
+                environment,
+                Sail.transform.Find("Visual/Sail Pivot"),
+                Sail.transform.Find("Visual/Sail Pivot/Cloth"),
+                28f,
+                5200f);
+            Sail.GetComponent<CaravanWindVane>()?.Configure(
+                environment,
+                Sail.transform.Find("Visual/Wind Vane/Vane Pivot"));
             SteeringStation.ConfigureSteering(
                 Chassis,
                 SteeringStation.transform.Find("Control Visual"),
                 SteeringStation.transform.Find("Focus Indicator")?.gameObject);
+            SailStation.ConfigureSail(
+                Sail,
+                SailStation.transform.Find("Control Visual"),
+                SailStation.transform.Find("Focus Indicator")?.gameObject);
+            for (var index = 0; index < EquipmentModules.Count; index++)
+            {
+                if (EquipmentModules[index].TryGetComponent<CaravanPhotovoltaicModule>(
+                        out var photovoltaic))
+                {
+                    photovoltaic.Configure(environment);
+                }
+            }
         }
     }
 
@@ -53,28 +87,44 @@ namespace Steppe.Caravan
     /// </summary>
     public static class CaravanDemoFactory
     {
-        private const float DeckWidth = 4f;
-        private const float DeckLength = 8f;
+        private const int DeckCellsWide = 10;
+        private const int DeckCellsLong = 18;
+        private const float DeckWidth = DeckCellsWide;
+        private const float DeckLength = DeckCellsLong;
 
-        public static CaravanDemoRig Create(Vector3 localPosition)
+        public static CaravanDemoRig Create(
+            Vector3 localPosition,
+            Quaternion localRotation)
         {
             var materials = new List<Material>();
             var metal = CreateMaterial("Caravan Warm Metal", new Color(0.28f, 0.38f, 0.32f), 0.28f, materials);
             var darkMetal = CreateMaterial("Caravan Dark Metal", new Color(0.10f, 0.14f, 0.14f), 0.42f, materials);
             var deckMaterial = CreateMaterial("Caravan Deck", new Color(0.42f, 0.31f, 0.17f), 0.18f, materials);
             var rubber = CreateMaterial("Caravan Wheel", new Color(0.055f, 0.06f, 0.055f), 0.12f, materials);
+            var copper = CreateMaterial("Caravan Copper", new Color(0.58f, 0.31f, 0.16f), 0.52f, materials);
+            var solar = CreateMaterial("Caravan Solar Cells", new Color(0.055f, 0.19f, 0.25f), 0.72f, materials);
+            var water = CreateMaterial("Caravan Water System", new Color(0.15f, 0.48f, 0.62f), 0.58f, materials);
+            var biomass = CreateMaterial("Caravan Biomass", new Color(0.42f, 0.39f, 0.16f), 0.16f, materials);
+            var hot = CreateMaterial("Caravan Heat", new Color(0.82f, 0.24f, 0.07f), 0.24f, materials);
+            var sailMaterial = CreateMaterial("Caravan Sail", new Color(0.73f, 0.69f, 0.47f), 0.08f, materials);
+            sailMaterial.doubleSidedGI = true;
+            if (sailMaterial.HasProperty("_Cull"))
+            {
+                sailMaterial.SetFloat("_Cull", (float)CullMode.Off);
+            }
             var ochre = CreateMaterial("Caravan Dust Gauge", new Color(0.86f, 0.48f, 0.12f), 0.2f, materials);
             var green = CreateMaterial("Caravan Condition Gauge", new Color(0.18f, 0.78f, 0.38f), 0.2f, materials);
             var blue = CreateMaterial("Caravan Load Gauge", new Color(0.17f, 0.57f, 0.92f), 0.2f, materials);
 
             var root = CreatePhysicsRoot(localPosition, out var vehicle, out var vehicleInput);
+            root.transform.rotation = localRotation;
             var body = root.GetComponent<Rigidbody>();
             body.isKinematic = true;
             var materialOwner = root.AddComponent<CaravanGeneratedMaterialOwner>();
             materialOwner.Configure(materials);
             var chassis = root.AddComponent<CaravanChassisController>();
             var grid = root.AddComponent<CaravanMountGrid>();
-            grid.Configure(4, 8, 1f, 0f);
+            grid.Configure(DeckCellsWide, DeckCellsLong, 1f, 0f);
             CreateChassisCollider(root.transform);
 
             var chassisVisual = new GameObject("Chassis Visual");
@@ -91,7 +141,7 @@ namespace Steppe.Caravan
 
             var chassisDisplay = CreateStatusDisplay(
                 chassisVisual.transform,
-                new Vector3(-1.45f, 0.62f, 2.55f),
+                new Vector3(-4.4f, 0.62f, 6.7f),
                 Quaternion.Euler(8f, 0f, 0f),
                 darkMetal,
                 ochre,
@@ -102,19 +152,19 @@ namespace Steppe.Caravan
                 "chassis",
                 chassisVisual.transform,
                 false,
-                4,
-                8,
+                DeckCellsWide,
+                DeckCellsLong,
                 chassisDisplay,
-                1280f,
-                new Vector3(0f, -0.62f, 0f));
+                2600f,
+                new Vector3(0f, -0.72f, 0f));
             chassisModule.State.SetForTests(0.24f, 0.91f, 0f);
 
             var wheelPositions = new[]
             {
-                new Vector3(-2.08f, -0.48f, 2.72f),
-                new Vector3(2.08f, -0.48f, 2.72f),
-                new Vector3(-2.08f, -0.48f, -2.72f),
-                new Vector3(2.08f, -0.48f, -2.72f)
+                new Vector3(-5.08f, -0.55f, 6.55f),
+                new Vector3(5.08f, -0.55f, 6.55f),
+                new Vector3(-5.08f, -0.55f, -6.55f),
+                new Vector3(5.08f, -0.55f, -6.55f)
             };
             var physicsWheels = new[]
             {
@@ -134,10 +184,35 @@ namespace Steppe.Caravan
                     physicsWheels[index]);
             }
 
+            var sailRoot = CreateSailModule(
+                grid,
+                sailMaterial,
+                darkMetal,
+                metal,
+                ochre,
+                green,
+                blue,
+                out var sail,
+                out var sailModule,
+                out var sailStation);
+
+            var palette = new CaravanPartPalette(
+                metal,
+                darkMetal,
+                copper,
+                solar,
+                water,
+                biomass,
+                hot,
+                ochre,
+                green,
+                blue);
+            var equipmentModules = CaravanGreyboxPartFactory.CreateInitialParts(grid, palette);
+
             var steeringStation = CreateControlStation(
                 root.transform,
                 "Steering Wheel",
-                new Vector3(0f, 0.68f, 2.92f),
+                new Vector3(-3.75f, 0.68f, 7.45f),
                 Quaternion.Euler(18f, 0f, 0f),
                 CaravanControlKind.Steering,
                 darkMetal,
@@ -146,18 +221,178 @@ namespace Steppe.Caravan
 
             var playerSpawn = new GameObject("Player Spawn").transform;
             playerSpawn.SetParent(root.transform, false);
-            playerSpawn.localPosition = new Vector3(0f, 0.06f, -2.55f);
+            playerSpawn.localPosition = new Vector3(0f, 0.06f, -5.2f);
 
             ConfigurePhysics(vehicle, vehicleInput, physicsWheels);
+            sailRoot.transform.SetParent(root.transform, true);
             chassisModule.RefreshRendererCache();
             root.SetActive(true);
             return new CaravanDemoRig(
                 root,
                 chassis,
                 chassisModule,
+                sail,
+                sailModule,
+                equipmentModules,
                 grid,
                 playerSpawn,
-                steeringStation);
+                steeringStation,
+                sailStation);
+        }
+
+        private static GameObject CreateSailModule(
+            CaravanMountGrid grid,
+            Material sailMaterial,
+            Material darkMetal,
+            Material metal,
+            Material dust,
+            Material condition,
+            Material load,
+            out CaravanSailModule sail,
+            out CaravanModule sailModule,
+            out CaravanControlStation sailStation)
+        {
+            var root = new GameObject("Sail Module");
+            var visual = new GameObject("Visual");
+            visual.transform.SetParent(root.transform, false);
+            CreatePrimitive(
+                "Mast",
+                PrimitiveType.Cylinder,
+                visual.transform,
+                new Vector3(-0.72f, 2.15f, 0f),
+                new Vector3(0.1f, 2.28f, 0.1f),
+                darkMetal,
+                false);
+            var pivot = new GameObject("Sail Pivot");
+            pivot.transform.SetParent(visual.transform, false);
+            pivot.transform.localPosition = new Vector3(-0.66f, 2.2f, 0f);
+            CreatePrimitive(
+                "Top Spar",
+                PrimitiveType.Cube,
+                pivot.transform,
+                new Vector3(1.32f, 1.75f, 0f),
+                new Vector3(2.82f, 0.08f, 0.08f),
+                darkMetal,
+                false);
+            CreatePrimitive(
+                "Bottom Spar",
+                PrimitiveType.Cube,
+                pivot.transform,
+                new Vector3(1.32f, -1.65f, 0f),
+                new Vector3(2.82f, 0.08f, 0.08f),
+                darkMetal,
+                false);
+            var cloth = CreateSailCloth(pivot.transform, sailMaterial);
+            cloth.localScale = new Vector3(1.2f, 1.25f, 0.04f);
+            CreateWindVane(
+                visual.transform,
+                darkMetal,
+                metal,
+                sailMaterial,
+                dust);
+
+            var collider = root.AddComponent<BoxCollider>();
+            collider.center = new Vector3(0.48f, 2.15f, 0f);
+            collider.size = new Vector3(2.9f, 4.35f, 0.3f);
+            var display = CreateStatusDisplay(
+                visual.transform,
+                new Vector3(-0.76f, 0.44f, -0.2f),
+                Quaternion.Euler(0f, 90f, 0f),
+                darkMetal,
+                dust,
+                condition,
+                load);
+            sailModule = root.AddComponent<CaravanModule>();
+            sailModule.Configure(
+                "sail",
+                visual.transform,
+                true,
+                2,
+                2,
+                display,
+                185f,
+                new Vector3(0.48f, 1.72f, 0f));
+            sailModule.State.SetForTests(0.14f, 0.94f, 0f);
+            root.AddComponent<CaravanPart>().Configure(CaravanPartKind.Sail, 65f, 42f);
+            sail = root.AddComponent<CaravanSailModule>();
+            root.AddComponent<CaravanWindVane>();
+            sailStation = CreateControlStation(
+                root.transform,
+                "Sail Trim",
+                new Vector3(-0.58f, 0.36f, -0.54f),
+                Quaternion.identity,
+                CaravanControlKind.SailTrim,
+                darkMetal,
+                metal,
+                dust);
+
+            if (!grid.Register(
+                    sailModule,
+                    new CaravanGridPlacement(4, 8, 2, 2, 0)))
+            {
+                UnityEngine.Object.Destroy(root);
+                throw new InvalidOperationException("Could not place the initial sail.");
+            }
+
+            sailModule.RefreshRendererCache();
+            return root;
+        }
+
+        private static void CreateWindVane(
+            Transform parent,
+            Material darkMetal,
+            Material metal,
+            Material tailMaterial,
+            Material arrowMaterial)
+        {
+            var root = new GameObject("Wind Vane");
+            root.transform.SetParent(parent, false);
+            root.transform.localPosition = new Vector3(-0.72f, 4.58f, 0f);
+
+            CreatePrimitive(
+                "Spindle",
+                PrimitiveType.Cylinder,
+                root.transform,
+                new Vector3(0f, -0.17f, 0f),
+                new Vector3(0.055f, 0.24f, 0.055f),
+                darkMetal,
+                false);
+            CreatePrimitive(
+                "Bearing",
+                PrimitiveType.Sphere,
+                root.transform,
+                Vector3.zero,
+                new Vector3(0.16f, 0.16f, 0.16f),
+                metal,
+                false);
+
+            var pivot = new GameObject("Vane Pivot");
+            pivot.transform.SetParent(root.transform, false);
+            CreatePrimitive(
+                "Arrow Shaft",
+                PrimitiveType.Cube,
+                pivot.transform,
+                Vector3.zero,
+                new Vector3(0.065f, 0.065f, 1.65f),
+                metal,
+                false);
+            var head = CreatePrimitive(
+                "Arrow Head",
+                PrimitiveType.Cube,
+                pivot.transform,
+                new Vector3(0f, 0f, 0.86f),
+                new Vector3(0.28f, 0.09f, 0.28f),
+                arrowMaterial,
+                false);
+            head.transform.localRotation = Quaternion.Euler(0f, 45f, 0f);
+            CreatePrimitive(
+                "Tail Vane",
+                PrimitiveType.Cube,
+                pivot.transform,
+                new Vector3(0f, 0.18f, -0.68f),
+                new Vector3(0.52f, 0.46f, 0.055f),
+                tailMaterial,
+                false);
         }
 
         private static GameObject CreatePhysicsRoot(
@@ -236,9 +471,9 @@ namespace Steppe.Caravan
         {
             var collision = new GameObject("Chassis Collision");
             collision.transform.SetParent(parent, false);
-            collision.transform.localPosition = new Vector3(0f, -0.15f, 0f);
+            collision.transform.localPosition = new Vector3(0f, -0.18f, 0f);
             var collider = collision.AddComponent<BoxCollider>();
-            collider.size = new Vector3(3.82f, 0.34f, 7.2f);
+            collider.size = new Vector3(9.65f, 0.34f, 17.2f);
         }
 
         private static void ConfigurePhysics(
@@ -267,42 +502,51 @@ namespace Steppe.Caravan
             for (var index = 0; index < wheels.Count; index++)
             {
                 var wheel = wheels[index];
-                wheel.mass = 75f;
-                wheel.radius = 0.58f;
+                wheel.mass = 110f;
+                wheel.radius = 0.72f;
                 wheel.center = Vector3.zero;
-                wheel.suspensionDistance = 0.38f;
+                wheel.suspensionDistance = 0.48f;
             }
         }
 
         private static void CreateDeck(Transform parent, Material deck, Material frame)
         {
-            for (var z = 0; z < 8; z++)
+            for (var z = 0; z < DeckCellsLong; z++)
             {
-                for (var x = 0; x < 4; x++)
+                for (var x = 0; x < DeckCellsWide; x++)
                 {
                     CreatePrimitive(
                         $"Floor {x},{z}",
                         PrimitiveType.Cube,
                         parent,
-                        new Vector3(-1.5f + x, -0.055f, -3.5f + z),
+                        new Vector3(
+                            -(DeckCellsWide - 1) * 0.5f + x,
+                            -0.055f,
+                            -(DeckCellsLong - 1) * 0.5f + z),
                         new Vector3(0.94f, 0.11f, 0.94f),
                         deck,
                         false);
                 }
             }
 
-            CreateBeam(parent, "Left Rail", new Vector3(-2f, -0.2f, 0f), new Vector3(0.16f, 0.28f, 8f), frame);
-            CreateBeam(parent, "Right Rail", new Vector3(2f, -0.2f, 0f), new Vector3(0.16f, 0.28f, 8f), frame);
+            CreateBeam(parent, "Left Rail", new Vector3(-DeckWidth * 0.5f, -0.2f, 0f),
+                new Vector3(0.16f, 0.28f, DeckLength), frame);
+            CreateBeam(parent, "Right Rail", new Vector3(DeckWidth * 0.5f, -0.2f, 0f),
+                new Vector3(0.16f, 0.28f, DeckLength), frame);
         }
 
         private static void CreateFrame(Transform parent, Material metal, Material darkMetal)
         {
-            CreateBeam(parent, "Front Beam", new Vector3(0f, -0.28f, 3.78f), new Vector3(4.15f, 0.18f, 0.18f), darkMetal);
-            CreateBeam(parent, "Rear Beam", new Vector3(0f, -0.28f, -3.78f), new Vector3(4.15f, 0.18f, 0.18f), darkMetal);
-            CreateBeam(parent, "Center Spine", new Vector3(0f, -0.31f, 0f), new Vector3(0.22f, 0.22f, 7.6f), metal);
-            for (var z = -3; z <= 3; z += 2)
+            CreateBeam(parent, "Front Beam", new Vector3(0f, -0.28f, DeckLength * 0.5f - 0.22f),
+                new Vector3(DeckWidth + 0.15f, 0.18f, 0.18f), darkMetal);
+            CreateBeam(parent, "Rear Beam", new Vector3(0f, -0.28f, -DeckLength * 0.5f + 0.22f),
+                new Vector3(DeckWidth + 0.15f, 0.18f, 0.18f), darkMetal);
+            CreateBeam(parent, "Center Spine", new Vector3(0f, -0.31f, 0f),
+                new Vector3(0.28f, 0.24f, DeckLength - 0.4f), metal);
+            for (var z = -8; z <= 8; z += 2)
             {
-                CreateBeam(parent, $"Cross Beam {z}", new Vector3(0f, -0.3f, z), new Vector3(3.9f, 0.16f, 0.16f), metal);
+                CreateBeam(parent, $"Cross Beam {z}", new Vector3(0f, -0.3f, z),
+                    new Vector3(DeckWidth - 0.2f, 0.16f, 0.16f), metal);
             }
         }
 
@@ -327,7 +571,7 @@ namespace Steppe.Caravan
                 PrimitiveType.Cylinder,
                 visualRoot.transform,
                 Vector3.zero,
-                new Vector3(0.58f, 0.18f, 0.58f),
+                new Vector3(0.72f, 0.22f, 0.72f),
                 rubber,
                 false);
             tyre.transform.localRotation = Quaternion.Euler(0f, 0f, 90f);
@@ -336,7 +580,7 @@ namespace Steppe.Caravan
                 PrimitiveType.Cylinder,
                 visualRoot.transform,
                 Vector3.zero,
-                new Vector3(0.32f, 0.2f, 0.32f),
+                new Vector3(0.4f, 0.24f, 0.4f),
                 hub,
                 false);
             wheelHub.transform.localRotation = Quaternion.Euler(0f, 0f, 90f);

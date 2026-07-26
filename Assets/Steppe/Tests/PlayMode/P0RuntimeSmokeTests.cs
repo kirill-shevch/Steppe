@@ -30,6 +30,8 @@ namespace Steppe.Tests
             var caravan = Object.FindAnyObjectByType<CaravanChassisController>();
             var firstPerson = Object.FindAnyObjectByType<CaravanFirstPersonController>();
             var sail = Object.FindAnyObjectByType<CaravanSailModule>();
+            var windVane = Object.FindAnyObjectByType<CaravanWindVane>();
+            var photovoltaic = Object.FindAnyObjectByType<CaravanPhotovoltaicModule>();
             var buildMode = Object.FindAnyObjectByType<CaravanBuildModeController>();
             var controlStations = Object.FindObjectsByType<CaravanControlStation>(
                 FindObjectsInactive.Include,
@@ -46,21 +48,61 @@ namespace Steppe.Tests
 
             Assert.That(firstPerson, Is.Not.Null);
             Assert.That(caravan, Is.Not.Null);
-            Assert.That(sail, Is.Null);
+            Assert.That(sail, Is.Not.Null);
+            Assert.That(windVane, Is.Not.Null);
+            Assert.That(
+                windVane.transform.Find("Visual/Wind Vane/Vane Pivot/Arrow Head"),
+                Is.Not.Null);
+            Assert.That(photovoltaic, Is.Not.Null);
             Assert.That(buildMode, Is.Not.Null);
-            Assert.That(controlStations, Has.Length.EqualTo(1));
+            Assert.That(controlStations, Has.Length.EqualTo(2));
             var steeringStation = System.Array.Find(
                 controlStations,
                 station => station.Kind == CaravanControlKind.Steering);
+            var trimStation = System.Array.Find(
+                controlStations,
+                station => station.Kind == CaravanControlKind.SailTrim);
             Assert.That(steeringStation, Is.Not.Null);
+            Assert.That(trimStation, Is.Not.Null);
             Assert.That(
                 steeringStation.transform.Find("Control Visual/Wheel Rim 1"),
                 Is.Not.Null);
             Assert.That(steeringStation.transform.Find("Focus Indicator"), Is.Not.Null);
             Assert.That(firstPerson.GetComponent<CharacterController>(), Is.Not.Null);
+            Assert.That(firstPerson.GetComponent<Rigidbody>(), Is.Null);
             Assert.That(caravan.GetComponent<Rigidbody>(), Is.Not.Null);
-            Assert.That(caravan.Body.mass, Is.EqualTo(1280f).Within(0.1f));
-            Assert.That(caravan.DefaultDriveEnabled, Is.True);
+            Assert.That(caravan.Body.mass, Is.GreaterThan(6500f));
+            Assert.That(caravan.DefaultDriveEnabled, Is.False);
+            var deckSurface = GameObject.Find("Deck Build Surface");
+            Assert.That(deckSurface, Is.Not.Null);
+            Assert.That(deckSurface.GetComponent<Rigidbody>(), Is.Null);
+            Assert.That(sail.GetComponent<Rigidbody>(), Is.Null);
+            var initialSurfaceWind = new Vector3(
+                weatherSystem.CurrentAtFocus.SurfaceWind.x,
+                0f,
+                weatherSystem.CurrentAtFocus.SurfaceWind.y).normalized;
+            Assert.That(
+                Vector3.Dot(caravan.transform.forward, initialSurfaceWind),
+                Is.GreaterThan(0.98f));
+            Assert.That(
+                photovoltaic.CurrentGenerationKilowatts,
+                Is.InRange(0f, photovoltaic.GetComponent<CaravanPart>().Capacity));
+            Assert.That(photovoltaic.CurrentIncidence, Is.InRange(0f, 1f));
+            Assert.That(photovoltaic.CurrentCloudTransmission, Is.InRange(0.06f, 1f));
+            Assert.That(
+                Shader.GetGlobalFloat("_SteppeCloudTransmissionAtFocus"),
+                Is.InRange(0.06f, 1f));
+            var caravanParts = Object.FindObjectsByType<CaravanPart>();
+            Assert.That(caravanParts.Length, Is.EqualTo(14));
+            foreach (CaravanPartKind kind in System.Enum.GetValues(typeof(CaravanPartKind)))
+            {
+                Assert.That(
+                    System.Array.Exists(caravanParts, part => part.Kind == kind),
+                    Is.True,
+                    $"The initial caravan is missing the {kind} part.");
+            }
+            Assert.That(Object.FindAnyObjectByType<CaravanMountGrid>().Width, Is.EqualTo(10));
+            Assert.That(Object.FindAnyObjectByType<CaravanMountGrid>().Length, Is.EqualTo(18));
             Assert.That(Object.FindObjectsByType<WheelCollider>().Length, Is.EqualTo(0));
             Assert.That(caravan.GetComponent("VPVehicleController"), Is.Not.Null);
             Assert.That(
@@ -97,6 +139,13 @@ namespace Steppe.Tests
 
             caravan.Body.linearVelocity = Vector3.zero;
             caravan.Body.angularVelocity = Vector3.zero;
+            var surfaceWind = new Vector3(
+                weatherSystem.CurrentAtFocus.SurfaceWind.x,
+                0f,
+                weatherSystem.CurrentAtFocus.SurfaceWind.y);
+            Assert.That(surfaceWind.magnitude, Is.GreaterThan(0.5f));
+            caravan.Body.rotation = Quaternion.LookRotation(surfaceWind.normalized, Vector3.up);
+            sail.SetTrimDegrees(0f);
             Physics.SyncTransforms();
             var naturalMotionStart = caravan.transform.position;
             for (var fixedStep = 0; fixedStep < 60; fixedStep++)
@@ -108,8 +157,8 @@ namespace Steppe.Tests
                     caravan.transform.position - naturalMotionStart,
                     Vector3.up).magnitude,
                 Is.GreaterThan(0.1f),
-                $"The default chassis drive did not move the caravan from rest. "
-                + $"drive={caravan.CurrentDriveForce:F1} N, "
+                $"The sail did not move the unpowered caravan from rest. "
+                + $"sailForce={sail.CurrentForce.Force}, "
                 + $"velocity={caravan.Body.linearVelocity}, "
                 + $"engine={caravan.VehicleEngineStarted}, "
                 + $"gear={caravan.VehicleEngagedGear}, "
@@ -272,7 +321,7 @@ namespace Steppe.Tests
         }
 
         [UnityTest]
-        public IEnumerator EmptyBuildModeCanBeEnteredWhenDefaultDriveIsDisabled()
+        public IEnumerator BuildModeMovesTheSailThroughTheSingleItemBuffer()
         {
             if (Object.FindAnyObjectByType<SteppePrototypeBootstrap>() == null)
             {
@@ -281,16 +330,24 @@ namespace Steppe.Tests
 
             yield return null;
             var caravan = Object.FindAnyObjectByType<CaravanChassisController>();
+            var sail = Object.FindAnyObjectByType<CaravanSailModule>();
             var build = Object.FindAnyObjectByType<CaravanBuildModeController>();
             Assert.That(caravan, Is.Not.Null);
+            Assert.That(sail, Is.Not.Null);
             Assert.That(build, Is.Not.Null);
 
-            caravan.SetDefaultDriveEnabled(false);
             caravan.Body.linearVelocity = Vector3.zero;
             Assert.That(build.TryEnterBuildMode(), Is.True);
+            Assert.That(build.TryHoldModule(sail.Module), Is.True);
+            Assert.That(build.HeldModule, Is.SameAs(sail.Module));
+            Assert.That(sail.gameObject.activeSelf, Is.False);
+
+            var destination = new CaravanGridPlacement(7, 8, 2, 2, 0);
+            Assert.That(build.TryPlaceHeldModule(destination), Is.True);
+            Assert.That(sail.gameObject.activeSelf, Is.True);
             Assert.That(build.HeldModule, Is.Null);
+            Assert.That(sail.transform.parent, Is.SameAs(caravan.transform));
             build.ExitBuildMode();
-            caravan.SetDefaultDriveEnabled(true);
             yield return null;
         }
 

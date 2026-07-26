@@ -134,4 +134,73 @@ namespace Steppe.Caravan
             }
         }
     }
+
+    /// <summary>
+    /// A mast-top weather vane driven by the real surface-wind field. Its arrow head
+    /// points into the wind while the broad tail follows the moving air mass.
+    /// </summary>
+    [DisallowMultipleComponent]
+    public sealed class CaravanWindVane : MonoBehaviour
+    {
+        private const float CalmWindThreshold = 0.15f;
+
+        private CaravanEnvironmentSampler environment;
+        private Transform vanePivot;
+
+        public Vector3 CurrentWindVelocity { get; private set; }
+        public Vector3 ArrowDirection { get; private set; } = Vector3.forward;
+        public float WindSpeed => CurrentWindVelocity.magnitude;
+
+        public void Configure(
+            CaravanEnvironmentSampler environmentSampler,
+            Transform pivot)
+        {
+            environment = environmentSampler
+                          ?? throw new ArgumentNullException(nameof(environmentSampler));
+            vanePivot = pivot != null ? pivot : throw new ArgumentNullException(nameof(pivot));
+            UpdateVane(true);
+        }
+
+        public static Vector3 GetArrowDirection(Vector2 surfaceWind)
+        {
+            var velocity = new Vector3(surfaceWind.x, 0f, surfaceWind.y);
+            return velocity.sqrMagnitude > CalmWindThreshold * CalmWindThreshold
+                ? -velocity.normalized
+                : Vector3.zero;
+        }
+
+        private void LateUpdate()
+        {
+            if (environment != null && vanePivot != null)
+            {
+                UpdateVane(false);
+            }
+        }
+
+        private void UpdateVane(bool snap)
+        {
+            var weather = environment.SampleWeather(vanePivot.position);
+            CurrentWindVelocity = new Vector3(
+                weather.SurfaceWind.x,
+                0f,
+                weather.SurfaceWind.y);
+            var desiredDirection = GetArrowDirection(weather.SurfaceWind);
+            if (desiredDirection.sqrMagnitude < 0.0001f)
+            {
+                return;
+            }
+
+            ArrowDirection = desiredDirection;
+            var desiredRotation = Quaternion.LookRotation(desiredDirection, Vector3.up);
+            if (snap)
+            {
+                vanePivot.rotation = desiredRotation;
+                return;
+            }
+
+            var response = Mathf.Lerp(2.4f, 9f, Mathf.InverseLerp(0.5f, 14f, WindSpeed));
+            var blend = 1f - Mathf.Exp(-response * UnityEngine.Time.deltaTime);
+            vanePivot.rotation = Quaternion.Slerp(vanePivot.rotation, desiredRotation, blend);
+        }
+    }
 }

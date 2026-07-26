@@ -54,6 +54,7 @@ namespace Steppe.Player
             viewCamera.transform.localRotation = Quaternion.identity;
             previousCarrierPosition = caravan.transform.position;
             previousCarrierRotation = caravan.transform.rotation;
+            yaw = transform.eulerAngles.y;
             floatingOrigin.Shifted += OnFloatingOriginShifted;
             caravan.Teleported += OnCaravanTeleported;
             SetPointerLock(true);

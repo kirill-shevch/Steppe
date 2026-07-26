@@ -24,7 +24,7 @@ namespace Steppe.Caravan
         private VPVehicleToolkit vehicleToolkit;
         private VPWheelCollider[] wheels;
         private bool physicsStarted;
-        private bool defaultDriveEnabled = true;
+        private bool defaultDriveEnabled;
         private float steeringNormalized;
 
         public Rigidbody Body => body;
@@ -114,7 +114,7 @@ namespace Steppe.Caravan
             body.constraints = RigidbodyConstraints.None;
             vehicleInput.externalSteer = 0f;
             vehicleInput.externalThrottle = 0f;
-            vehicleInput.externalBrake = 1f;
+            vehicleInput.externalBrake = 0f;
             vehicleInput.externalHandbrake = 0f;
             vehicleInput.enabled = false;
             terrain = new TerrainHeightGenerator(settings);
@@ -130,9 +130,21 @@ namespace Steppe.Caravan
         public void SetDefaultDriveEnabled(bool enabled)
         {
             defaultDriveEnabled = enabled;
-            if (!enabled)
+            if (vehicleToolkit == null || !physicsStarted)
+            {
+                return;
+            }
+
+            if (enabled)
+            {
+                vehicleToolkit.StartEngine();
+                vehicleToolkit.SetAutomaticModeD();
+            }
+            else
             {
                 CurrentDriveForce = 0f;
+                VPVehicleToolkit.SetThrottle(vehicle, 0f);
+                vehicleToolkit.SetAutomaticModeN();
             }
         }
 
@@ -242,16 +254,16 @@ namespace Steppe.Caravan
             var throttle = defaultDriveEnabled && Speed < maximumSpeed
                 ? Mathf.Lerp(0.55f, 0.7f, resistance) * condition
                 : 0f;
-            if (vehicleToolkit.isEngineStarted && vehicleToolkit.engagedGear == 0)
+            if (defaultDriveEnabled
+                && vehicleToolkit.isEngineStarted
+                && vehicleToolkit.engagedGear == 0)
             {
                 vehicleToolkit.SetAutomaticModeD();
                 vehicleToolkit.SetGear(1);
             }
             vehicleInput.externalSteer = steeringNormalized;
             vehicleInput.externalThrottle = throttle;
-            vehicleInput.externalBrake = defaultDriveEnabled
-                ? 0f
-                : (Speed > 0.15f ? 0.35f : 1f);
+            vehicleInput.externalBrake = 0f;
             vehicleInput.externalHandbrake = 0f;
             VPVehicleToolkit.SetSteering(vehicle, steeringNormalized);
             VPVehicleToolkit.SetThrottle(vehicle, throttle);
@@ -271,14 +283,18 @@ namespace Steppe.Caravan
             }
 
             var groundHeight = terrain.SampleHeight(world.X, world.Z);
-            var local = floatingOrigin.WorldToLocal(world.X, groundHeight + 1.05, world.Z);
+            var local = floatingOrigin.WorldToLocal(world.X, groundHeight + 1.35, world.Z);
             body.position = local;
             transform.position = local;
             Physics.SyncTransforms();
             body.isKinematic = false;
             physicsStarted = true;
-            vehicleToolkit.StartEngine();
-            vehicleToolkit.SetAutomaticModeD();
+            vehicleToolkit.SetAutomaticModeN();
+            if (defaultDriveEnabled)
+            {
+                vehicleToolkit.StartEngine();
+                vehicleToolkit.SetAutomaticModeD();
+            }
         }
 
         private void UpdateSurfaceState()

@@ -1,10 +1,111 @@
 using System;
 using Steppe.Settings;
+using Steppe.Time;
 using Steppe.World;
 using UnityEngine;
 
 namespace Steppe.Weather
 {
+    public readonly struct SteppeSolarExposureSample
+    {
+        public SteppeSolarExposureSample(
+            SolarState solar,
+            SteppeWeatherSample weather,
+            float incidence,
+            float cloudShadow,
+            float cloudTransmission)
+        {
+            Solar = solar;
+            Weather = weather;
+            Incidence = incidence;
+            CloudShadow = cloudShadow;
+            CloudTransmission = cloudTransmission;
+        }
+
+        public SolarState Solar { get; }
+        public SteppeWeatherSample Weather { get; }
+        public float Incidence { get; }
+        public float CloudShadow { get; }
+        public float CloudTransmission { get; }
+        public float AvailableIrradiance =>
+            Mathf.Clamp01((float)Solar.Daylight)
+            * Incidence
+            * CloudTransmission;
+    }
+
+    /// <summary>
+    /// Shared physical contract for cloud shadows and photovoltaic generation.
+    /// Presentation shaders duplicate the small optical-depth expression so the
+    /// shadow seen on the steppe agrees with the energy available to the caravan.
+    /// </summary>
+    public static class SteppeSolarExposureModel
+    {
+        public const float MinimumStormTransmission = 0.06f;
+        public const float MinimumProjectionSunHeight = 0.12f;
+
+        public static SteppeSolarExposureSample Evaluate(
+            SolarState solar,
+            SteppeWeatherSample weather,
+            Vector3 receivingNormal)
+        {
+            var normal = receivingNormal.sqrMagnitude > 0.000001f
+                ? receivingNormal.normalized
+                : Vector3.up;
+            var incidence = solar.Direction.y > 0f
+                ? Mathf.Clamp01(Vector3.Dot(normal, solar.Direction))
+                : 0f;
+            var shadow = EvaluateCloudShadow(weather);
+            return new SteppeSolarExposureSample(
+                solar,
+                weather,
+                incidence,
+                shadow,
+                Mathf.Lerp(1f, MinimumStormTransmission, shadow));
+        }
+
+        public static float EvaluateCloudShadow(SteppeWeatherSample weather)
+        {
+            var opticalDepth = Mathf.Clamp01(
+                (float)weather.CloudCoverage * 0.25f
+                + (float)weather.CloudWater * 0.85f
+                + (float)weather.RainIntensity * 0.45f);
+            return Mathf.SmoothStep(0f, 1f, Mathf.InverseLerp(0.12f, 1f, opticalDepth));
+        }
+
+        public static Vector2 ProjectReceiverToCloud(
+            Vector2 receiverPosition,
+            float receiverHeight,
+            SolarState solar,
+            float cloudBaseHeight,
+            float maximumProjectionDistance)
+        {
+            return receiverPosition
+                   + CalculateCloudProjectionOffset(
+                       receiverHeight,
+                       solar,
+                       cloudBaseHeight,
+                       maximumProjectionDistance);
+        }
+
+        public static Vector2 CalculateCloudProjectionOffset(
+            float receiverHeight,
+            SolarState solar,
+            float cloudBaseHeight,
+            float maximumProjectionDistance)
+        {
+            if (solar.Direction.y <= 0f || solar.Daylight <= 0.001)
+            {
+                return Vector2.zero;
+            }
+
+            var height = Mathf.Max(0f, cloudBaseHeight - receiverHeight);
+            var distance = Mathf.Min(
+                height / Mathf.Max(solar.Direction.y, MinimumProjectionSunHeight),
+                Mathf.Max(0f, maximumProjectionDistance));
+            return new Vector2(solar.Direction.x, solar.Direction.z) * distance;
+        }
+    }
+
     public readonly struct SteppeWeatherSample
     {
         public SteppeWeatherSample(

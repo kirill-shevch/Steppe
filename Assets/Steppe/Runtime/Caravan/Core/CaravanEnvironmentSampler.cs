@@ -4,6 +4,7 @@ using Steppe.Player;
 using Steppe.Settings;
 using Steppe.Surface;
 using Steppe.Terrain;
+using Steppe.Time;
 using Steppe.Weather;
 using Steppe.World;
 using UnityEngine;
@@ -43,6 +44,7 @@ namespace Steppe.Caravan
         private readonly FloatingOriginSystem floatingOrigin;
         private readonly SteppeWeatherSystem weatherSystem;
         private readonly SteppeEcologySystem ecologySystem;
+        private readonly SteppeTimeSystem timeSystem;
         private readonly TerrainHeightGenerator terrain;
         private readonly SteppeSurfaceGenerator surface;
 
@@ -50,12 +52,14 @@ namespace Steppe.Caravan
             SteppeWorldSettings worldSettings,
             FloatingOriginSystem origin,
             SteppeWeatherSystem weather,
-            SteppeEcologySystem ecology)
+            SteppeEcologySystem ecology,
+            SteppeTimeSystem clock)
         {
             settings = worldSettings != null ? worldSettings : throw new ArgumentNullException(nameof(worldSettings));
             floatingOrigin = origin != null ? origin : throw new ArgumentNullException(nameof(origin));
             weatherSystem = weather != null ? weather : throw new ArgumentNullException(nameof(weather));
             ecologySystem = ecology != null ? ecology : throw new ArgumentNullException(nameof(ecology));
+            timeSystem = clock != null ? clock : throw new ArgumentNullException(nameof(clock));
             terrain = new TerrainHeightGenerator(settings);
             surface = new SteppeSurfaceGenerator(settings);
         }
@@ -83,6 +87,29 @@ namespace Steppe.Caravan
                 weather.RainIntensity);
             sample = new CaravanEnvironmentSample(weather, surfaceSample, ecology, traversal, dust);
             return true;
+        }
+
+        public SteppeWeatherSample SampleWeather(Vector3 localPosition)
+        {
+            var world = floatingOrigin.LocalToWorld(localPosition);
+            return weatherSystem.Sample(world.X, world.Z);
+        }
+
+        public SteppeSolarExposureSample SampleSolarExposure(
+            Vector3 localPosition,
+            Vector3 receivingNormal)
+        {
+            var world = floatingOrigin.LocalToWorld(localPosition);
+            var solar = SteppeAstronomy.Evaluate(timeSystem.Current, settings.LatitudeDegrees);
+            var cloudOffset = SteppeSolarExposureModel.CalculateCloudProjectionOffset(
+                localPosition.y,
+                solar,
+                settings.CloudBaseHeight,
+                settings.CloudLayerRadius);
+            var weather = weatherSystem.Sample(
+                world.X + cloudOffset.x,
+                world.Z + cloudOffset.y);
+            return SteppeSolarExposureModel.Evaluate(solar, weather, receivingNormal);
         }
     }
 }
