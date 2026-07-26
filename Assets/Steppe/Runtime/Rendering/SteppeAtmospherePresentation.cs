@@ -21,6 +21,9 @@ namespace Steppe.Rendering
     {
         private static readonly int HeatHazeId = Shader.PropertyToID("_SteppeHeatHaze");
         private static readonly int AirHumidityId = Shader.PropertyToID("_SteppeAirHumiditySignal");
+        private static readonly int CloudShadowId = Shader.PropertyToID("_SteppeCloudShadowAtFocus");
+        private static readonly int CloudTransmissionId =
+            Shader.PropertyToID("_SteppeCloudTransmissionAtFocus");
 
         private SteppeWorldSettings settings;
         private SteppeTimeSystem timeSystem;
@@ -28,6 +31,7 @@ namespace Steppe.Rendering
         private SteppeEcologySystem ecologySystem;
         private FloatingOriginSystem floatingOrigin;
         private Transform focus;
+        private SteppeCelestialPresentation celestialPresentation;
         private TerrainHeightGenerator terrainGenerator;
         private SteppeSurfaceGenerator surfaceGenerator;
         private SteppeClimateModel climateModel;
@@ -35,6 +39,8 @@ namespace Steppe.Rendering
         public float CurrentAirTemperatureC { get; private set; }
         public float CurrentHeatHaze { get; private set; }
         public float CurrentHumidityHaze { get; private set; }
+        public float CurrentCloudShadow { get; private set; }
+        public float CurrentCloudTransmission { get; private set; } = 1f;
 
         public void Configure(
             SteppeWorldSettings worldSettings,
@@ -42,7 +48,8 @@ namespace Steppe.Rendering
             SteppeWeatherSystem weather,
             SteppeEcologySystem ecology,
             FloatingOriginSystem origin,
-            Transform focusTransform)
+            Transform focusTransform,
+            SteppeCelestialPresentation celestial)
         {
             settings = worldSettings != null ? worldSettings : throw new ArgumentNullException(nameof(worldSettings));
             timeSystem = clock != null ? clock : throw new ArgumentNullException(nameof(clock));
@@ -50,6 +57,9 @@ namespace Steppe.Rendering
             ecologySystem = ecology != null ? ecology : throw new ArgumentNullException(nameof(ecology));
             floatingOrigin = origin != null ? origin : throw new ArgumentNullException(nameof(origin));
             focus = focusTransform != null ? focusTransform : throw new ArgumentNullException(nameof(focusTransform));
+            celestialPresentation = celestial != null
+                ? celestial
+                : throw new ArgumentNullException(nameof(celestial));
             terrainGenerator = new TerrainHeightGenerator(settings);
             surfaceGenerator = new SteppeSurfaceGenerator(settings);
             climateModel = new SteppeClimateModel(settings);
@@ -75,7 +85,20 @@ namespace Steppe.Rendering
             CurrentHeatHaze = Mathf.InverseLerp(27f, 39f, CurrentAirTemperatureC)
                               * drySurface
                               * (float)solar.Daylight;
-            var weather = weatherSystem.CurrentAtFocus;
+            var cloudOffset = SteppeSolarExposureModel.CalculateCloudProjectionOffset(
+                focus.position.y,
+                solar,
+                settings.CloudBaseHeight,
+                settings.CloudLayerRadius);
+            var weather = weatherSystem.Sample(
+                world.X + cloudOffset.x,
+                world.Z + cloudOffset.y);
+            CurrentCloudShadow = SteppeSolarExposureModel.EvaluateCloudShadow(weather)
+                                 * (float)solar.Daylight;
+            CurrentCloudTransmission = Mathf.Lerp(
+                1f,
+                SteppeSolarExposureModel.MinimumStormTransmission,
+                CurrentCloudShadow);
             CurrentHumidityHaze = Mathf.Clamp01((float)(
                 weather.CloudWater * 0.48
                 + weather.RainIntensity * 0.72
@@ -91,14 +114,27 @@ namespace Steppe.Rendering
                 RenderSettings.fogColor,
                 warmHorizon,
                 CurrentHeatHaze * 0.18f);
+            RenderSettings.fogColor = Color.Lerp(
+                RenderSettings.fogColor,
+                RenderSettings.fogColor * new Color(0.63f, 0.70f, 0.78f),
+                CurrentCloudShadow * 0.42f);
+            RenderSettings.ambientIntensity *= Mathf.Lerp(1f, 0.58f, CurrentCloudShadow);
+            if (celestialPresentation.SunLight != null)
+            {
+                celestialPresentation.SunLight.intensity *= CurrentCloudTransmission;
+            }
             Shader.SetGlobalFloat(HeatHazeId, CurrentHeatHaze);
             Shader.SetGlobalFloat(AirHumidityId, CurrentHumidityHaze);
+            Shader.SetGlobalFloat(CloudShadowId, CurrentCloudShadow);
+            Shader.SetGlobalFloat(CloudTransmissionId, CurrentCloudTransmission);
         }
 
         private void OnDestroy()
         {
             Shader.SetGlobalFloat(HeatHazeId, 0f);
             Shader.SetGlobalFloat(AirHumidityId, 0f);
+            Shader.SetGlobalFloat(CloudShadowId, 0f);
+            Shader.SetGlobalFloat(CloudTransmissionId, 1f);
         }
     }
 }

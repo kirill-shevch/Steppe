@@ -25,6 +25,7 @@ namespace Steppe.Time
 
         public SolarState CurrentSolarState { get; private set; }
         public float MoonVisibility { get; private set; }
+        public Light SunLight => sun;
         public Light MoonLight => moon;
 
         public void Configure(

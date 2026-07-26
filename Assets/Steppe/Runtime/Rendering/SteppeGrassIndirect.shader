@@ -33,6 +33,7 @@ Shader "Steppe/Grass Indirect"
 
             #include "Packages/com.unity.render-pipelines.universal/ShaderLibrary/Core.hlsl"
             #include "Packages/com.unity.render-pipelines.universal/ShaderLibrary/Lighting.hlsl"
+            #include "Assets/Steppe/Runtime/Rendering/SteppeCloudShadow.hlsl"
             #include "Assets/Steppe/Runtime/Rendering/SteppeWindField.hlsl"
             #include "Assets/Steppe/Runtime/Rendering/SteppeEcologyField.hlsl"
             #include "Assets/Steppe/Runtime/Rendering/SteppeTrackField.hlsl"
@@ -238,8 +239,13 @@ Shader "Steppe/Grass Indirect"
                 Light mainLight = GetMainLight(shadowCoord);
                 half diffuse = 0.30h + abs(dot(normal, mainLight.direction)) * 0.52h;
                 half3 ambient = SampleSH(half3(0, 1, 0));
-                half3 lighting = ambient * 0.46h
-                                 + mainLight.color * diffuse * mainLight.shadowAttenuation;
+                half cloudLightAdjustment = SteppeCloudLightAdjustment(input.positionWS);
+                half3 cloudAdjustedMainLight = mainLight.color * cloudLightAdjustment;
+                half ambientAdjustment = SteppeCloudAmbientAdjustment(input.positionWS);
+                half3 lighting = ambient * 0.46h * ambientAdjustment
+                                 + cloudAdjustedMainLight
+                                 * diffuse
+                                 * mainLight.shadowAttenuation;
 
                 half rootFactor = lerp(1.0h - _RootDarkening, _TipBrightness, input.heightAlongBlade);
                 half3 viewDirection = SafeNormalize(_WorldSpaceCameraPos - input.positionWS);
@@ -259,7 +265,7 @@ Shader "Steppe/Grass Indirect"
                     half3(0.84h, 0.89h, 0.92h),
                     snowOnBlade * 0.78h);
                 half3 color = phenologyColor * rootFactor * lighting * gustTone
-                              + silver * mainLight.color;
+                              + silver * cloudAdjustedMainLight;
                 color = MixFog(color, input.fogFactor);
                 return half4(color, 1.0h);
             }

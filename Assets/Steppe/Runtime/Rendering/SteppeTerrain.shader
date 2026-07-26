@@ -33,6 +33,7 @@ Shader "Steppe/Terrain Surface"
 
             #include "Packages/com.unity.render-pipelines.universal/ShaderLibrary/Core.hlsl"
             #include "Packages/com.unity.render-pipelines.universal/ShaderLibrary/Lighting.hlsl"
+            #include "Assets/Steppe/Runtime/Rendering/SteppeCloudShadow.hlsl"
             #include "Assets/Steppe/Runtime/Rendering/SteppeWindField.hlsl"
             #include "Assets/Steppe/Runtime/Rendering/SteppeEcologyField.hlsl"
             #include "Assets/Steppe/Runtime/Rendering/SteppeTrackField.hlsl"
@@ -94,7 +95,13 @@ Shader "Steppe/Terrain Surface"
                 Light mainLight = GetMainLight(shadowCoord);
                 half diffuse = saturate(dot(normal, mainLight.direction));
                 half3 ambient = SampleSH(normal);
-                half3 lighting = ambient + mainLight.color * diffuse * mainLight.shadowAttenuation;
+                half cloudLightAdjustment = SteppeCloudLightAdjustment(input.positionWS);
+                half3 cloudAdjustedMainLight = mainLight.color * cloudLightAdjustment;
+                half ambientAdjustment = SteppeCloudAmbientAdjustment(input.positionWS);
+                half3 lighting = ambient * ambientAdjustment
+                                 + cloudAdjustedMainLight
+                                 * diffuse
+                                 * mainLight.shadowAttenuation;
                 float2 canonicalXZ = input.positionWS.xz + _SteppeWorldOriginXZ.xz;
                 half broadVariation = SteppeWindValueNoise(canonicalXZ / 38.0) - 0.5h;
                 half tuftVariation = SteppeWindValueNoise(canonicalXZ / 6.5) - 0.5h;
@@ -173,13 +180,13 @@ Shader "Steppe/Terrain Surface"
                                 * smoothness
                                 * lerp(0.06h, 0.30h, wetness)
                                 * mainLight.shadowAttenuation;
-                color += mainLight.color * specular;
+                color += cloudAdjustedMainLight * specular;
                 half sparkleNoise = SteppeWindValueNoise(canonicalXZ / 0.85h);
                 half sparkle = smoothstep(0.965h, 1.0h, sparkleNoise)
                                * snowCoverage
                                * saturate(dot(normal, mainLight.direction))
                                * 0.24h;
-                color += mainLight.color * sparkle;
+                color += cloudAdjustedMainLight * sparkle;
                 color = MixFog(color, input.fogFactor);
                 return half4(color, 1.0h);
             }

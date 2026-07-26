@@ -79,7 +79,7 @@ namespace Steppe.Player
         private SteppeTimeSystem timeSystem;
         private FloatingOriginSystem floatingOrigin;
         private Transform focus;
-        private SteppeBallController ball;
+        private ISteppeTravelFocus traveller;
         private Texture2D stateMap;
         private Color32[] pixels;
         private SteppeTrackCellCoordinate mapOrigin;
@@ -101,13 +101,13 @@ namespace Steppe.Player
             SteppeTimeSystem clock,
             FloatingOriginSystem origin,
             Transform focusTransform,
-            SteppeBallController ballController)
+            ISteppeTravelFocus travelFocus)
         {
             settings = worldSettings != null ? worldSettings : throw new ArgumentNullException(nameof(worldSettings));
             timeSystem = clock != null ? clock : throw new ArgumentNullException(nameof(clock));
             floatingOrigin = origin != null ? origin : throw new ArgumentNullException(nameof(origin));
             focus = focusTransform != null ? focusTransform : throw new ArgumentNullException(nameof(focusTransform));
-            ball = ballController != null ? ballController : throw new ArgumentNullException(nameof(ballController));
+            traveller = travelFocus ?? throw new ArgumentNullException(nameof(travelFocus));
 
             stateMap = new Texture2D(
                 settings.TrackMapResolution,
@@ -149,14 +149,14 @@ namespace Steppe.Player
 
         private void FixedUpdate()
         {
-            if (settings == null || ball == null || !ball.IsGrounded || ball.Speed < 0.15f)
+            if (settings == null || traveller == null || !traveller.IsGrounded || traveller.Speed < 0.15f)
             {
                 return;
             }
 
             var world = floatingOrigin.LocalToWorld(focus.position);
-            var traversal = ball.CurrentSurface;
-            var pressure = Mathf.Clamp01(0.32f + ball.Speed / settings.PlayerMaximumSpeed * 0.68f);
+            var traversal = traveller.CurrentSurface;
+            var pressure = Mathf.Clamp01(0.32f + traveller.Speed / settings.PlayerMaximumSpeed * 0.68f);
             var flattening = pressure * 0.92f;
             var snowCompression = pressure * (float)traversal.SnowSink;
             var soilRut = pressure * Mathf.Clamp01((float)traversal.Mud * 0.9f + (float)traversal.LooseGround * 0.24f);
@@ -164,7 +164,7 @@ namespace Steppe.Player
             Stamp(
                 world.X,
                 world.Z,
-                settings.PlayerBallRadius * 1.12f,
+                traveller.TrackRadius,
                 new SteppeTrackSample(flattening, snowCompression, soilRut, wetPrint));
         }
 

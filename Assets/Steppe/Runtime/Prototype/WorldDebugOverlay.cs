@@ -17,7 +17,7 @@ namespace Steppe.Prototype
         private SteppeWorldSettings settings;
         private FloatingOriginSystem floatingOrigin;
         private TerrainChunkStreamer chunkStreamer;
-        private SteppeBallController ballController;
+        private ISteppeTravelFocus travelFocus;
         private SteppeTrackSystem trackSystem;
         private Transform focus;
         private TerrainHeightGenerator terrainGenerator;
@@ -30,13 +30,13 @@ namespace Steppe.Prototype
         private SteppeSnowPresentation snowPresentation;
         private SteppeGrassRenderer grassRenderer;
         private WorldWorkScheduler workScheduler;
-        private bool visible = true;
+        private bool visible;
 
         public void Configure(
             SteppeWorldSettings worldSettings,
             FloatingOriginSystem origin,
             TerrainChunkStreamer streamer,
-            SteppeBallController controller,
+            ISteppeTravelFocus traveller,
             SteppeTrackSystem tracks,
             Transform focusTransform,
             SteppeTimeSystem clock,
@@ -50,7 +50,7 @@ namespace Steppe.Prototype
             settings = worldSettings;
             floatingOrigin = origin;
             chunkStreamer = streamer;
-            ballController = controller;
+            travelFocus = traveller;
             trackSystem = tracks;
             focus = focusTransform;
             timeSystem = clock;
@@ -152,9 +152,9 @@ namespace Steppe.Prototype
                     + $"threshold {dust.ThresholdWindSpeed:F1} m/s / dry {dust.SurfaceDryness:P0} / loose {dust.Looseness:P0}    "
                     + $"particles {dustPresentation.Particles.particleCount}");
             }
-            if (ballController != null)
+            if (travelFocus != null)
             {
-                var traversal = ballController.CurrentSurface;
+                var traversal = travelFocus.CurrentSurface;
                 GUILayout.Label(
                     $"Traversal: resistance {traversal.Resistance:P0} / mud {traversal.Mud:P0} / loose {traversal.LooseGround:P0} / "
                     + $"snow sink {traversal.SnowSink:P0} / frozen firm {traversal.FrozenFirmness:P0} / depth {traversal.SinkDepth:F2} m");
@@ -172,9 +172,10 @@ namespace Steppe.Prototype
                 ? $"Grass: {grassRenderer.InstanceCount:N0} tufts / {grassRenderer.LoadedCellCount} cells / {grassRenderer.PendingCount} queued / {grassRenderer.TuftVertexCount}v {grassRenderer.TuftTriangleCount}t / {(grassRenderer.UsesAuthoredMesh ? "Nobiax CC0 mesh" : "procedural fallback")}"
                 : "Grass: P1 CPU fallback");
             GUILayout.Label($"World work: {workScheduler.LastFrameWorkMilliseconds:F2} ms / {workScheduler.LastFrameStepCount} steps / {workScheduler.RegisteredSourceCount} sources");
-            GUILayout.Label($"Seed: {settings.WorldSeed}    Terrain: v{settings.GeneratorVersion}    Surface: v{settings.SurfaceVersion}    Speed: {(ballController != null ? ballController.Speed : 0f):F1} m/s");
+            GUILayout.Label($"Seed: {settings.WorldSeed}    Terrain: v{settings.GeneratorVersion}    Surface: v{settings.SurfaceVersion}    Speed: {(travelFocus != null ? travelFocus.Speed : 0f):F1} m/s");
             GUILayout.Space(4f);
-            GUILayout.Label("WASD roll - mouse orbit - Shift push - wheel camera distance");
+            GUILayout.Label("WASD walk - mouse look - Shift run - Space jump - E use");
+            GUILayout.Label("C clean - R repair - B build mode");
             GUILayout.Label("1-4 biomes - F3 panel - F5 pause time - F6 accelerate time");
             GUILayout.EndArea();
         }
