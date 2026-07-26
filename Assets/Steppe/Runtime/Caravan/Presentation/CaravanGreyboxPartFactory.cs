@@ -76,19 +76,9 @@ namespace Steppe.Caravan
         {
             var modules = new List<CaravanModule>
             {
-                Create(grid, palette, CaravanPartKind.BiomassStorage, new CaravanGridPlacement(0, 0, 2, 3, 0)),
-                Create(grid, palette, CaravanPartKind.GrassDryer, new CaravanGridPlacement(2, 0, 2, 3, 0)),
-                Create(grid, palette, CaravanPartKind.WaterReservoir, new CaravanGridPlacement(6, 0, 2, 3, 0)),
-                Create(grid, palette, CaravanPartKind.Biofurnace, new CaravanGridPlacement(8, 0, 2, 2, 0)),
                 Create(grid, palette, CaravanPartKind.Battery, new CaravanGridPlacement(0, 4, 2, 2, 0)),
-                Create(grid, palette, CaravanPartKind.DualModePump, new CaravanGridPlacement(2, 4, 1, 2, 0)),
-                Create(grid, palette, CaravanPartKind.Radiator, new CaravanGridPlacement(3, 4, 2, 2, 0)),
-                Create(grid, palette, CaravanPartKind.BiofuelEngine, new CaravanGridPlacement(5, 4, 2, 2, 0)),
-                Create(grid, palette, CaravanPartKind.ElectricMotor, new CaravanGridPlacement(7, 4, 2, 2, 0)),
-                Create(grid, palette, CaravanPartKind.Transmission, new CaravanGridPlacement(9, 4, 1, 2, 0)),
-                Create(grid, palette, CaravanPartKind.PhotovoltaicLeaves, new CaravanGridPlacement(0, 8, 3, 3, 0)),
-                Create(grid, palette, CaravanPartKind.Harvester, new CaravanGridPlacement(3, 16, 4, 2, 0)),
-                Create(grid, palette, CaravanPartKind.CouplingRope, new CaravanGridPlacement(8, 16, 2, 1, 0))
+                Create(grid, palette, CaravanPartKind.ElectricMotor, new CaravanGridPlacement(2, 4, 2, 2, 0)),
+                Create(grid, palette, CaravanPartKind.PhotovoltaicLeaves, new CaravanGridPlacement(0, 8, 3, 3, 0))
             };
 
             return modules;
@@ -137,6 +127,20 @@ namespace Steppe.Caravan
             if (kind == CaravanPartKind.PhotovoltaicLeaves)
             {
                 root.AddComponent<CaravanPhotovoltaicModule>();
+                CreateElectricalPort(root.transform, part, kind, palette);
+            }
+            else if (kind == CaravanPartKind.Battery)
+            {
+                var battery = root.AddComponent<CaravanBatteryModule>();
+                battery.Configure(visual.transform.Find("Charge Window"));
+                CreateElectricalPort(root.transform, part, kind, palette);
+            }
+            else if (kind == CaravanPartKind.ElectricMotor)
+            {
+                var motor = root.AddComponent<CaravanElectricMotorModule>();
+                motor.Configure(visual.transform.Find("Motor Shaft"));
+                root.AddComponent<CaravanControlStation>();
+                CreateElectricalPort(root.transform, part, kind, palette);
             }
 
             if (!grid.Register(module, placement))
@@ -359,6 +363,75 @@ namespace Steppe.Caravan
                     new Vector3(-0.48f + index * 0.16f, 0.7f, 0f),
                     new Vector3(0.05f, 1.35f, 0.82f), p.DarkMetal);
             }
+
+            var throttle = new GameObject("Electric Throttle");
+            throttle.transform.SetParent(root, false);
+            throttle.transform.localPosition = new Vector3(0.1f, 1.52f, -0.54f);
+            Primitive("Throttle Base", PrimitiveType.Cylinder, throttle.transform,
+                Vector3.zero, new Vector3(0.18f, 0.1f, 0.18f), p.DarkMetal);
+            var controlVisual = new GameObject("Control Visual");
+            controlVisual.transform.SetParent(throttle.transform, false);
+            Primitive("Lever", PrimitiveType.Cube, controlVisual.transform,
+                new Vector3(0f, 0.28f, 0f), new Vector3(0.08f, 0.54f, 0.08f), p.Copper);
+            Primitive("Grip", PrimitiveType.Sphere, controlVisual.transform,
+                new Vector3(0f, 0.58f, 0f), new Vector3(0.16f, 0.16f, 0.16f), p.Metal);
+            var indicator = Primitive("Focus Indicator", PrimitiveType.Sphere, throttle.transform,
+                new Vector3(0.34f, 0.22f, -0.04f), new Vector3(0.1f, 0.1f, 0.1f), p.Condition);
+            var light = indicator.AddComponent<Light>();
+            light.type = LightType.Point;
+            light.range = 0.8f;
+            light.intensity = 0.55f;
+            light.shadows = LightShadows.None;
+            light.color = p.Condition.HasProperty("_BaseColor")
+                ? p.Condition.GetColor("_BaseColor")
+                : p.Condition.color;
+            indicator.SetActive(false);
+        }
+
+        private static CaravanElectricalPort CreateElectricalPort(
+            Transform moduleRoot,
+            CaravanPart part,
+            CaravanPartKind kind,
+            CaravanPartPalette palette)
+        {
+            var portRoot = new GameObject("Electrical Port");
+            portRoot.transform.SetParent(moduleRoot, false);
+            portRoot.transform.localPosition = kind switch
+            {
+                CaravanPartKind.PhotovoltaicLeaves => new Vector3(-1.08f, 0.38f, -1.08f),
+                CaravanPartKind.Battery => new Vector3(0.62f, 0.78f, -0.62f),
+                CaravanPartKind.ElectricMotor => new Vector3(-0.68f, 0.74f, -0.58f),
+                _ => Vector3.zero
+            };
+            Primitive("Terminal Block", PrimitiveType.Cube, portRoot.transform,
+                Vector3.zero, new Vector3(0.36f, 0.18f, 0.22f), palette.DarkMetal);
+            Primitive("Positive Terminal", PrimitiveType.Cylinder, portRoot.transform,
+                new Vector3(-0.09f, 0.13f, 0f), new Vector3(0.06f, 0.1f, 0.06f), palette.Copper);
+            Primitive("Return Terminal", PrimitiveType.Cylinder, portRoot.transform,
+                new Vector3(0.09f, 0.13f, 0f), new Vector3(0.06f, 0.1f, 0.06f), palette.Metal);
+            var buildMarker = Primitive(
+                "Communication Build Marker",
+                PrimitiveType.Sphere,
+                portRoot.transform,
+                new Vector3(0f, 0.36f, 0f),
+                new Vector3(0.14f, 0.14f, 0.14f),
+                palette.Condition);
+            var markerLight = buildMarker.AddComponent<Light>();
+            markerLight.type = LightType.Point;
+            markerLight.range = 0.75f;
+            markerLight.intensity = 0.45f;
+            markerLight.shadows = LightShadows.None;
+
+            var port = portRoot.AddComponent<CaravanElectricalPort>();
+            var portKind = kind switch
+            {
+                CaravanPartKind.PhotovoltaicLeaves => CaravanElectricalPortKind.Generator,
+                CaravanPartKind.Battery => CaravanElectricalPortKind.Storage,
+                CaravanPartKind.ElectricMotor => CaravanElectricalPortKind.Consumer,
+                _ => throw new ArgumentOutOfRangeException(nameof(kind), kind, null)
+            };
+            port.Configure(part, portKind, buildMarker);
+            return port;
         }
 
         private static void BuildHarvester(Transform root, CaravanPartPalette p)

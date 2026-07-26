@@ -21,9 +21,9 @@ namespace Steppe.Caravan
     }
 
     /// <summary>
-    /// Identifies a physical caravan part and reserves its future resource state.
-    /// Networks do not consume these values yet; the component keeps the greybox
-    /// hierarchy stable when water, electricity and biomass simulation arrives.
+    /// Identifies a physical caravan part and owns its generic resource state.
+    /// The electrical network uses capacity, storage and current output directly;
+    /// later water and biomass networks can reuse the same contract.
     /// </summary>
     [DisallowMultipleComponent]
     [RequireComponent(typeof(CaravanModule))]
@@ -65,7 +65,7 @@ namespace Steppe.Caravan
 
     /// <summary>
     /// Converts the real sun direction and the local storm shadow into instantaneous
-    /// electrical output. Storage and cable networks deliberately remain a later layer.
+    /// electrical output for the caravan electrical network.
     /// </summary>
     [DisallowMultipleComponent]
     [RequireComponent(typeof(CaravanPart))]

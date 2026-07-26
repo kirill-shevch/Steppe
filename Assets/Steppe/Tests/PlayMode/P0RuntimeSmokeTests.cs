@@ -32,10 +32,12 @@ namespace Steppe.Tests
             var sail = Object.FindAnyObjectByType<CaravanSailModule>();
             var windVane = Object.FindAnyObjectByType<CaravanWindVane>();
             var photovoltaic = Object.FindAnyObjectByType<CaravanPhotovoltaicModule>();
+            var electricalNetwork = Object.FindAnyObjectByType<CaravanElectricalNetwork>();
+            var battery = Object.FindAnyObjectByType<CaravanBatteryModule>();
+            var electricMotor = Object.FindAnyObjectByType<CaravanElectricMotorModule>();
             var buildMode = Object.FindAnyObjectByType<CaravanBuildModeController>();
             var controlStations = Object.FindObjectsByType<CaravanControlStation>(
-                FindObjectsInactive.Include,
-                FindObjectsSortMode.None);
+                FindObjectsInactive.Include);
             var tracks = Object.FindAnyObjectByType<SteppeTrackSystem>();
             var streamer = Object.FindAnyObjectByType<TerrainChunkStreamer>();
             var grass = Object.FindAnyObjectByType<SteppeGrassRenderer>();
@@ -48,12 +50,35 @@ namespace Steppe.Tests
 
             Assert.That(firstPerson, Is.Not.Null);
             Assert.That(caravan, Is.Not.Null);
-            Assert.That(sail, Is.Not.Null);
-            Assert.That(windVane, Is.Not.Null);
-            Assert.That(
-                windVane.transform.Find("Visual/Wind Vane/Vane Pivot/Arrow Head"),
-                Is.Not.Null);
+            Assert.That(sail, Is.Null);
+            Assert.That(windVane, Is.Null);
             Assert.That(photovoltaic, Is.Not.Null);
+            Assert.That(electricalNetwork, Is.Not.Null);
+            Assert.That(battery, Is.Not.Null);
+            Assert.That(electricMotor, Is.Not.Null);
+            Assert.That(electricalNetwork.IsClosed, Is.False);
+            Assert.That(battery.StateOfCharge, Is.EqualTo(0.35f).Within(0.01f));
+            Assert.That(electricMotor.RequestedThrottle, Is.Zero);
+            var electricalPorts = Object.FindObjectsByType<CaravanElectricalPort>(
+                FindObjectsInactive.Include);
+            var electricalCables = Object.FindObjectsByType<CaravanElectricalCable>(
+                FindObjectsInactive.Include);
+            Assert.That(electricalPorts, Has.Length.EqualTo(3));
+            Assert.That(electricalCables, Is.Empty);
+            var communicationPreview = GameObject.Find("Communication Cable Preview");
+            Assert.That(communicationPreview, Is.Not.Null);
+            Assert.That(communicationPreview.GetComponent<LineRenderer>(), Is.Not.Null);
+            Assert.That(communicationPreview.GetComponent<Collider>(), Is.Null);
+            Assert.That(communicationPreview.GetComponent<Rigidbody>(), Is.Null);
+            Assert.That(
+                System.Array.TrueForAll(
+                    electricalPorts,
+                    port => !port.IsBuildMarkerVisible),
+                Is.True);
+            Assert.That(
+                System.Array.Find(electricalPorts, port => port.Kind == CaravanElectricalPortKind.Storage)
+                    .ConnectedCableCount,
+                Is.Zero);
             Assert.That(buildMode, Is.Not.Null);
             Assert.That(controlStations, Has.Length.EqualTo(2));
             var steeringStation = System.Array.Find(
@@ -62,28 +87,47 @@ namespace Steppe.Tests
             var trimStation = System.Array.Find(
                 controlStations,
                 station => station.Kind == CaravanControlKind.SailTrim);
+            var motorStation = System.Array.Find(
+                controlStations,
+                station => station.Kind == CaravanControlKind.ElectricThrottle);
             Assert.That(steeringStation, Is.Not.Null);
-            Assert.That(trimStation, Is.Not.Null);
+            Assert.That(trimStation, Is.Null);
+            Assert.That(motorStation, Is.Not.Null);
             Assert.That(
                 steeringStation.transform.Find("Control Visual/Wheel Rim 1"),
                 Is.Not.Null);
             Assert.That(steeringStation.transform.Find("Focus Indicator"), Is.Not.Null);
             Assert.That(firstPerson.GetComponent<CharacterController>(), Is.Not.Null);
             Assert.That(firstPerson.GetComponent<Rigidbody>(), Is.Null);
+            Assert.That(firstPerson.CaravanContactIsolationEnabled, Is.True);
+            Assert.That(firstPerson.CaravanCollisionProxyCount, Is.GreaterThan(0));
+            var keeperCollisionProxy = GameObject.Find("Keeper Caravan Collision Proxy");
+            Assert.That(keeperCollisionProxy, Is.Not.Null);
+            Assert.That(keeperCollisionProxy.GetComponent<Rigidbody>().isKinematic, Is.True);
+            Assert.That(keeperCollisionProxy.transform.IsChildOf(caravan.transform), Is.False);
+            Assert.That(
+                Physics.GetIgnoreLayerCollision(
+                    CaravanFirstPersonController.CollisionProxyLayer,
+                    caravan.gameObject.layer),
+                Is.True);
+            foreach (var caravanCollider in caravan.GetComponentsInChildren<Collider>(true))
+            {
+                if (caravanCollider.enabled && !caravanCollider.isTrigger)
+                {
+                    Assert.That(
+                        Physics.GetIgnoreCollision(
+                            firstPerson.GetComponent<CharacterController>(),
+                            caravanCollider),
+                        Is.True,
+                        $"The keeper still has a physical contact with {caravanCollider.name}.");
+                }
+            }
             Assert.That(caravan.GetComponent<Rigidbody>(), Is.Not.Null);
-            Assert.That(caravan.Body.mass, Is.GreaterThan(6500f));
+            Assert.That(caravan.Body.mass, Is.InRange(3300f, 3400f));
             Assert.That(caravan.DefaultDriveEnabled, Is.False);
             var deckSurface = GameObject.Find("Deck Build Surface");
             Assert.That(deckSurface, Is.Not.Null);
             Assert.That(deckSurface.GetComponent<Rigidbody>(), Is.Null);
-            Assert.That(sail.GetComponent<Rigidbody>(), Is.Null);
-            var initialSurfaceWind = new Vector3(
-                weatherSystem.CurrentAtFocus.SurfaceWind.x,
-                0f,
-                weatherSystem.CurrentAtFocus.SurfaceWind.y).normalized;
-            Assert.That(
-                Vector3.Dot(caravan.transform.forward, initialSurfaceWind),
-                Is.GreaterThan(0.98f));
             Assert.That(
                 photovoltaic.CurrentGenerationKilowatts,
                 Is.InRange(0f, photovoltaic.GetComponent<CaravanPart>().Capacity));
@@ -93,8 +137,13 @@ namespace Steppe.Tests
                 Shader.GetGlobalFloat("_SteppeCloudTransmissionAtFocus"),
                 Is.InRange(0.06f, 1f));
             var caravanParts = Object.FindObjectsByType<CaravanPart>();
-            Assert.That(caravanParts.Length, Is.EqualTo(14));
-            foreach (CaravanPartKind kind in System.Enum.GetValues(typeof(CaravanPartKind)))
+            Assert.That(caravanParts.Length, Is.EqualTo(3));
+            foreach (var kind in new[]
+                     {
+                         CaravanPartKind.PhotovoltaicLeaves,
+                         CaravanPartKind.Battery,
+                         CaravanPartKind.ElectricMotor
+                     })
             {
                 Assert.That(
                     System.Array.Exists(caravanParts, part => part.Kind == kind),
@@ -136,33 +185,6 @@ namespace Steppe.Tests
             }
             Assert.That(caravan.Body.isKinematic, Is.False, "Caravan never attached to a streamed terrain collider.");
             Assert.That(Object.FindObjectsByType<MeshCollider>().Length, Is.GreaterThan(0));
-
-            caravan.Body.linearVelocity = Vector3.zero;
-            caravan.Body.angularVelocity = Vector3.zero;
-            var surfaceWind = new Vector3(
-                weatherSystem.CurrentAtFocus.SurfaceWind.x,
-                0f,
-                weatherSystem.CurrentAtFocus.SurfaceWind.y);
-            Assert.That(surfaceWind.magnitude, Is.GreaterThan(0.5f));
-            caravan.Body.rotation = Quaternion.LookRotation(surfaceWind.normalized, Vector3.up);
-            sail.SetTrimDegrees(0f);
-            Physics.SyncTransforms();
-            var naturalMotionStart = caravan.transform.position;
-            for (var fixedStep = 0; fixedStep < 60; fixedStep++)
-            {
-                yield return new WaitForFixedUpdate();
-            }
-            Assert.That(
-                Vector3.ProjectOnPlane(
-                    caravan.transform.position - naturalMotionStart,
-                    Vector3.up).magnitude,
-                Is.GreaterThan(0.1f),
-                $"The sail did not move the unpowered caravan from rest. "
-                + $"sailForce={sail.CurrentForce.Force}, "
-                + $"velocity={caravan.Body.linearVelocity}, "
-                + $"engine={caravan.VehicleEngineStarted}, "
-                + $"gear={caravan.VehicleEngagedGear}, "
-                + $"groundedWheels={caravan.GroundedWheelCount}");
             Assert.That(
                 Vector3.Dot(caravan.transform.up, Vector3.up),
                 Is.GreaterThan(0.88f),
@@ -321,7 +343,7 @@ namespace Steppe.Tests
         }
 
         [UnityTest]
-        public IEnumerator BuildModeMovesTheSailThroughTheSingleItemBuffer()
+        public IEnumerator BuildModeManuallyLaysAndRemovesElectricalCommunications()
         {
             if (Object.FindAnyObjectByType<SteppePrototypeBootstrap>() == null)
             {
@@ -330,24 +352,85 @@ namespace Steppe.Tests
 
             yield return null;
             var caravan = Object.FindAnyObjectByType<CaravanChassisController>();
-            var sail = Object.FindAnyObjectByType<CaravanSailModule>();
+            var network = Object.FindAnyObjectByType<CaravanElectricalNetwork>();
             var build = Object.FindAnyObjectByType<CaravanBuildModeController>();
             Assert.That(caravan, Is.Not.Null);
-            Assert.That(sail, Is.Not.Null);
+            Assert.That(network, Is.Not.Null);
             Assert.That(build, Is.Not.Null);
 
             caravan.Body.linearVelocity = Vector3.zero;
+            network.ClearConnections();
             Assert.That(build.TryEnterBuildMode(), Is.True);
-            Assert.That(build.TryHoldModule(sail.Module), Is.True);
-            Assert.That(build.HeldModule, Is.SameAs(sail.Module));
-            Assert.That(sail.gameObject.activeSelf, Is.False);
+            Assert.That(
+                build.SetInteractionMode(CaravanBuildInteractionMode.Communications),
+                Is.True);
+            Assert.That(build.IsCommunicationMode, Is.True);
+            Assert.That(network.PhotovoltaicPort.IsBuildMarkerVisible, Is.True);
+            Assert.That(network.BatteryPort.IsBuildMarkerVisible, Is.True);
+            Assert.That(network.MotorPort.IsBuildMarkerVisible, Is.True);
+            var previewObject = GameObject.Find("Communication Cable Preview");
+            Assert.That(previewObject, Is.Not.Null);
+            var previewLine = previewObject.GetComponent<LineRenderer>();
+            Assert.That(previewLine, Is.Not.Null);
 
-            var destination = new CaravanGridPlacement(7, 8, 2, 2, 0);
-            Assert.That(build.TryPlaceHeldModule(destination), Is.True);
-            Assert.That(sail.gameObject.activeSelf, Is.True);
-            Assert.That(build.HeldModule, Is.Null);
-            Assert.That(sail.transform.parent, Is.SameAs(caravan.transform));
+            Assert.That(
+                build.TrySelectCommunicationPort(network.PhotovoltaicPort),
+                Is.True);
+            Assert.That(previewLine.enabled, Is.True);
+            Assert.That(
+                build.SelectedCommunicationPort,
+                Is.SameAs(network.PhotovoltaicPort));
+            Assert.That(
+                build.TrySelectCommunicationPort(network.MotorPort),
+                Is.False,
+                "A generator must not connect directly to a consumer.");
+            Assert.That(network.CableCount, Is.Zero);
+            Assert.That(
+                build.TrySelectCommunicationPort(network.PhotovoltaicPort),
+                Is.True,
+                "Clicking the selected port should cancel the pending cable.");
+            Assert.That(build.SelectedCommunicationPort, Is.Null);
+            Assert.That(previewLine.enabled, Is.False);
+
+            Assert.That(
+                build.TrySelectCommunicationPort(network.PhotovoltaicPort),
+                Is.True);
+            Assert.That(
+                build.TrySelectCommunicationPort(network.BatteryPort),
+                Is.True);
+            Assert.That(previewLine.enabled, Is.False);
+            Assert.That(network.CableCount, Is.EqualTo(1));
+            Assert.That(network.IsClosed, Is.False);
+
+            Assert.That(
+                build.TrySelectCommunicationPort(network.BatteryPort),
+                Is.True);
+            Assert.That(
+                build.TrySelectCommunicationPort(network.MotorPort),
+                Is.True);
+            Assert.That(network.CableCount, Is.EqualTo(2));
+            Assert.That(network.IsClosed, Is.True);
+            foreach (var cable in network.Cables)
+            {
+                Assert.That(cable.GetComponentsInChildren<LineRenderer>(true), Has.Length.EqualTo(2));
+                Assert.That(cable.GetComponentInChildren<Collider>(true), Is.Null);
+                Assert.That(cable.GetComponentInChildren<Rigidbody>(true), Is.Null);
+            }
+
+            Assert.That(
+                build.RemoveCommunicationConnections(network.MotorPort),
+                Is.EqualTo(1));
+            Assert.That(network.CableCount, Is.EqualTo(1));
+            Assert.That(network.IsClosed, Is.False);
+            Assert.That(
+                build.TrySelectCommunicationPort(network.BatteryPort),
+                Is.True);
+            Assert.That(
+                build.TrySelectCommunicationPort(network.MotorPort),
+                Is.True);
+            Assert.That(network.IsClosed, Is.True);
             build.ExitBuildMode();
+            Assert.That(network.PhotovoltaicPort.IsBuildMarkerVisible, Is.False);
             yield return null;
         }
 
@@ -360,7 +443,26 @@ namespace Steppe.Tests
             }
 
             var caravan = Object.FindAnyObjectByType<CaravanChassisController>();
+            var battery = Object.FindAnyObjectByType<CaravanBatteryModule>();
+            var electricMotor = Object.FindAnyObjectByType<CaravanElectricMotorModule>();
+            var network = Object.FindAnyObjectByType<CaravanElectricalNetwork>();
             Assert.That(caravan, Is.Not.Null);
+            Assert.That(battery, Is.Not.Null);
+            Assert.That(electricMotor, Is.Not.Null);
+            Assert.That(network, Is.Not.Null);
+            if (network.PanelToBatteryCable == null)
+            {
+                Assert.That(
+                    network.TryConnect(network.PhotovoltaicPort, network.BatteryPort),
+                    Is.True);
+            }
+            if (network.BatteryToMotorCable == null)
+            {
+                Assert.That(
+                    network.TryConnect(network.BatteryPort, network.MotorPort),
+                    Is.True);
+            }
+            Assert.That(network.IsClosed, Is.True);
             for (var frame = 0; frame < 60 && !caravan.PhysicsStarted; frame++)
             {
                 yield return new WaitForFixedUpdate();
@@ -376,11 +478,16 @@ namespace Steppe.Tests
             var maximumSpeed = 0f;
             var maximumYawSpeed = 0f;
             var initialForward = caravan.transform.forward;
+            var initialBatteryEnergy = battery.StoredEnergyKilowattHours;
+            var peakMotorPower = 0f;
             var accumulatedSlipAngle = 0f;
             var measuredSteps = 0;
             for (var fixedStep = 0; fixedStep < 300; fixedStep++)
             {
                 yield return new WaitForFixedUpdate();
+                peakMotorPower = Mathf.Max(
+                    peakMotorPower,
+                    electricMotor.DeliveredMechanicalKilowatts);
                 var planarVelocity = Vector3.ProjectOnPlane(caravan.Body.linearVelocity, Vector3.up);
                 maximumSpeed = Mathf.Max(maximumSpeed, planarVelocity.magnitude);
                 maximumYawSpeed = Mathf.Max(maximumYawSpeed, Mathf.Abs(caravan.Body.angularVelocity.y));
@@ -414,6 +521,14 @@ namespace Steppe.Tests
                 maximumSlipAngle,
                 Is.LessThan(48f),
                 "The chassis rotated across its direction of travel during a sustained turn.");
+            Assert.That(
+                peakMotorPower,
+                Is.GreaterThan(1f),
+                "The electric motor never received usable power from the circuit.");
+            Assert.That(
+                battery.StoredEnergyKilowattHours,
+                Is.LessThan(initialBatteryEnergy),
+                "Powered driving did not discharge the battery.");
         }
 
         [UnityTest]

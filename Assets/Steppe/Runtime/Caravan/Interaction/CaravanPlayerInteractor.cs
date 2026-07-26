@@ -120,7 +120,7 @@ namespace Steppe.Caravan
                 ray,
                 out var hit,
                 InteractionDistance,
-                ~0,
+                CaravanFirstPersonController.WorldQueryMask,
                 QueryTriggerInteraction.Collide);
             return hit;
         }
@@ -132,7 +132,7 @@ namespace Steppe.Caravan
                 StationAimRadius,
                 viewCamera.transform.forward,
                 InteractionDistance,
-                ~0,
+                CaravanFirstPersonController.WorldQueryMask,
                 QueryTriggerInteraction.Collide);
             Array.Sort(hits, (left, right) => left.distance.CompareTo(right.distance));
             for (var index = 0; index < hits.Length; index++)

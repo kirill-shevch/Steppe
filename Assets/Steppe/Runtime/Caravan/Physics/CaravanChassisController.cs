@@ -23,8 +23,10 @@ namespace Steppe.Caravan
         private VPStandardInput vehicleInput;
         private VPVehicleToolkit vehicleToolkit;
         private VPWheelCollider[] wheels;
+        private CaravanElectricMotorModule electricMotor;
         private bool physicsStarted;
         private bool defaultDriveEnabled;
+        private float electricDriveThrottle;
         private float steeringNormalized;
 
         public Rigidbody Body => body;
@@ -58,6 +60,7 @@ namespace Steppe.Caravan
         public float SteeringNormalized => steeringNormalized;
         public bool PhysicsStarted => physicsStarted;
         public bool DefaultDriveEnabled => defaultDriveEnabled;
+        public float ElectricDriveThrottle => electricDriveThrottle;
         public float CurrentDriveForce { get; private set; }
         public bool VehicleEngineStarted => vehicleToolkit != null && vehicleToolkit.isEngineStarted;
         public int VehicleEngagedGear => vehicleToolkit != null ? vehicleToolkit.engagedGear : 0;
@@ -129,13 +132,30 @@ namespace Steppe.Caravan
 
         public void SetDefaultDriveEnabled(bool enabled)
         {
-            defaultDriveEnabled = enabled;
+            SetElectricDriveThrottle(enabled ? 1f : 0f);
+        }
+
+        public void AttachElectricMotor(CaravanElectricMotorModule motor)
+        {
+            electricMotor = motor != null ? motor : throw new ArgumentNullException(nameof(motor));
+            electricMotor.SetRequestedThrottle(0f);
+        }
+
+        public void SetElectricDriveThrottle(float normalizedThrottle)
+        {
+            electricDriveThrottle = Mathf.Clamp01(normalizedThrottle);
+            defaultDriveEnabled = electricDriveThrottle > 0.001f;
+            if (!defaultDriveEnabled)
+            {
+                electricMotor?.SetRequestedThrottle(0f);
+            }
+
             if (vehicleToolkit == null || !physicsStarted)
             {
                 return;
             }
 
-            if (enabled)
+            if (defaultDriveEnabled)
             {
                 vehicleToolkit.StartEngine();
                 vehicleToolkit.SetAutomaticModeD();
@@ -251,9 +271,16 @@ namespace Steppe.Caravan
             var resistance = (float)CurrentSurface.Resistance;
             var condition = module != null ? module.State.Efficiency : 1f;
             var maximumSpeed = Mathf.Lerp(8.5f, 4.2f, resistance);
-            var throttle = defaultDriveEnabled && Speed < maximumSpeed
-                ? Mathf.Lerp(0.55f, 0.7f, resistance) * condition
+            var requestedThrottle = defaultDriveEnabled && Speed < maximumSpeed
+                ? Mathf.Lerp(0.55f, 0.7f, resistance)
+                  * condition
+                  * electricDriveThrottle
                 : 0f;
+            electricMotor?.SetRequestedThrottle(requestedThrottle);
+            var availablePower = electricMotor != null
+                ? electricMotor.PowerAvailability
+                : 1f;
+            var throttle = requestedThrottle * availablePower;
             if (defaultDriveEnabled
                 && vehicleToolkit.isEngineStarted
                 && vehicleToolkit.engagedGear == 0)

@@ -14,36 +14,30 @@ namespace Steppe.Caravan
             GameObject root,
             CaravanChassisController chassis,
             CaravanModule chassisModule,
-            CaravanSailModule sail,
-            CaravanModule sailModule,
             IReadOnlyList<CaravanModule> equipmentModules,
+            CaravanElectricalNetwork electricalNetwork,
             CaravanMountGrid grid,
             Transform playerSpawn,
-            CaravanControlStation steeringStation,
-            CaravanControlStation sailStation)
+            CaravanControlStation steeringStation)
         {
             Root = root;
             Chassis = chassis;
             ChassisModule = chassisModule;
-            Sail = sail;
-            SailModule = sailModule;
             EquipmentModules = equipmentModules;
+            ElectricalNetwork = electricalNetwork;
             MountGrid = grid;
             PlayerSpawn = playerSpawn;
             SteeringStation = steeringStation;
-            SailStation = sailStation;
         }
 
         public GameObject Root { get; }
         public CaravanChassisController Chassis { get; }
         public CaravanModule ChassisModule { get; }
-        public CaravanSailModule Sail { get; }
-        public CaravanModule SailModule { get; }
         public IReadOnlyList<CaravanModule> EquipmentModules { get; }
+        public CaravanElectricalNetwork ElectricalNetwork { get; }
         public CaravanMountGrid MountGrid { get; }
         public Transform PlayerSpawn { get; }
         public CaravanControlStation SteeringStation { get; }
-        public CaravanControlStation SailStation { get; }
 
         public void Configure(
             SteppeWorldSettings settings,
@@ -51,30 +45,29 @@ namespace Steppe.Caravan
             CaravanEnvironmentSampler environment)
         {
             Chassis.Configure(settings, floatingOrigin, environment);
-            Sail.Configure(
-                Chassis.Body,
-                environment,
-                Sail.transform.Find("Visual/Sail Pivot"),
-                Sail.transform.Find("Visual/Sail Pivot/Cloth"),
-                28f,
-                5200f);
-            Sail.GetComponent<CaravanWindVane>()?.Configure(
-                environment,
-                Sail.transform.Find("Visual/Wind Vane/Vane Pivot"));
             SteeringStation.ConfigureSteering(
                 Chassis,
                 SteeringStation.transform.Find("Control Visual"),
                 SteeringStation.transform.Find("Focus Indicator")?.gameObject);
-            SailStation.ConfigureSail(
-                Sail,
-                SailStation.transform.Find("Control Visual"),
-                SailStation.transform.Find("Focus Indicator")?.gameObject);
             for (var index = 0; index < EquipmentModules.Count; index++)
             {
                 if (EquipmentModules[index].TryGetComponent<CaravanPhotovoltaicModule>(
                         out var photovoltaic))
                 {
                     photovoltaic.Configure(environment);
+                }
+
+                if (EquipmentModules[index].TryGetComponent<CaravanPart>(out var part)
+                    && part.Kind == CaravanPartKind.ElectricMotor
+                    && EquipmentModules[index].TryGetComponent<CaravanControlStation>(
+                        out var motorStation))
+                {
+                    motorStation.ConfigureElectricThrottle(
+                        Chassis,
+                        EquipmentModules[index].transform.Find(
+                            "Visual/Electric Throttle/Control Visual"),
+                        EquipmentModules[index].transform.Find(
+                            "Visual/Electric Throttle/Focus Indicator")?.gameObject);
                 }
             }
         }
@@ -106,12 +99,6 @@ namespace Steppe.Caravan
             var water = CreateMaterial("Caravan Water System", new Color(0.15f, 0.48f, 0.62f), 0.58f, materials);
             var biomass = CreateMaterial("Caravan Biomass", new Color(0.42f, 0.39f, 0.16f), 0.16f, materials);
             var hot = CreateMaterial("Caravan Heat", new Color(0.82f, 0.24f, 0.07f), 0.24f, materials);
-            var sailMaterial = CreateMaterial("Caravan Sail", new Color(0.73f, 0.69f, 0.47f), 0.08f, materials);
-            sailMaterial.doubleSidedGI = true;
-            if (sailMaterial.HasProperty("_Cull"))
-            {
-                sailMaterial.SetFloat("_Cull", (float)CullMode.Off);
-            }
             var ochre = CreateMaterial("Caravan Dust Gauge", new Color(0.86f, 0.48f, 0.12f), 0.2f, materials);
             var green = CreateMaterial("Caravan Condition Gauge", new Color(0.18f, 0.78f, 0.38f), 0.2f, materials);
             var blue = CreateMaterial("Caravan Load Gauge", new Color(0.17f, 0.57f, 0.92f), 0.2f, materials);
@@ -139,14 +126,6 @@ namespace Steppe.Caravan
             deckCollider.size = new Vector3(DeckWidth, 0.24f, DeckLength);
             deckCollision.AddComponent<CaravanBuildSurface>();
 
-            var chassisDisplay = CreateStatusDisplay(
-                chassisVisual.transform,
-                new Vector3(-4.4f, 0.62f, 6.7f),
-                Quaternion.Euler(8f, 0f, 0f),
-                darkMetal,
-                ochre,
-                green,
-                blue);
             var chassisModule = root.AddComponent<CaravanModule>();
             chassisModule.Configure(
                 "chassis",
@@ -154,7 +133,7 @@ namespace Steppe.Caravan
                 false,
                 DeckCellsWide,
                 DeckCellsLong,
-                chassisDisplay,
+                null,
                 2600f,
                 new Vector3(0f, -0.72f, 0f));
             chassisModule.State.SetForTests(0.24f, 0.91f, 0f);
@@ -184,18 +163,6 @@ namespace Steppe.Caravan
                     physicsWheels[index]);
             }
 
-            var sailRoot = CreateSailModule(
-                grid,
-                sailMaterial,
-                darkMetal,
-                metal,
-                ochre,
-                green,
-                blue,
-                out var sail,
-                out var sailModule,
-                out var sailStation);
-
             var palette = new CaravanPartPalette(
                 metal,
                 darkMetal,
@@ -208,6 +175,20 @@ namespace Steppe.Caravan
                 green,
                 blue);
             var equipmentModules = CaravanGreyboxPartFactory.CreateInitialParts(grid, palette);
+            var photovoltaic = FindEquipmentComponent<CaravanPhotovoltaicModule>(equipmentModules);
+            var battery = FindEquipmentComponent<CaravanBatteryModule>(equipmentModules);
+            var electricMotor = FindEquipmentComponent<CaravanElectricMotorModule>(equipmentModules);
+            var electricalNetwork = root.AddComponent<CaravanElectricalNetwork>();
+            electricalNetwork.Configure(
+                chassis,
+                photovoltaic,
+                battery,
+                electricMotor,
+                photovoltaic.GetComponentInChildren<CaravanElectricalPort>(true),
+                battery.GetComponentInChildren<CaravanElectricalPort>(true),
+                electricMotor.GetComponentInChildren<CaravanElectricalPort>(true),
+                copper,
+                darkMetal);
 
             var steeringStation = CreateControlStation(
                 root.transform,
@@ -224,20 +205,33 @@ namespace Steppe.Caravan
             playerSpawn.localPosition = new Vector3(0f, 0.06f, -5.2f);
 
             ConfigurePhysics(vehicle, vehicleInput, physicsWheels);
-            sailRoot.transform.SetParent(root.transform, true);
             chassisModule.RefreshRendererCache();
             root.SetActive(true);
             return new CaravanDemoRig(
                 root,
                 chassis,
                 chassisModule,
-                sail,
-                sailModule,
                 equipmentModules,
+                electricalNetwork,
                 grid,
                 playerSpawn,
-                steeringStation,
-                sailStation);
+                steeringStation);
+        }
+
+        private static T FindEquipmentComponent<T>(
+            IReadOnlyList<CaravanModule> modules)
+            where T : Component
+        {
+            for (var index = 0; index < modules.Count; index++)
+            {
+                if (modules[index].TryGetComponent<T>(out var component))
+                {
+                    return component;
+                }
+            }
+
+            throw new InvalidOperationException(
+                $"The initial caravan is missing the required {typeof(T).Name} component.");
         }
 
         private static GameObject CreateSailModule(

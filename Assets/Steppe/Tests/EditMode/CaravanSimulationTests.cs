@@ -162,6 +162,70 @@ namespace Steppe.Tests
         }
 
         [Test]
+        public void SolarSurplusChargesBatteryWithinChargeLimit()
+        {
+            var flow = CaravanElectricalModel.Evaluate(
+                18f,
+                0f,
+                10f,
+                120f,
+                12f,
+                65f,
+                0.94f,
+                0.93f,
+                1f);
+
+            Assert.That(flow.BatteryChargeKilowatts, Is.EqualTo(12f).Within(0.0001f));
+            Assert.That(flow.SpilledKilowatts, Is.EqualTo(6f).Within(0.0001f));
+            Assert.That(flow.StoredKilowattHours, Is.EqualTo(21.28f).Within(0.0001f));
+            Assert.That(flow.DeliveredKilowatts, Is.Zero);
+        }
+
+        [Test]
+        public void ElectricMotorDrawsSolarFirstAndBatteryCoversDeficit()
+        {
+            var flow = CaravanElectricalModel.Evaluate(
+                18f,
+                55f,
+                40f,
+                120f,
+                36f,
+                65f,
+                0.94f,
+                0.93f,
+                0.25f);
+
+            Assert.That(flow.DeliveredKilowatts, Is.EqualTo(55f).Within(0.0001f));
+            Assert.That(flow.BatteryDischargeKilowatts, Is.EqualTo(37f).Within(0.0001f));
+            Assert.That(flow.DeficitKilowatts, Is.EqualTo(0f).Within(0.0001f));
+            Assert.That(
+                flow.StoredKilowattHours,
+                Is.EqualTo(40f - 37f / 0.93f * 0.25f).Within(0.0001f));
+        }
+
+        [Test]
+        public void DisconnectedMotorReceivesNoPowerWhileBatteryCanStillCharge()
+        {
+            var flow = CaravanElectricalModel.Evaluate(
+                18f,
+                55f,
+                10f,
+                120f,
+                36f,
+                65f,
+                0.94f,
+                0.93f,
+                0.5f,
+                true,
+                false);
+
+            Assert.That(flow.DeliveredKilowatts, Is.Zero);
+            Assert.That(flow.DeficitKilowatts, Is.EqualTo(55f).Within(0.0001f));
+            Assert.That(flow.BatteryChargeKilowatts, Is.EqualTo(18f).Within(0.0001f));
+            Assert.That(flow.StoredKilowattHours, Is.EqualTo(18.46f).Within(0.0001f));
+        }
+
+        [Test]
         public void LowSunProjectsCloudShadowAwayFromReceiver()
         {
             var solar = new SolarState(
