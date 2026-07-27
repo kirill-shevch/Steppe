@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using Steppe.Player;
 using Steppe.Settings;
 using Steppe.Terrain;
@@ -23,7 +24,12 @@ namespace Steppe.Caravan
         private VPStandardInput vehicleInput;
         private VPVehicleToolkit vehicleToolkit;
         private VPWheelCollider[] wheels;
-        private CaravanElectricMotorModule electricMotor;
+        private readonly List<CaravanElectricMotorModule> electricMotors =
+            new List<CaravanElectricMotorModule>(2);
+        private readonly List<ICaravanDriveSource> driveSources =
+            new List<ICaravanDriveSource>(4);
+        private readonly List<CaravanTransmissionModule> transmissions =
+            new List<CaravanTransmissionModule>(2);
         private bool physicsStarted;
         private bool defaultDriveEnabled;
         private float electricDriveThrottle;
@@ -62,6 +68,9 @@ namespace Steppe.Caravan
         public bool DefaultDriveEnabled => defaultDriveEnabled;
         public float ElectricDriveThrottle => electricDriveThrottle;
         public float CurrentDriveForce { get; private set; }
+        public IReadOnlyList<CaravanElectricMotorModule> ElectricMotors => electricMotors;
+        public IReadOnlyList<ICaravanDriveSource> DriveSources => driveSources;
+        public IReadOnlyList<CaravanTransmissionModule> Transmissions => transmissions;
         public bool VehicleEngineStarted => vehicleToolkit != null && vehicleToolkit.isEngineStarted;
         public int VehicleEngagedGear => vehicleToolkit != null ? vehicleToolkit.engagedGear : 0;
         public int GroundedWheelCount
@@ -137,8 +146,57 @@ namespace Steppe.Caravan
 
         public void AttachElectricMotor(CaravanElectricMotorModule motor)
         {
-            electricMotor = motor != null ? motor : throw new ArgumentNullException(nameof(motor));
-            electricMotor.SetRequestedThrottle(0f);
+            if (motor == null)
+            {
+                throw new ArgumentNullException(nameof(motor));
+            }
+            if (electricMotors.Contains(motor))
+            {
+                return;
+            }
+
+            electricMotors.Add(motor);
+            if (!driveSources.Contains(motor))
+            {
+                driveSources.Add(motor);
+            }
+            motor.SetRequestedThrottle(0f);
+        }
+
+        public void AttachDriveSource(ICaravanDriveSource source)
+        {
+            if (source == null)
+            {
+                throw new ArgumentNullException(nameof(source));
+            }
+            if (driveSources.Contains(source))
+            {
+                return;
+            }
+
+            driveSources.Add(source);
+            source.SetRequestedThrottle(0f);
+        }
+
+        public void AttachTransmission(CaravanTransmissionModule transmission)
+        {
+            if (transmission != null && !transmissions.Contains(transmission))
+            {
+                transmissions.Add(transmission);
+            }
+        }
+
+        public bool DetachElectricMotor(CaravanElectricMotorModule motor)
+        {
+            if (motor == null || !electricMotors.Remove(motor))
+            {
+                return false;
+            }
+
+            motor.SetRequestedThrottle(0f);
+            motor.ApplyDeliveredPower(0f);
+            driveSources.Remove(motor);
+            return true;
         }
 
         public void SetElectricDriveThrottle(float normalizedThrottle)
@@ -147,7 +205,13 @@ namespace Steppe.Caravan
             defaultDriveEnabled = electricDriveThrottle > 0.001f;
             if (!defaultDriveEnabled)
             {
-                electricMotor?.SetRequestedThrottle(0f);
+                for (var index = 0; index < driveSources.Count; index++)
+                {
+                    if (IsAlive(driveSources[index]))
+                    {
+                        driveSources[index].SetRequestedThrottle(0f);
+                    }
+                }
             }
 
             if (vehicleToolkit == null || !physicsStarted)
@@ -225,15 +289,14 @@ namespace Steppe.Caravan
 
             if (vehicle != null)
             {
-                vehicle.HardReposition(localPosition, Quaternion.identity, true);
+                vehicle.HardReposition(localPosition, body.rotation, true);
             }
             else
             {
                 body.linearVelocity = Vector3.zero;
                 body.angularVelocity = Vector3.zero;
                 body.position = localPosition;
-                body.rotation = Quaternion.identity;
-                transform.SetPositionAndRotation(localPosition, Quaternion.identity);
+                transform.SetPositionAndRotation(localPosition, body.rotation);
             }
             Physics.SyncTransforms();
             body.isKinematic = true;
@@ -270,23 +333,86 @@ namespace Steppe.Caravan
 
             var resistance = (float)CurrentSurface.Resistance;
             var condition = module != null ? module.State.Efficiency : 1f;
-            var maximumSpeed = Mathf.Lerp(8.5f, 4.2f, resistance);
-            var requestedThrottle = defaultDriveEnabled && Speed < maximumSpeed
-                ? Mathf.Lerp(0.55f, 0.7f, resistance)
-                  * condition
-                  * electricDriveThrottle
-                : 0f;
-            electricMotor?.SetRequestedThrottle(requestedThrottle);
-            var availablePower = electricMotor != null
-                ? electricMotor.PowerAvailability
+            var torqueMultiplier = 0f;
+            var speedMultiplier = 0f;
+            var engagedTransmissionCount = 0;
+            for (var index = transmissions.Count - 1; index >= 0; index--)
+            {
+                if (transmissions[index] == null)
+                {
+                    transmissions.RemoveAt(index);
+                    continue;
+                }
+
+                if (!transmissions[index].IsEngaged)
+                {
+                    continue;
+                }
+
+                torqueMultiplier += transmissions[index].TorqueMultiplier;
+                speedMultiplier += transmissions[index].SpeedMultiplier;
+                engagedTransmissionCount++;
+            }
+            torqueMultiplier = engagedTransmissionCount > 0
+                ? torqueMultiplier / engagedTransmissionCount
                 : 1f;
-            var throttle = requestedThrottle * availablePower;
-            if (defaultDriveEnabled
+            speedMultiplier = engagedTransmissionCount > 0
+                ? speedMultiplier / engagedTransmissionCount
+                : 1f;
+            torqueMultiplier = Mathf.Clamp(torqueMultiplier, 0.6f, 1.8f);
+            speedMultiplier = Mathf.Clamp(speedMultiplier, 0.6f, 1.4f);
+            var maximumSpeed =
+                Mathf.Lerp(8.5f, 4.2f, resistance) * speedMultiplier;
+            var baseThrottle = Speed < maximumSpeed
+                ? Mathf.Lerp(0.55f, 0.7f, resistance) * condition
+                : 0f;
+            var totalRequestedPower = 0f;
+            var totalDeliveredPower = 0f;
+            var maximumRequestedThrottle = 0f;
+            for (var index = driveSources.Count - 1; index >= 0; index--)
+            {
+                var currentSource = driveSources[index];
+                if (!IsAlive(currentSource))
+                {
+                    driveSources.RemoveAt(index);
+                    continue;
+                }
+
+                var sourceControl = electricDriveThrottle;
+                if (currentSource is CaravanBiofuelEngineModule engine)
+                {
+                    sourceControl = engine.IsDriveCoupled
+                        ? engine.ManualThrottle
+                        : 0f;
+                }
+                var sourceThrottle = baseThrottle * sourceControl;
+                currentSource.SetRequestedThrottle(sourceThrottle);
+                maximumRequestedThrottle = Mathf.Max(
+                    maximumRequestedThrottle,
+                    sourceThrottle);
+                totalRequestedPower += currentSource.RequestedMechanicalKilowatts;
+                totalDeliveredPower += currentSource.DeliveredMechanicalKilowatts;
+            }
+
+            var availablePower = totalRequestedPower > 0.001f
+                ? Mathf.Clamp01(totalDeliveredPower / totalRequestedPower)
+                : 0f;
+            var throttle = Mathf.Clamp01(
+                maximumRequestedThrottle
+                * availablePower
+                * torqueMultiplier);
+            if (maximumRequestedThrottle > 0.001f
                 && vehicleToolkit.isEngineStarted
                 && vehicleToolkit.engagedGear == 0)
             {
                 vehicleToolkit.SetAutomaticModeD();
                 vehicleToolkit.SetGear(1);
+            }
+            else if (maximumRequestedThrottle > 0.001f
+                     && !vehicleToolkit.isEngineStarted)
+            {
+                vehicleToolkit.StartEngine();
+                vehicleToolkit.SetAutomaticModeD();
             }
             vehicleInput.externalSteer = steeringNormalized;
             vehicleInput.externalThrottle = throttle;
@@ -298,6 +424,13 @@ namespace Steppe.Caravan
             VPVehicleToolkit.SetHandbrake(vehicle, 0f);
             vehicle.tireFriction.frictionMultiplier = Mathf.Lerp(0.95f, 0.64f, resistance);
             CurrentDriveForce = throttle * 1000f;
+        }
+
+        private static bool IsAlive(ICaravanDriveSource source)
+        {
+            return source != null
+                   && (!(source is UnityEngine.Object unityObject)
+                       || unityObject != null);
         }
 
         private void TryBeginPhysicsOnLoadedTerrain()

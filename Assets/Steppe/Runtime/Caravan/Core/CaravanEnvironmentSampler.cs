@@ -47,6 +47,7 @@ namespace Steppe.Caravan
         private readonly SteppeTimeSystem timeSystem;
         private readonly TerrainHeightGenerator terrain;
         private readonly SteppeSurfaceGenerator surface;
+        private readonly SteppeClimateModel climate;
 
         public CaravanEnvironmentSampler(
             SteppeWorldSettings worldSettings,
@@ -62,6 +63,7 @@ namespace Steppe.Caravan
             timeSystem = clock != null ? clock : throw new ArgumentNullException(nameof(clock));
             terrain = new TerrainHeightGenerator(settings);
             surface = new SteppeSurfaceGenerator(settings);
+            climate = new SteppeClimateModel(settings);
         }
 
         public bool TrySample(Vector3 localPosition, out CaravanEnvironmentSample sample)
@@ -93,6 +95,34 @@ namespace Steppe.Caravan
         {
             var world = floatingOrigin.LocalToWorld(localPosition);
             return weatherSystem.Sample(world.X, world.Z);
+        }
+
+        public double SampleAirTemperature(Vector3 localPosition)
+        {
+            var world = floatingOrigin.LocalToWorld(localPosition);
+            var height = terrain.SampleHeight(world.X, world.Z);
+            var normal = terrain.SampleNormal(world.X, world.Z, 2.0);
+            var surfaceSample = surface.Sample(world.X, world.Z, height, normal.y);
+            return climate.Evaluate(surfaceSample, timeSystem.Current).AirTemperatureC;
+        }
+
+        public bool TryExtractResources(
+            Vector3 localPosition,
+            float requestedSurfaceWater,
+            float requestedRootWater,
+            float requestedSnowWater,
+            float requestedBiomass,
+            out SteppeEcoExtraction extraction)
+        {
+            var world = floatingOrigin.LocalToWorld(localPosition);
+            return ecologySystem.TryExtractResources(
+                world.X,
+                world.Z,
+                Math.Max(0f, requestedSurfaceWater),
+                Math.Max(0f, requestedRootWater),
+                Math.Max(0f, requestedSnowWater),
+                Math.Max(0f, requestedBiomass),
+                out extraction);
         }
 
         public SteppeSolarExposureSample SampleSolarExposure(

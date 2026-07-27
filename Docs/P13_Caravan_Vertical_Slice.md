@@ -32,15 +32,17 @@ but the caravan does not choose a course as the ground changes.
 | hold `C` | clean the targeted module |
 | hold `R` | repair the targeted module |
 | `B` | enter or leave build mode while nearly stopped |
-| `Tab` in build mode | switch between module placement and communications |
+| `Tab` in build mode | cycle modules, electrical, fluid, biomass and mechanical layers |
+| `Q` / `E` in module mode | select one of the fourteen technical blueprints |
+| `F` in module mode | create the selected module in the placement buffer |
 | left click in module mode | pick up or place a movable module |
 | `R` in build mode | rotate the held module by 90 degrees |
 | right click in module mode | return the held module to its previous mount |
-| two left clicks in communications mode | connect the selected compatible ports |
-| right click in communications mode | cancel selection or remove cables from the targeted port |
+| two left clicks in a communication layer | connect compatible ports in the active layer |
+| right click in a communication layer | cancel selection or remove the targeted connection |
 
-The mouse pointer remains a centre-screen world ray. No inventory, status window
-or persistent gameplay HUD is introduced.
+The mouse pointer remains a centre-screen world ray. A compact build-mode panel shows
+the active layer and selected blueprint; no persistent gameplay HUD is introduced.
 
 The front station has a steering wheel and the electric motor has a physical
 throttle lever. A small lamp appears when the keeper
@@ -97,6 +99,11 @@ generation and unmet demand are all preserved in the network state. The battery
 window shows state of charge, and the motor shaft spins in proportion to delivered
 mechanical power.
 
+P14 now keeps this exact starting circuit while registering ports dynamically and
+evaluating each connected cable component independently. Additional generators,
+batteries and motors can join or leave the runtime network without adding fixed
+references to the build-mode controller.
+
 The keeper is a CharacterController independent of the Rigidbody. While grounded
 on a caravan collider, carrier translation and rotation are applied before player
 movement. A jump inherits the platform's planar point velocity.
@@ -106,6 +113,9 @@ movement. A jump inherits the platform's planar point velocity.
 The deck uses a `10 × 18` one-metre mount grid and one-item construction buffer.
 Each of the three installed electrical parts can be picked up, previewed as a
 transparent ghost, rotated and placed in another free footprint.
+
+The same buffer constructs all fourteen P14 technical modules. New modules do not
+enter the live resource graphs or contribute chassis mass until placement succeeds.
 
 The same build mode owns communication editing. A generator or consumer accepts one
 cable, while the battery storage port accepts two. Only generator-to-storage and
@@ -130,17 +140,12 @@ The hierarchy and pivots are intended to survive replacement of the greybox visu
 with authored or generated meshes. Gameplay code addresses modules, pivots and mount
 footprints rather than individual renderers.
 
-## Deferred
+## P14 extension
 
-P13 does not yet implement:
+P14 now adds water extraction and cooling, biomass harvesting, drying and combustion,
+sail propulsion, biofuel drive, transmissions, resource-backed repair and coupling
+rope forces. These systems reuse the same module state, mount grid, environment
+sampler and interaction ray rather than introducing a second construction UI.
 
-- water extraction, circulation or heat transfer;
-- biomass harvesting, drying or combustion;
-- sail and wind propulsion in the starting loadout;
-- water pipes;
-- physical ropes between multiple chassis;
-- resource costs for repair;
-- additional caravan modules or living spaces.
-
-Those systems should extend the existing module state, mount grid, environment
-sampler and interaction ray instead of creating a second construction or UI layer.
+Persistence, construction costs, dismantling and the second coupled chassis remain
+future work.

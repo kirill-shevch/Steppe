@@ -33,6 +33,20 @@ namespace Steppe.Tests
             var windVane = Object.FindAnyObjectByType<CaravanWindVane>();
             var photovoltaic = Object.FindAnyObjectByType<CaravanPhotovoltaicModule>();
             var electricalNetwork = Object.FindAnyObjectByType<CaravanElectricalNetwork>();
+            var fluidNetwork = Object.FindAnyObjectByType<CaravanFluidNetwork>();
+            var materialNetworks =
+                Object.FindObjectsByType<CaravanMaterialNetwork>(
+                    FindObjectsInactive.Include);
+            var biomassNetwork = System.Array.Find(
+                materialNetworks,
+                item => item.Kind == CaravanMaterialNetworkKind.Biomass);
+            var mechanicalNetwork = System.Array.Find(
+                materialNetworks,
+                item => item.Kind == CaravanMaterialNetworkKind.Mechanical);
+            var resourceSystem =
+                Object.FindAnyObjectByType<CaravanResourceSystem>();
+            var construction =
+                Object.FindAnyObjectByType<CaravanConstructionService>();
             var battery = Object.FindAnyObjectByType<CaravanBatteryModule>();
             var electricMotor = Object.FindAnyObjectByType<CaravanElectricMotorModule>();
             var buildMode = Object.FindAnyObjectByType<CaravanBuildModeController>();
@@ -54,6 +68,11 @@ namespace Steppe.Tests
             Assert.That(windVane, Is.Null);
             Assert.That(photovoltaic, Is.Not.Null);
             Assert.That(electricalNetwork, Is.Not.Null);
+            Assert.That(fluidNetwork, Is.Not.Null);
+            Assert.That(biomassNetwork, Is.Not.Null);
+            Assert.That(mechanicalNetwork, Is.Not.Null);
+            Assert.That(resourceSystem, Is.Not.Null);
+            Assert.That(construction, Is.Not.Null);
             Assert.That(battery, Is.Not.Null);
             Assert.That(electricMotor, Is.Not.Null);
             Assert.That(electricalNetwork.IsClosed, Is.False);
@@ -65,6 +84,12 @@ namespace Steppe.Tests
                 FindObjectsInactive.Include);
             Assert.That(electricalPorts, Has.Length.EqualTo(3));
             Assert.That(electricalCables, Is.Empty);
+            Assert.That(fluidNetwork.Ports, Has.Count.EqualTo(1));
+            Assert.That(fluidNetwork.Pipes, Is.Empty);
+            Assert.That(biomassNetwork.Ports, Is.Empty);
+            Assert.That(biomassNetwork.Links, Is.Empty);
+            Assert.That(mechanicalNetwork.Ports, Has.Count.EqualTo(1));
+            Assert.That(mechanicalNetwork.Links, Is.Empty);
             var communicationPreview = GameObject.Find("Communication Cable Preview");
             Assert.That(communicationPreview, Is.Not.Null);
             Assert.That(communicationPreview.GetComponent<LineRenderer>(), Is.Not.Null);
@@ -80,7 +105,7 @@ namespace Steppe.Tests
                     .ConnectedCableCount,
                 Is.Zero);
             Assert.That(buildMode, Is.Not.Null);
-            Assert.That(controlStations, Has.Length.EqualTo(2));
+            Assert.That(controlStations, Has.Length.EqualTo(3));
             var steeringStation = System.Array.Find(
                 controlStations,
                 station => station.Kind == CaravanControlKind.Steering);
@@ -90,9 +115,13 @@ namespace Steppe.Tests
             var motorStation = System.Array.Find(
                 controlStations,
                 station => station.Kind == CaravanControlKind.ElectricThrottle);
+            var solarStation = System.Array.Find(
+                controlStations,
+                station => station.Kind == CaravanControlKind.SolarOrientation);
             Assert.That(steeringStation, Is.Not.Null);
             Assert.That(trimStation, Is.Null);
             Assert.That(motorStation, Is.Not.Null);
+            Assert.That(solarStation, Is.Not.Null);
             Assert.That(
                 steeringStation.transform.Find("Control Visual/Wheel Rim 1"),
                 Is.Not.Null);
@@ -136,6 +165,14 @@ namespace Steppe.Tests
             Assert.That(
                 Shader.GetGlobalFloat("_SteppeCloudTransmissionAtFocus"),
                 Is.InRange(0.06f, 1f));
+            var initialSurfaceWind = new Vector3(
+                weatherSystem.CurrentAtFocus.SurfaceWind.x,
+                0f,
+                weatherSystem.CurrentAtFocus.SurfaceWind.y).normalized;
+            Assert.That(
+                Vector3.Dot(caravan.transform.forward, initialSurfaceWind),
+                Is.GreaterThan(0.98f),
+                "The caravan nose is not aligned with the initial surface wind.");
             var caravanParts = Object.FindObjectsByType<CaravanPart>();
             Assert.That(caravanParts.Length, Is.EqualTo(3));
             foreach (var kind in new[]
@@ -435,6 +472,565 @@ namespace Steppe.Tests
         }
 
         [UnityTest]
+        public IEnumerator BuildModeConstructsAndPipesPoweredWaterCoolingLoop()
+        {
+            if (Object.FindAnyObjectByType<SteppePrototypeBootstrap>() == null)
+            {
+                new GameObject("Water Circuit Test Bootstrap")
+                    .AddComponent<SteppePrototypeBootstrap>();
+            }
+
+            yield return null;
+            var caravan = Object.FindAnyObjectByType<CaravanChassisController>();
+            var electrical = Object.FindAnyObjectByType<CaravanElectricalNetwork>();
+            var fluids = Object.FindAnyObjectByType<CaravanFluidNetwork>();
+            var construction =
+                Object.FindAnyObjectByType<CaravanConstructionService>();
+            var build = Object.FindAnyObjectByType<CaravanBuildModeController>();
+            Assert.That(caravan, Is.Not.Null);
+            Assert.That(electrical, Is.Not.Null);
+            Assert.That(fluids, Is.Not.Null);
+            Assert.That(construction, Is.Not.Null);
+            Assert.That(build, Is.Not.Null);
+            Assert.That(fluids.Ports, Has.Count.EqualTo(1));
+            Assert.That(fluids.Pipes, Is.Empty);
+            Assert.That(
+                Object.FindAnyObjectByType<CaravanWaterReservoirModule>(),
+                Is.Null);
+
+            caravan.Body.linearVelocity = Vector3.zero;
+            electrical.ClearConnections();
+            var startingMass = caravan.Body.mass;
+            Assert.That(build.TryEnterBuildMode(), Is.True);
+
+            Assert.That(
+                build.TryCreateModule(CaravanPartKind.WaterReservoir),
+                Is.True);
+            Assert.That(
+                build.TryPlaceHeldModule(
+                    new CaravanGridPlacement(4, 8, 2, 3, 0)),
+                Is.True);
+            Assert.That(
+                build.TryCreateModule(CaravanPartKind.DualModePump),
+                Is.True);
+            Assert.That(
+                build.TryPlaceHeldModule(
+                    new CaravanGridPlacement(7, 8, 1, 2, 0)),
+                Is.True);
+            Assert.That(
+                build.TryCreateModule(CaravanPartKind.Radiator),
+                Is.True);
+            Assert.That(
+                build.TryPlaceHeldModule(
+                    new CaravanGridPlacement(4, 12, 2, 2, 0)),
+                Is.True);
+
+            Assert.That(
+                Object.FindObjectsByType<CaravanPart>().Length,
+                Is.EqualTo(6));
+            Assert.That(fluids.Ports, Has.Count.EqualTo(7));
+            Assert.That(electrical.Ports, Has.Count.EqualTo(4));
+            Assert.That(caravan.Body.mass, Is.GreaterThan(startingMass + 1400f));
+            Assert.That(fluids.Reservoir, Is.Not.Null);
+            Assert.That(fluids.Pump, Is.Not.Null);
+            Assert.That(fluids.Radiator, Is.Not.Null);
+
+            Assert.That(
+                build.SetInteractionMode(CaravanBuildInteractionMode.Fluids),
+                Is.True);
+            Assert.That(fluids.ReservoirSupplyPort.IsBuildMarkerVisible, Is.True);
+            Assert.That(
+                build.TrySelectFluidPort(fluids.ReservoirSupplyPort),
+                Is.True);
+            Assert.That(
+                build.TrySelectFluidPort(fluids.RadiatorInletPort),
+                Is.False,
+                "A reservoir supply may only connect to the pump inlet.");
+            Assert.That(fluids.PipeCount, Is.Zero);
+            Assert.That(
+                build.TrySelectFluidPort(fluids.PumpInletPort),
+                Is.True);
+            Assert.That(
+                build.TrySelectFluidPort(fluids.PumpOutletPort),
+                Is.True);
+            Assert.That(
+                build.TrySelectFluidPort(fluids.RadiatorInletPort),
+                Is.True);
+            Assert.That(
+                build.TrySelectFluidPort(fluids.RadiatorOutletPort),
+                Is.True);
+            Assert.That(
+                build.TrySelectFluidPort(fluids.ReservoirReturnPort),
+                Is.True);
+            Assert.That(fluids.IsClosed, Is.True);
+            Assert.That(fluids.PipeCount, Is.EqualTo(3));
+            foreach (var pipe in fluids.Pipes)
+            {
+                Assert.That(pipe.GetComponent<LineRenderer>(), Is.Not.Null);
+                Assert.That(pipe.GetComponentInChildren<Collider>(true), Is.Null);
+                Assert.That(pipe.GetComponentInChildren<Rigidbody>(true), Is.Null);
+            }
+
+            Assert.That(
+                build.SetInteractionMode(CaravanBuildInteractionMode.Electrical),
+                Is.True);
+            var pumpElectricalPort = System.Array.Find(
+                Object.FindObjectsByType<CaravanElectricalPort>(
+                    FindObjectsInactive.Include),
+                port => port.Part.Kind == CaravanPartKind.DualModePump);
+            Assert.That(pumpElectricalPort, Is.Not.Null);
+            Assert.That(
+                build.TrySelectCommunicationPort(electrical.BatteryPort),
+                Is.True);
+            Assert.That(
+                build.TrySelectCommunicationPort(pumpElectricalPort),
+                Is.True);
+
+            fluids.Reservoir.SetTemperature(70f);
+            fluids.Simulate(1f);
+            Assert.That(fluids.Pump.RequestedPowerKilowatts, Is.GreaterThan(0f));
+            electrical.Simulate(1f);
+            var temperatureBeforeCooling =
+                fluids.Reservoir.TemperatureCelsius;
+            fluids.Simulate(60f);
+
+            Assert.That(
+                fluids.Pump.DeliveredElectricalKilowatts,
+                Is.GreaterThan(0f));
+            Assert.That(fluids.CurrentFlowLitresPerSecond, Is.GreaterThan(0f));
+            Assert.That(fluids.CurrentCoolingKilowatts, Is.GreaterThan(0f));
+            Assert.That(
+                fluids.Reservoir.TemperatureCelsius,
+                Is.LessThan(temperatureBeforeCooling));
+            foreach (var pipe in fluids.Pipes)
+            {
+                Assert.That(pipe.FlowLitresPerSecond, Is.GreaterThan(0f));
+            }
+
+            Assert.That(
+                build.SetInteractionMode(CaravanBuildInteractionMode.Fluids),
+                Is.True);
+            Assert.That(
+                build.RemoveFluidConnections(fluids.RadiatorInletPort),
+                Is.EqualTo(1));
+            Assert.That(fluids.PipeCount, Is.EqualTo(2));
+            Assert.That(fluids.IsClosed, Is.False);
+            Assert.That(
+                build.TrySelectFluidPort(fluids.PumpOutletPort),
+                Is.True);
+            Assert.That(
+                build.TrySelectFluidPort(fluids.RadiatorInletPort),
+                Is.True);
+            Assert.That(fluids.IsClosed, Is.True);
+
+            build.ExitBuildMode();
+            foreach (var port in fluids.Ports)
+            {
+                Assert.That(port.IsBuildMarkerVisible, Is.False);
+            }
+            yield return null;
+        }
+
+        [UnityTest]
+        public IEnumerator EveryCatalogModuleConstructsAndResourceChainsOperate()
+        {
+            if (Object.FindAnyObjectByType<SteppePrototypeBootstrap>() == null)
+            {
+                new GameObject("Complete Caravan Module Test Bootstrap")
+                    .AddComponent<SteppePrototypeBootstrap>();
+            }
+
+            yield return null;
+            yield return null;
+            var caravan = Object.FindAnyObjectByType<CaravanChassisController>();
+            var grid = Object.FindAnyObjectByType<CaravanMountGrid>();
+            var build = Object.FindAnyObjectByType<CaravanBuildModeController>();
+            var electrical = Object.FindAnyObjectByType<CaravanElectricalNetwork>();
+            var fluids = Object.FindAnyObjectByType<CaravanFluidNetwork>();
+            var resource = Object.FindAnyObjectByType<CaravanResourceSystem>();
+            var materialNetworks =
+                Object.FindObjectsByType<CaravanMaterialNetwork>(
+                    FindObjectsInactive.Include);
+            var biomass = System.Array.Find(
+                materialNetworks,
+                item => item.Kind == CaravanMaterialNetworkKind.Biomass);
+            var mechanical = System.Array.Find(
+                materialNetworks,
+                item => item.Kind == CaravanMaterialNetworkKind.Mechanical);
+            Assert.That(caravan, Is.Not.Null);
+            Assert.That(grid, Is.Not.Null);
+            Assert.That(build, Is.Not.Null);
+            Assert.That(electrical, Is.Not.Null);
+            Assert.That(fluids, Is.Not.Null);
+            Assert.That(resource, Is.Not.Null);
+            Assert.That(biomass, Is.Not.Null);
+            Assert.That(mechanical, Is.Not.Null);
+
+            var startingPartCount = Object.FindObjectsByType<CaravanPart>(
+                FindObjectsInactive.Exclude).Length;
+            var startingElectricalPortCount = electrical.Ports.Count;
+            var startingFluidPortCount = fluids.Ports.Count;
+            var startingBiomassPortCount = biomass.Ports.Count;
+            var startingMechanicalPortCount = mechanical.Ports.Count;
+            var startingControlCount =
+                Object.FindObjectsByType<CaravanControlStation>(
+                    FindObjectsInactive.Include).Length;
+            caravan.Body.linearVelocity = Vector3.zero;
+            Assert.That(build.TryEnterBuildMode(), Is.True);
+            foreach (var kind in CaravanConstructionService.AvailablePartKinds)
+            {
+                Assert.That(
+                    build.TryCreateModule(kind),
+                    Is.True,
+                    $"Could not create the {kind} blueprint.");
+                Assert.That(
+                    TryFindFreePlacement(
+                        grid,
+                        build.HeldModule,
+                        out var placement),
+                    Is.True,
+                    $"No free mount-grid placement remained for {kind}.");
+                Assert.That(
+                    build.TryPlaceHeldModule(placement),
+                    Is.True,
+                    $"Could not place the {kind} module.");
+            }
+
+            var parts = Object.FindObjectsByType<CaravanPart>(
+                FindObjectsInactive.Exclude);
+            Assert.That(
+                parts,
+                Has.Length.EqualTo(
+                    startingPartCount
+                    + CaravanConstructionService.AvailablePartKinds.Count));
+            foreach (CaravanPartKind kind in
+                     System.Enum.GetValues(typeof(CaravanPartKind)))
+            {
+                Assert.That(
+                    System.Array.Exists(parts, part => part.Kind == kind),
+                    Is.True,
+                    $"The constructed caravan is missing {kind}.");
+            }
+
+            Assert.That(
+                electrical.Ports.Count,
+                Is.EqualTo(startingElectricalPortCount + 6));
+            Assert.That(
+                fluids.Ports.Count,
+                Is.EqualTo(startingFluidPortCount + 10));
+            Assert.That(
+                biomass.Ports.Count,
+                Is.EqualTo(startingBiomassPortCount + 7));
+            Assert.That(
+                mechanical.Ports.Count,
+                Is.EqualTo(startingMechanicalPortCount + 7));
+            Assert.That(resource.Harvesters, Has.Count.EqualTo(1));
+            Assert.That(resource.Dryers, Has.Count.EqualTo(1));
+            Assert.That(resource.Storages, Has.Count.EqualTo(1));
+            Assert.That(resource.Furnaces, Has.Count.EqualTo(1));
+            Assert.That(resource.Engines, Has.Count.EqualTo(1));
+            Assert.That(
+                Object.FindObjectsByType<CaravanControlStation>(
+                    FindObjectsInactive.Include),
+                Has.Length.EqualTo(startingControlCount + 10));
+
+            var harvesterPart = FindPart(parts, CaravanPartKind.Harvester);
+            var dryerPart = FindPart(parts, CaravanPartKind.GrassDryer);
+            var storagePart = FindPart(parts, CaravanPartKind.BiomassStorage);
+            var furnacePart = FindPart(parts, CaravanPartKind.Biofurnace);
+            var enginePart = FindPart(parts, CaravanPartKind.BiofuelEngine);
+            var pumpPart = FindPart(parts, CaravanPartKind.DualModePump);
+            var transmissionPart = FindPart(parts, CaravanPartKind.Transmission);
+
+            Assert.That(
+                build.SetInteractionMode(CaravanBuildInteractionMode.Biomass),
+                Is.True);
+            AssertMaterialConnection(
+                build,
+                biomass,
+                harvesterPart,
+                CaravanMaterialPortRole.WetBiomassOutput,
+                dryerPart,
+                CaravanMaterialPortRole.WetBiomassInput);
+            AssertMaterialConnection(
+                build,
+                biomass,
+                dryerPart,
+                CaravanMaterialPortRole.DryBiomassOutput,
+                storagePart,
+                CaravanMaterialPortRole.DryBiomassInput);
+            AssertMaterialConnection(
+                build,
+                biomass,
+                storagePart,
+                CaravanMaterialPortRole.DryBiomassOutput,
+                furnacePart,
+                CaravanMaterialPortRole.DryBiomassInput);
+            AssertMaterialConnection(
+                build,
+                biomass,
+                storagePart,
+                CaravanMaterialPortRole.DryBiomassOutput,
+                enginePart,
+                CaravanMaterialPortRole.DryBiomassInput);
+
+            Assert.That(
+                build.SetInteractionMode(CaravanBuildInteractionMode.Mechanical),
+                Is.True);
+            AssertMaterialConnection(
+                build,
+                mechanical,
+                enginePart,
+                CaravanMaterialPortRole.MechanicalSource,
+                transmissionPart,
+                CaravanMaterialPortRole.TransmissionInput);
+            AssertMaterialConnection(
+                build,
+                mechanical,
+                transmissionPart,
+                CaravanMaterialPortRole.TransmissionOutput,
+                pumpPart,
+                CaravanMaterialPortRole.MechanicalConsumer);
+            AssertMaterialConnection(
+                build,
+                mechanical,
+                transmissionPart,
+                CaravanMaterialPortRole.TransmissionOutput,
+                harvesterPart,
+                CaravanMaterialPortRole.MechanicalConsumer);
+
+            var batteryPort = System.Array.Find(
+                Object.FindObjectsByType<CaravanElectricalPort>(
+                    FindObjectsInactive.Include),
+                port => port.Part.Kind == CaravanPartKind.Battery
+                        && port.ConnectedCableCount == 0);
+            var harvesterElectrical = FindElectricalPort(
+                electrical,
+                CaravanPartKind.Harvester);
+            var dryerElectrical = FindElectricalPort(
+                electrical,
+                CaravanPartKind.GrassDryer);
+            Assert.That(
+                electrical.TryConnect(batteryPort, harvesterElectrical),
+                Is.True);
+            Assert.That(
+                electrical.TryConnect(batteryPort, dryerElectrical),
+                Is.True);
+
+            AssertFluidConnection(
+                fluids,
+                fluids.ReservoirSupplyPort,
+                fluids.PumpInletPort);
+            AssertFluidConnection(
+                fluids,
+                fluids.PumpOutletPort,
+                fluids.RadiatorInletPort);
+            AssertFluidConnection(
+                fluids,
+                fluids.RadiatorOutletPort,
+                fluids.ReservoirReturnPort);
+            Assert.That(
+                fluids.TryConnect(
+                    FindFluidPort(fluids, furnacePart),
+                    fluids.ReservoirReturnPort),
+                Is.True);
+            Assert.That(
+                fluids.TryConnect(
+                    FindFluidPort(fluids, enginePart),
+                    fluids.ReservoirReturnPort),
+                Is.True);
+
+            var harvester =
+                harvesterPart.GetComponent<CaravanHarvesterModule>();
+            var dryer = dryerPart.GetComponent<CaravanGrassDryerModule>();
+            var furnace =
+                furnacePart.GetComponent<CaravanBiofurnaceModule>();
+            var engine =
+                enginePart.GetComponent<CaravanBiofuelEngineModule>();
+            var pump = pumpPart.GetComponent<CaravanElectricPumpModule>();
+            harvester.SetControlNormalized(1f);
+            dryer.SetControlNormalized(1f);
+            furnace.SetControlNormalized(1f);
+            engine.SetControlNormalized(1f);
+            engine.SetRequestedThrottle(1f);
+            pump.SetMode(CaravanPumpMode.Circulation);
+            caravan.Body.linearVelocity = caravan.transform.forward * 2f;
+
+            var storedFuelBefore =
+                resource.Storages[0].StoredDryBiomassKilograms;
+            resource.Simulate(0.1f);
+            electrical.Simulate(1f);
+            resource.Simulate(4f);
+            resource.Simulate(0.1f);
+            electrical.Simulate(1f);
+            resource.Simulate(2f);
+            fluids.Simulate(2f);
+
+            Assert.That(
+                harvester.CurrentHarvestKilogramsPerSecond,
+                Is.GreaterThan(0f));
+            Assert.That(
+                dryer.CurrentDryingKilogramsPerSecond,
+                Is.GreaterThan(0f));
+            Assert.That(furnace.ThermalOutputKilowatts, Is.GreaterThan(0f));
+            Assert.That(
+                engine.DeliveredMechanicalKilowatts,
+                Is.GreaterThan(0f));
+            Assert.That(
+                harvester.TotalHarvestedKilograms,
+                Is.GreaterThan(0f));
+            Assert.That(
+                dryer.TotalDriedWetKilograms,
+                Is.GreaterThan(0f));
+            Assert.That(
+                furnace.TotalFuelConsumedKilograms,
+                Is.GreaterThan(0f));
+            Assert.That(
+                engine.TotalFuelConsumedKilograms,
+                Is.GreaterThan(0f));
+            Assert.That(
+                resource.Storages[0].StoredDryBiomassKilograms,
+                Is.GreaterThanOrEqualTo(storedFuelBefore));
+            Assert.That(engine.IsDriveCoupled, Is.True);
+            Assert.That(
+                transmissionPart
+                    .GetComponent<CaravanTransmissionModule>()
+                    .IsEngaged,
+                Is.True);
+            Assert.That(fluids.CurrentHeatingKilowatts, Is.GreaterThan(0f));
+            Assert.That(biomass.LinkCount, Is.EqualTo(4));
+            Assert.That(mechanical.LinkCount, Is.EqualTo(3));
+            foreach (var link in biomass.Links)
+            {
+                Assert.That(link.GetComponent<LineRenderer>(), Is.Not.Null);
+                Assert.That(link.GetComponentInChildren<Collider>(true), Is.Null);
+                Assert.That(link.GetComponentInChildren<Rigidbody>(true), Is.Null);
+            }
+
+            Assert.That(
+                build.SetInteractionMode(CaravanBuildInteractionMode.Biomass),
+                Is.True);
+            var harvesterWetOutput = FindMaterialPort(
+                biomass,
+                harvesterPart,
+                CaravanMaterialPortRole.WetBiomassOutput);
+            Assert.That(
+                build.RemoveMaterialConnections(harvesterWetOutput),
+                Is.EqualTo(1));
+            Assert.That(biomass.LinkCount, Is.EqualTo(3));
+            AssertMaterialConnection(
+                build,
+                biomass,
+                harvesterPart,
+                CaravanMaterialPortRole.WetBiomassOutput,
+                dryerPart,
+                CaravanMaterialPortRole.WetBiomassInput);
+
+            Assert.That(
+                build.SetInteractionMode(CaravanBuildInteractionMode.Mechanical),
+                Is.True);
+            var harvesterMechanicalInput = FindMaterialPort(
+                mechanical,
+                harvesterPart,
+                CaravanMaterialPortRole.MechanicalConsumer);
+            Assert.That(
+                build.RemoveMaterialConnections(harvesterMechanicalInput),
+                Is.EqualTo(1));
+            Assert.That(mechanical.LinkCount, Is.EqualTo(2));
+            AssertMaterialConnection(
+                build,
+                mechanical,
+                transmissionPart,
+                CaravanMaterialPortRole.TransmissionOutput,
+                harvesterPart,
+                CaravanMaterialPortRole.MechanicalConsumer);
+
+            build.ExitBuildMode();
+            yield return null;
+        }
+
+        [UnityTest]
+        public IEnumerator ElectricalNetworkRegistersAdditionalStorageAndConsumersAtRuntime()
+        {
+            if (Object.FindAnyObjectByType<SteppePrototypeBootstrap>() == null)
+            {
+                new GameObject("Dynamic Electrical Test Bootstrap")
+                    .AddComponent<SteppePrototypeBootstrap>();
+            }
+
+            yield return null;
+            var caravan = Object.FindAnyObjectByType<CaravanChassisController>();
+            var network = Object.FindAnyObjectByType<CaravanElectricalNetwork>();
+            Assert.That(caravan, Is.Not.Null);
+            Assert.That(network, Is.Not.Null);
+
+            var batteryObject = new GameObject("Test Auxiliary Battery");
+            batteryObject.transform.SetParent(caravan.transform, false);
+            var batteryModule = batteryObject.AddComponent<CaravanModule>();
+            batteryModule.Configure(
+                "battery",
+                batteryObject.transform,
+                true,
+                1,
+                1,
+                instanceId: "test-auxiliary-battery");
+            var batteryPart = batteryObject.AddComponent<CaravanPart>();
+            batteryPart.Configure(CaravanPartKind.Battery, 40f, 20f);
+            var auxiliaryBattery = batteryObject.AddComponent<CaravanBatteryModule>();
+            auxiliaryBattery.Configure(null, 12f, 20f);
+            var batteryPort = batteryObject.AddComponent<CaravanElectricalPort>();
+            batteryPort.Configure(
+                batteryPart,
+                CaravanElectricalPortKind.Storage,
+                connectionCapacity: 4,
+                portId: "test-auxiliary-battery:electrical");
+
+            var motorObject = new GameObject("Test Auxiliary Motor");
+            motorObject.transform.SetParent(caravan.transform, false);
+            var motorModule = motorObject.AddComponent<CaravanModule>();
+            motorModule.Configure(
+                "electric-motor",
+                motorObject.transform,
+                true,
+                1,
+                1,
+                instanceId: "test-auxiliary-motor");
+            var motorPart = motorObject.AddComponent<CaravanPart>();
+            motorPart.Configure(CaravanPartKind.ElectricMotor, 10f);
+            var auxiliaryMotor = motorObject.AddComponent<CaravanElectricMotorModule>();
+            auxiliaryMotor.Configure(null);
+            var motorPort = motorObject.AddComponent<CaravanElectricalPort>();
+            motorPort.Configure(
+                motorPart,
+                CaravanElectricalPortKind.Consumer,
+                portId: "test-auxiliary-motor:electrical");
+
+            Assert.That(network.RegisterPort(batteryPort), Is.True);
+            Assert.That(network.RegisterPort(motorPort), Is.True);
+            Assert.That(network.Batteries, Has.Count.EqualTo(2));
+            Assert.That(network.Motors, Has.Count.EqualTo(2));
+            Assert.That(caravan.ElectricMotors, Has.Count.EqualTo(2));
+            Assert.That(network.TryConnect(batteryPort, motorPort), Is.True);
+
+            auxiliaryMotor.SetRequestedThrottle(1f);
+            var before = auxiliaryBattery.StoredEnergyKilowattHours;
+            network.Simulate(60f);
+
+            Assert.That(auxiliaryMotor.DeliveredElectricalKilowatts, Is.EqualTo(10f).Within(0.001f));
+            Assert.That(auxiliaryMotor.PowerAvailability, Is.EqualTo(1f).Within(0.001f));
+            Assert.That(auxiliaryBattery.StoredEnergyKilowattHours, Is.LessThan(before));
+            Assert.That(network.ConnectedComponentCount, Is.GreaterThanOrEqualTo(1));
+
+            Assert.That(network.UnregisterPort(motorPort), Is.True);
+            Assert.That(network.UnregisterPort(batteryPort), Is.True);
+            Assert.That(caravan.ElectricMotors, Has.Count.EqualTo(1));
+            Assert.That(network.Motors, Has.Count.EqualTo(1));
+            Object.Destroy(motorObject);
+            Object.Destroy(batteryObject);
+            yield return null;
+        }
+
+        [UnityTest]
         public IEnumerator ChassisMaintainsForwardGripDuringSustainedTurn()
         {
             if (Object.FindAnyObjectByType<SteppePrototypeBootstrap>() == null)
@@ -710,6 +1306,139 @@ namespace Steppe.Tests
         private static float PositiveModulo(double value, double modulus)
         {
             return (float)(value - System.Math.Floor(value / modulus) * modulus);
+        }
+
+        private static bool TryFindFreePlacement(
+            CaravanMountGrid grid,
+            CaravanModule module,
+            out CaravanGridPlacement placement)
+        {
+            for (var quarterTurns = 0; quarterTurns < 2; quarterTurns++)
+            {
+                for (var z = 0; z < grid.Length; z++)
+                {
+                    for (var x = 0; x < grid.Width; x++)
+                    {
+                        var candidate = new CaravanGridPlacement(
+                            x,
+                            z,
+                            module.FootprintWidth,
+                            module.FootprintLength,
+                            quarterTurns);
+                        if (!grid.CanPlace(module, candidate))
+                        {
+                            continue;
+                        }
+
+                        placement = candidate;
+                        return true;
+                    }
+                }
+            }
+
+            placement = default;
+            return false;
+        }
+
+        private static CaravanPart FindPart(
+            CaravanPart[] parts,
+            CaravanPartKind kind)
+        {
+            var part = System.Array.Find(parts, item => item.Kind == kind);
+            Assert.That(part, Is.Not.Null, $"Could not find {kind}.");
+            return part;
+        }
+
+        private static void AssertMaterialConnection(
+            CaravanBuildModeController build,
+            CaravanMaterialNetwork network,
+            CaravanPart firstPart,
+            CaravanMaterialPortRole firstRole,
+            CaravanPart secondPart,
+            CaravanMaterialPortRole secondRole)
+        {
+            var first = FindMaterialPort(network, firstPart, firstRole);
+            var second = FindMaterialPort(network, secondPart, secondRole);
+            Assert.That(build.TrySelectMaterialPort(first), Is.True);
+            Assert.That(
+                build.TrySelectMaterialPort(second),
+                Is.True,
+                $"Could not connect {firstRole} to {secondRole}.");
+        }
+
+        private static CaravanMaterialPort FindMaterialPort(
+            CaravanMaterialNetwork network,
+            CaravanPart part,
+            CaravanMaterialPortRole role)
+        {
+            for (var index = 0; index < network.Ports.Count; index++)
+            {
+                var port = network.Ports[index];
+                if (port.Part == part && port.Role == role)
+                {
+                    return port;
+                }
+            }
+
+            Assert.Fail($"Could not find {role} on {part.Kind}.");
+            return null;
+        }
+
+        private static CaravanElectricalPort FindElectricalPort(
+            CaravanElectricalNetwork network,
+            CaravanPartKind kind)
+        {
+            for (var index = 0; index < network.Ports.Count; index++)
+            {
+                var port = network.Ports[index];
+                if (port.Part.Kind == kind)
+                {
+                    return port;
+                }
+            }
+
+            Assert.Fail($"Could not find an electrical port on {kind}.");
+            return null;
+        }
+
+        private static CaravanFluidPort FindFluidPort(
+            CaravanFluidNetwork network,
+            CaravanPart part)
+        {
+            for (var index = 0; index < network.Ports.Count; index++)
+            {
+                var port = network.Ports[index];
+                if (port.Part == part
+                    && port.Role == CaravanFluidPortRole.ThermalTap)
+                {
+                    return port;
+                }
+            }
+
+            Assert.Fail($"Could not find a thermal tap on {part.Kind}.");
+            return null;
+        }
+
+        private static void AssertFluidConnection(
+            CaravanFluidNetwork network,
+            CaravanFluidPort first,
+            CaravanFluidPort second)
+        {
+            for (var index = 0; index < network.Pipes.Count; index++)
+            {
+                var pipe = network.Pipes[index];
+                if ((pipe.Start == first && pipe.End == second)
+                    || (pipe.Start == second && pipe.End == first))
+                {
+                    Assert.That(pipe.IsConductive, Is.True);
+                    return;
+                }
+            }
+
+            Assert.That(
+                network.TryConnect(first, second),
+                Is.True,
+                $"Could not connect {first.Role} to {second.Role}.");
         }
     }
 }

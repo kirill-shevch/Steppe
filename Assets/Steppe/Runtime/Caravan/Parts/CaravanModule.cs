@@ -16,12 +16,16 @@ namespace Steppe.Caravan
         private RendererState[] rendererStates = Array.Empty<RendererState>();
         private Transform visualRoot;
         private CaravanStatusDisplay statusDisplay;
+        private float baseMassKilograms = 50f;
 
         public string ModuleId { get; private set; }
+        public string InstanceId { get; private set; }
         public bool IsMovable { get; private set; }
         public int FootprintWidth { get; private set; } = 1;
         public int FootprintLength { get; private set; } = 1;
-        public float MassKilograms { get; private set; } = 50f;
+        public float BaseMassKilograms => baseMassKilograms;
+        public float PayloadMassKilograms { get; private set; }
+        public float MassKilograms => baseMassKilograms + PayloadMassKilograms;
         public Vector3 LocalMassCenter { get; private set; }
         public Vector3 WorldMassCenter => transform.TransformPoint(LocalMassCenter);
         public Transform VisualRoot => visualRoot;
@@ -35,14 +39,19 @@ namespace Steppe.Caravan
             int footprintLength,
             CaravanStatusDisplay display = null,
             float massKilograms = 50f,
-            Vector3 localMassCenter = default)
+            Vector3 localMassCenter = default,
+            string instanceId = null)
         {
             ModuleId = string.IsNullOrWhiteSpace(moduleId) ? name : moduleId;
+            InstanceId = string.IsNullOrWhiteSpace(instanceId)
+                ? Guid.NewGuid().ToString("N")
+                : instanceId;
             visualRoot = moduleVisualRoot != null ? moduleVisualRoot : transform;
             IsMovable = movable;
             FootprintWidth = Mathf.Max(1, footprintWidth);
             FootprintLength = Mathf.Max(1, footprintLength);
-            MassKilograms = Mathf.Max(0.1f, massKilograms);
+            baseMassKilograms = Mathf.Max(0.1f, massKilograms);
+            PayloadMassKilograms = 0f;
             LocalMassCenter = localMassCenter;
             statusDisplay = display;
             CaptureRenderers();
@@ -77,6 +86,11 @@ namespace Steppe.Caravan
         {
             State.SetLoad(amount);
             UpdatePresentation();
+        }
+
+        public void SetPayloadMass(float massKilograms)
+        {
+            PayloadMassKilograms = Mathf.Max(0f, massKilograms);
         }
 
         public void SetVisualVisible(bool visible)

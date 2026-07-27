@@ -16,6 +16,11 @@ namespace Steppe.Caravan
             CaravanModule chassisModule,
             IReadOnlyList<CaravanModule> equipmentModules,
             CaravanElectricalNetwork electricalNetwork,
+            CaravanFluidNetwork fluidNetwork,
+            CaravanMaterialNetwork biomassNetwork,
+            CaravanMaterialNetwork mechanicalNetwork,
+            CaravanResourceSystem resourceSystem,
+            CaravanConstructionService construction,
             CaravanMountGrid grid,
             Transform playerSpawn,
             CaravanControlStation steeringStation)
@@ -25,6 +30,11 @@ namespace Steppe.Caravan
             ChassisModule = chassisModule;
             EquipmentModules = equipmentModules;
             ElectricalNetwork = electricalNetwork;
+            FluidNetwork = fluidNetwork;
+            BiomassNetwork = biomassNetwork;
+            MechanicalNetwork = mechanicalNetwork;
+            ResourceSystem = resourceSystem;
+            Construction = construction;
             MountGrid = grid;
             PlayerSpawn = playerSpawn;
             SteeringStation = steeringStation;
@@ -35,6 +45,11 @@ namespace Steppe.Caravan
         public CaravanModule ChassisModule { get; }
         public IReadOnlyList<CaravanModule> EquipmentModules { get; }
         public CaravanElectricalNetwork ElectricalNetwork { get; }
+        public CaravanFluidNetwork FluidNetwork { get; }
+        public CaravanMaterialNetwork BiomassNetwork { get; }
+        public CaravanMaterialNetwork MechanicalNetwork { get; }
+        public CaravanResourceSystem ResourceSystem { get; }
+        public CaravanConstructionService Construction { get; }
         public CaravanMountGrid MountGrid { get; }
         public Transform PlayerSpawn { get; }
         public CaravanControlStation SteeringStation { get; }
@@ -45,30 +60,16 @@ namespace Steppe.Caravan
             CaravanEnvironmentSampler environment)
         {
             Chassis.Configure(settings, floatingOrigin, environment);
+            FluidNetwork.SetEnvironment(environment);
+            ResourceSystem.SetEnvironment(environment);
+            Construction.SetEnvironment(environment);
             SteeringStation.ConfigureSteering(
                 Chassis,
                 SteeringStation.transform.Find("Control Visual"),
                 SteeringStation.transform.Find("Focus Indicator")?.gameObject);
             for (var index = 0; index < EquipmentModules.Count; index++)
             {
-                if (EquipmentModules[index].TryGetComponent<CaravanPhotovoltaicModule>(
-                        out var photovoltaic))
-                {
-                    photovoltaic.Configure(environment);
-                }
-
-                if (EquipmentModules[index].TryGetComponent<CaravanPart>(out var part)
-                    && part.Kind == CaravanPartKind.ElectricMotor
-                    && EquipmentModules[index].TryGetComponent<CaravanControlStation>(
-                        out var motorStation))
-                {
-                    motorStation.ConfigureElectricThrottle(
-                        Chassis,
-                        EquipmentModules[index].transform.Find(
-                            "Visual/Electric Throttle/Control Visual"),
-                        EquipmentModules[index].transform.Find(
-                            "Visual/Electric Throttle/Focus Indicator")?.gameObject);
-                }
+                Construction.ActivatePlaced(EquipmentModules[index]);
             }
         }
     }
@@ -135,7 +136,8 @@ namespace Steppe.Caravan
                 DeckCellsLong,
                 null,
                 2600f,
-                new Vector3(0f, -0.72f, 0f));
+                new Vector3(0f, -0.72f, 0f),
+                "starter-chassis");
             chassisModule.State.SetForTests(0.24f, 0.91f, 0f);
 
             var wheelPositions = new[]
@@ -175,20 +177,49 @@ namespace Steppe.Caravan
                 green,
                 blue);
             var equipmentModules = CaravanGreyboxPartFactory.CreateInitialParts(grid, palette);
-            var photovoltaic = FindEquipmentComponent<CaravanPhotovoltaicModule>(equipmentModules);
-            var battery = FindEquipmentComponent<CaravanBatteryModule>(equipmentModules);
-            var electricMotor = FindEquipmentComponent<CaravanElectricMotorModule>(equipmentModules);
             var electricalNetwork = root.AddComponent<CaravanElectricalNetwork>();
+            var electricalPorts = new List<CaravanElectricalPort>();
+            for (var index = 0; index < equipmentModules.Count; index++)
+            {
+                electricalPorts.AddRange(
+                    equipmentModules[index].GetComponentsInChildren<CaravanElectricalPort>(
+                        true));
+            }
             electricalNetwork.Configure(
                 chassis,
-                photovoltaic,
-                battery,
-                electricMotor,
-                photovoltaic.GetComponentInChildren<CaravanElectricalPort>(true),
-                battery.GetComponentInChildren<CaravanElectricalPort>(true),
-                electricMotor.GetComponentInChildren<CaravanElectricalPort>(true),
+                electricalPorts,
                 copper,
                 darkMetal);
+            var fluidNetwork = root.AddComponent<CaravanFluidNetwork>();
+            fluidNetwork.Configure(water);
+            var biomassNetwork = root.AddComponent<CaravanMaterialNetwork>();
+            biomassNetwork.Configure(
+                CaravanMaterialNetworkKind.Biomass,
+                biomass);
+            var mechanicalNetwork = root.AddComponent<CaravanMaterialNetwork>();
+            mechanicalNetwork.Configure(
+                CaravanMaterialNetworkKind.Mechanical,
+                copper);
+            for (var index = 0; index < equipmentModules.Count; index++)
+            {
+                biomassNetwork.RegisterModule(equipmentModules[index]);
+                mechanicalNetwork.RegisterModule(equipmentModules[index]);
+            }
+            var resourceSystem = root.AddComponent<CaravanResourceSystem>();
+            resourceSystem.Configure(
+                chassis,
+                biomassNetwork,
+                mechanicalNetwork,
+                fluidNetwork);
+            var construction = root.AddComponent<CaravanConstructionService>();
+            construction.Configure(
+                palette,
+                chassis,
+                electricalNetwork,
+                fluidNetwork,
+                biomassNetwork,
+                mechanicalNetwork,
+                resourceSystem);
 
             var steeringStation = CreateControlStation(
                 root.transform,
@@ -213,6 +244,11 @@ namespace Steppe.Caravan
                 chassisModule,
                 equipmentModules,
                 electricalNetwork,
+                fluidNetwork,
+                biomassNetwork,
+                mechanicalNetwork,
+                resourceSystem,
+                construction,
                 grid,
                 playerSpawn,
                 steeringStation);
@@ -246,7 +282,8 @@ namespace Steppe.Caravan
             out CaravanModule sailModule,
             out CaravanControlStation sailStation)
         {
-            var root = new GameObject("Sail Module");
+            var definition = CaravanPartCatalog.Get(CaravanPartKind.Sail);
+            var root = new GameObject(definition.DisplayName);
             var visual = new GameObject("Visual");
             visual.transform.SetParent(root.transform, false);
             CreatePrimitive(
@@ -298,16 +335,20 @@ namespace Steppe.Caravan
                 load);
             sailModule = root.AddComponent<CaravanModule>();
             sailModule.Configure(
-                "sail",
+                definition.Id,
                 visual.transform,
                 true,
-                2,
-                2,
+                definition.FootprintWidth,
+                definition.FootprintLength,
                 display,
-                185f,
-                new Vector3(0.48f, 1.72f, 0f));
+                definition.MassKilograms,
+                new Vector3(0.48f, 1.72f, 0f),
+                "starter-sail");
             sailModule.State.SetForTests(0.14f, 0.94f, 0f);
-            root.AddComponent<CaravanPart>().Configure(CaravanPartKind.Sail, 65f, 42f);
+            root.AddComponent<CaravanPart>().Configure(
+                CaravanPartKind.Sail,
+                definition.Capacity,
+                42f);
             sail = root.AddComponent<CaravanSailModule>();
             root.AddComponent<CaravanWindVane>();
             sailStation = CreateControlStation(

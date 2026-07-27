@@ -11,6 +11,7 @@ namespace Steppe.Caravan
         private Camera viewCamera;
         private CaravanFirstPersonController firstPerson;
         private CaravanBuildModeController buildMode;
+        private CaravanResourceSystem resourceSystem;
         private CaravanControlStation activeStation;
         private CaravanControlStation focusedStation;
         private const float InteractionDistance = 4.8f;
@@ -26,6 +27,7 @@ namespace Steppe.Caravan
             viewCamera = camera != null ? camera : throw new ArgumentNullException(nameof(camera));
             firstPerson = controller != null ? controller : throw new ArgumentNullException(nameof(controller));
             buildMode = builder;
+            resourceSystem = FindAnyObjectByType<CaravanResourceSystem>();
         }
 
         private void Update()
@@ -90,7 +92,21 @@ namespace Steppe.Caravan
             }
             if (keyboard.rKey.isPressed)
             {
-                module.Repair(UnityEngine.Time.deltaTime * 0.16f);
+                var repairAmount = Mathf.Min(
+                    UnityEngine.Time.deltaTime * 0.16f,
+                    1f - module.State.Integrity);
+                if (repairAmount > 0f
+                    && resourceSystem != null
+                    && resourceSystem.TryConsumeRepairMaterial(
+                        repairAmount * 2f))
+                {
+                    module.Repair(repairAmount);
+                    if (module.TryGetComponent<CaravanCouplingRopeModule>(
+                            out var rope))
+                    {
+                        rope.RepairRope();
+                    }
+                }
             }
         }
 

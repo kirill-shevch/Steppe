@@ -8,8 +8,12 @@ namespace Steppe.Caravan
 {
     public enum CaravanBuildInteractionMode
     {
-        Modules,
-        Communications
+        Modules = 0,
+        Communications = 1,
+        Electrical = Communications,
+        Fluids = 2,
+        Biomass = 3,
+        Mechanical = 4
     }
 
     [DisallowMultipleComponent]
@@ -20,9 +24,17 @@ namespace Steppe.Caravan
         private CaravanChassisController chassis;
         private CaravanMountGrid grid;
         private CaravanElectricalNetwork electricalNetwork;
+        private CaravanFluidNetwork fluidNetwork;
+        private CaravanMaterialNetwork biomassNetwork;
+        private CaravanMaterialNetwork mechanicalNetwork;
+        private CaravanConstructionService construction;
         private CaravanModule heldModule;
         private CaravanElectricalPort selectedCommunicationPort;
         private CaravanElectricalPort focusedCommunicationPort;
+        private CaravanFluidPort selectedFluidPort;
+        private CaravanFluidPort focusedFluidPort;
+        private CaravanMaterialPort selectedMaterialPort;
+        private CaravanMaterialPort focusedMaterialPort;
         private CaravanGridPlacement previousPlacement;
         private GameObject ghost;
         private LineRenderer communicationPreview;
@@ -30,7 +42,9 @@ namespace Steppe.Caravan
         private Material invalidGhostMaterial;
         private CaravanGridPlacement candidate;
         private bool candidateValid;
+        private bool heldModuleIsNew;
         private int quarterTurns;
+        private int selectedConstructionIndex;
 
         public bool IsActive { get; private set; }
         public CaravanModule HeldModule => heldModule;
@@ -38,16 +52,33 @@ namespace Steppe.Caravan
         public CaravanBuildInteractionMode InteractionMode { get; private set; } =
             CaravanBuildInteractionMode.Modules;
         public bool IsCommunicationMode =>
-            InteractionMode == CaravanBuildInteractionMode.Communications;
+            InteractionMode != CaravanBuildInteractionMode.Modules;
+        public bool IsElectricalMode =>
+            InteractionMode == CaravanBuildInteractionMode.Electrical;
+        public bool IsFluidMode =>
+            InteractionMode == CaravanBuildInteractionMode.Fluids;
+        public bool IsBiomassMode =>
+            InteractionMode == CaravanBuildInteractionMode.Biomass;
+        public bool IsMechanicalMode =>
+            InteractionMode == CaravanBuildInteractionMode.Mechanical;
+        public bool IsMaterialMode => IsBiomassMode || IsMechanicalMode;
         public CaravanElectricalPort SelectedCommunicationPort =>
             selectedCommunicationPort;
+        public CaravanFluidPort SelectedFluidPort => selectedFluidPort;
+        public CaravanMaterialPort SelectedMaterialPort => selectedMaterialPort;
+        public CaravanPartKind SelectedConstructionKind =>
+            CaravanConstructionService.AvailablePartKinds[selectedConstructionIndex];
 
         public void Configure(
             Camera camera,
             CaravanFirstPersonController controller,
             CaravanChassisController caravan,
             CaravanMountGrid mountGrid,
-            CaravanElectricalNetwork network)
+            CaravanElectricalNetwork network,
+            CaravanFluidNetwork fluids,
+            CaravanMaterialNetwork biomass,
+            CaravanMaterialNetwork mechanical,
+            CaravanConstructionService constructionService)
         {
             viewCamera = camera != null ? camera : throw new ArgumentNullException(nameof(camera));
             firstPerson = controller != null ? controller : throw new ArgumentNullException(nameof(controller));
@@ -56,6 +87,18 @@ namespace Steppe.Caravan
             electricalNetwork = network != null
                 ? network
                 : throw new ArgumentNullException(nameof(network));
+            fluidNetwork = fluids != null
+                ? fluids
+                : throw new ArgumentNullException(nameof(fluids));
+            biomassNetwork = biomass != null
+                ? biomass
+                : throw new ArgumentNullException(nameof(biomass));
+            mechanicalNetwork = mechanical != null
+                ? mechanical
+                : throw new ArgumentNullException(nameof(mechanical));
+            construction = constructionService != null
+                ? constructionService
+                : throw new ArgumentNullException(nameof(constructionService));
             validGhostMaterial = CreateGhostMaterial(
                 "Caravan Valid Placement",
                 new Color(0.15f, 0.92f, 0.48f, 0.38f));
@@ -106,6 +149,19 @@ namespace Steppe.Caravan
 
             if (heldModule == null)
             {
+                if (keyboard.qKey.wasPressedThisFrame)
+                {
+                    CycleConstructionSelection(-1);
+                }
+                else if (keyboard.eKey.wasPressedThisFrame)
+                {
+                    CycleConstructionSelection(1);
+                }
+                else if (keyboard.fKey.wasPressedThisFrame)
+                {
+                    TryCreateSelectedModule();
+                }
+
                 if (mouse != null && mouse.leftButton.wasPressedThisFrame)
                 {
                     TryPickTargetedModule();
@@ -140,22 +196,42 @@ namespace Steppe.Caravan
             InteractionMode = CaravanBuildInteractionMode.Modules;
             selectedCommunicationPort = null;
             focusedCommunicationPort = null;
-            RefreshCommunicationPresentation(null);
+            selectedFluidPort = null;
+            focusedFluidPort = null;
+            selectedMaterialPort = null;
+            focusedMaterialPort = null;
+            RefreshCommunicationPresentation(null, null);
             return true;
         }
 
         public bool ToggleCommunicationMode()
         {
-            return SetInteractionMode(IsCommunicationMode
-                ? CaravanBuildInteractionMode.Modules
-                : CaravanBuildInteractionMode.Communications);
+            var next = InteractionMode switch
+            {
+                CaravanBuildInteractionMode.Modules =>
+                    CaravanBuildInteractionMode.Electrical,
+                CaravanBuildInteractionMode.Electrical =>
+                    CaravanBuildInteractionMode.Fluids,
+                CaravanBuildInteractionMode.Fluids =>
+                    CaravanBuildInteractionMode.Biomass,
+                CaravanBuildInteractionMode.Biomass =>
+                    CaravanBuildInteractionMode.Mechanical,
+                _ => CaravanBuildInteractionMode.Modules
+            };
+            return SetInteractionMode(next);
         }
 
         public bool SetInteractionMode(CaravanBuildInteractionMode mode)
         {
             if (!IsActive
-                || (mode == CaravanBuildInteractionMode.Communications
-                    && electricalNetwork == null))
+                || (mode == CaravanBuildInteractionMode.Electrical
+                    && electricalNetwork == null)
+                || (mode == CaravanBuildInteractionMode.Fluids
+                    && fluidNetwork == null)
+                || (mode == CaravanBuildInteractionMode.Biomass
+                    && biomassNetwork == null)
+                || (mode == CaravanBuildInteractionMode.Mechanical
+                    && mechanicalNetwork == null))
             {
                 return false;
             }
@@ -166,16 +242,20 @@ namespace Steppe.Caravan
             }
             selectedCommunicationPort = null;
             focusedCommunicationPort = null;
+            selectedFluidPort = null;
+            focusedFluidPort = null;
+            selectedMaterialPort = null;
+            focusedMaterialPort = null;
             InteractionMode = mode;
-            RefreshCommunicationPresentation(null);
-            UpdateCommunicationPreview(null);
+            RefreshCommunicationPresentation(null, null);
+            UpdateCommunicationPreview(null, null);
             return true;
         }
 
         public bool TrySelectCommunicationPort(CaravanElectricalPort port)
         {
             if (!IsActive
-                || !IsCommunicationMode
+                || !IsElectricalMode
                 || electricalNetwork == null
                 || port == null)
             {
@@ -190,8 +270,8 @@ namespace Steppe.Caravan
                 }
 
                 selectedCommunicationPort = port;
-                RefreshCommunicationPresentation(port);
-                UpdateCommunicationPreview(port);
+                RefreshCommunicationPresentation(port, null);
+                UpdateCommunicationPreview(port, null);
                 return true;
             }
 
@@ -203,21 +283,21 @@ namespace Steppe.Caravan
 
             if (!electricalNetwork.TryConnect(selectedCommunicationPort, port))
             {
-                RefreshCommunicationPresentation(port);
-                UpdateCommunicationPreview(port);
+                RefreshCommunicationPresentation(port, null);
+                UpdateCommunicationPreview(port, null);
                 return false;
             }
 
             selectedCommunicationPort = null;
-            RefreshCommunicationPresentation(port);
-            UpdateCommunicationPreview(port);
+            RefreshCommunicationPresentation(port, null);
+            UpdateCommunicationPreview(port, null);
             return true;
         }
 
         public int RemoveCommunicationConnections(CaravanElectricalPort port)
         {
             if (!IsActive
-                || !IsCommunicationMode
+                || !IsElectricalMode
                 || electricalNetwork == null)
             {
                 return 0;
@@ -225,9 +305,172 @@ namespace Steppe.Caravan
 
             var removed = electricalNetwork.DisconnectPort(port);
             selectedCommunicationPort = null;
-            RefreshCommunicationPresentation(port);
-            UpdateCommunicationPreview(port);
+            RefreshCommunicationPresentation(port, null);
+            UpdateCommunicationPreview(port, null);
             return removed;
+        }
+
+        public bool TrySelectFluidPort(CaravanFluidPort port)
+        {
+            if (!IsActive
+                || !IsFluidMode
+                || fluidNetwork == null
+                || port == null)
+            {
+                return false;
+            }
+
+            if (selectedFluidPort == null)
+            {
+                if (port.IsAtCapacity || !ContainsFluidPort(port))
+                {
+                    return false;
+                }
+
+                selectedFluidPort = port;
+                RefreshCommunicationPresentation(null, port);
+                UpdateCommunicationPreview(null, port);
+                return true;
+            }
+
+            if (selectedFluidPort == port)
+            {
+                CancelCommunicationSelection();
+                return true;
+            }
+
+            if (!fluidNetwork.TryConnect(selectedFluidPort, port))
+            {
+                RefreshCommunicationPresentation(null, port);
+                UpdateCommunicationPreview(null, port);
+                return false;
+            }
+
+            selectedFluidPort = null;
+            RefreshCommunicationPresentation(null, port);
+            UpdateCommunicationPreview(null, port);
+            return true;
+        }
+
+        public int RemoveFluidConnections(CaravanFluidPort port)
+        {
+            if (!IsActive || !IsFluidMode || fluidNetwork == null)
+            {
+                return 0;
+            }
+
+            var removed = fluidNetwork.DisconnectPort(port);
+            selectedFluidPort = null;
+            RefreshCommunicationPresentation(null, port);
+            UpdateCommunicationPreview(null, port);
+            return removed;
+        }
+
+        public bool TrySelectMaterialPort(CaravanMaterialPort port)
+        {
+            var network = ActiveMaterialNetwork;
+            if (!IsActive
+                || !IsMaterialMode
+                || network == null
+                || port == null)
+            {
+                return false;
+            }
+
+            focusedMaterialPort = port;
+            if (selectedMaterialPort == null)
+            {
+                if (port.IsAtCapacity || !ContainsMaterialPort(network, port))
+                {
+                    return false;
+                }
+
+                selectedMaterialPort = port;
+                RefreshCommunicationPresentation(null, null);
+                UpdateCommunicationPreview(null, null);
+                return true;
+            }
+
+            if (selectedMaterialPort == port)
+            {
+                CancelCommunicationSelection();
+                return true;
+            }
+
+            if (!network.TryConnect(selectedMaterialPort, port))
+            {
+                RefreshCommunicationPresentation(null, null);
+                UpdateCommunicationPreview(null, null);
+                return false;
+            }
+
+            selectedMaterialPort = null;
+            RefreshCommunicationPresentation(null, null);
+            UpdateCommunicationPreview(null, null);
+            return true;
+        }
+
+        public int RemoveMaterialConnections(CaravanMaterialPort port)
+        {
+            var network = ActiveMaterialNetwork;
+            if (!IsActive || !IsMaterialMode || network == null)
+            {
+                return 0;
+            }
+
+            var removed = network.DisconnectPort(port);
+            selectedMaterialPort = null;
+            focusedMaterialPort = port;
+            RefreshCommunicationPresentation(null, null);
+            UpdateCommunicationPreview(null, null);
+            return removed;
+        }
+
+        private CaravanMaterialNetwork ActiveMaterialNetwork =>
+            IsBiomassMode
+                ? biomassNetwork
+                : IsMechanicalMode
+                    ? mechanicalNetwork
+                    : null;
+
+        public void CycleConstructionSelection(int delta)
+        {
+            var count = CaravanConstructionService.AvailablePartKinds.Count;
+            if (count <= 0)
+            {
+                selectedConstructionIndex = 0;
+                return;
+            }
+
+            selectedConstructionIndex =
+                (selectedConstructionIndex + delta % count + count) % count;
+        }
+
+        public bool TryCreateSelectedModule()
+        {
+            return TryCreateModule(SelectedConstructionKind);
+        }
+
+        public bool TryCreateModule(CaravanPartKind kind)
+        {
+            if (!IsActive
+                || IsCommunicationMode
+                || heldModule != null
+                || construction == null
+                || !construction.TryCreateBuffered(kind, out var module))
+            {
+                return false;
+            }
+
+            heldModule = module;
+            heldModuleIsNew = true;
+            previousPlacement = default;
+            quarterTurns = 0;
+            ghost = Instantiate(module.VisualRoot.gameObject);
+            ghost.name = module.name + " Placement Ghost";
+            SetGhostMaterial(validGhostMaterial);
+            UpdateGhost();
+            return true;
         }
 
         public bool TryHoldModule(CaravanModule module)
@@ -243,6 +486,7 @@ namespace Steppe.Caravan
             }
 
             heldModule = module;
+            heldModuleIsNew = false;
             quarterTurns = previousPlacement.QuarterTurns;
             ghost = Instantiate(module.VisualRoot.gameObject);
             ghost.name = module.name + " Placement Ghost";
@@ -259,8 +503,17 @@ namespace Steppe.Caravan
                 return false;
             }
 
-            heldModule.gameObject.SetActive(true);
-            chassis.RefreshMassProperties();
+            var placedModule = heldModule;
+            var wasNew = heldModuleIsNew;
+            placedModule.gameObject.SetActive(true);
+            if (wasNew)
+            {
+                construction.ActivatePlaced(placedModule);
+            }
+            else
+            {
+                chassis.RefreshMassProperties();
+            }
             ClearGhostAndBuffer();
             return true;
         }
@@ -342,9 +595,16 @@ namespace Steppe.Caravan
                 return;
             }
 
-            grid.TryPlace(heldModule, previousPlacement);
-            heldModule.gameObject.SetActive(true);
-            chassis.RefreshMassProperties();
+            if (heldModuleIsNew)
+            {
+                construction.DestroyBuffered(heldModule);
+            }
+            else
+            {
+                grid.TryPlace(heldModule, previousPlacement);
+                heldModule.gameObject.SetActive(true);
+                chassis.RefreshMassProperties();
+            }
             ClearGhostAndBuffer();
         }
 
@@ -357,17 +617,33 @@ namespace Steppe.Caravan
 
             selectedCommunicationPort = null;
             focusedCommunicationPort = null;
+            selectedFluidPort = null;
+            focusedFluidPort = null;
+            selectedMaterialPort = null;
+            focusedMaterialPort = null;
             InteractionMode = CaravanBuildInteractionMode.Modules;
-            RefreshCommunicationPresentation(null);
-            UpdateCommunicationPreview(null);
+            RefreshCommunicationPresentation(null, null);
+            UpdateCommunicationPreview(null, null);
             IsActive = false;
         }
 
         private void UpdateCommunicationMode(Mouse mouse)
         {
-            focusedCommunicationPort = FindTargetedCommunicationPort();
-            RefreshCommunicationPresentation(focusedCommunicationPort);
-            UpdateCommunicationPreview(focusedCommunicationPort);
+            focusedCommunicationPort = IsElectricalMode
+                ? FindTargetedElectricalPort()
+                : null;
+            focusedFluidPort = IsFluidMode
+                ? FindTargetedFluidPort()
+                : null;
+            focusedMaterialPort = IsMaterialMode
+                ? FindTargetedMaterialPort()
+                : null;
+            RefreshCommunicationPresentation(
+                focusedCommunicationPort,
+                focusedFluidPort);
+            UpdateCommunicationPreview(
+                focusedCommunicationPort,
+                focusedFluidPort);
             if (mouse == null)
             {
                 return;
@@ -375,23 +651,43 @@ namespace Steppe.Caravan
 
             if (mouse.rightButton.wasPressedThisFrame)
             {
-                if (selectedCommunicationPort != null)
+                if (selectedCommunicationPort != null
+                    || selectedFluidPort != null
+                    || selectedMaterialPort != null)
                 {
                     CancelCommunicationSelection();
                 }
-                else if (focusedCommunicationPort != null)
+                else if (IsElectricalMode && focusedCommunicationPort != null)
                 {
                     RemoveCommunicationConnections(focusedCommunicationPort);
                 }
+                else if (IsFluidMode && focusedFluidPort != null)
+                {
+                    RemoveFluidConnections(focusedFluidPort);
+                }
+                else if (IsMaterialMode && focusedMaterialPort != null)
+                {
+                    RemoveMaterialConnections(focusedMaterialPort);
+                }
             }
-            else if (mouse.leftButton.wasPressedThisFrame
-                     && focusedCommunicationPort != null)
+            else if (mouse.leftButton.wasPressedThisFrame)
             {
-                TrySelectCommunicationPort(focusedCommunicationPort);
+                if (IsElectricalMode && focusedCommunicationPort != null)
+                {
+                    TrySelectCommunicationPort(focusedCommunicationPort);
+                }
+                else if (IsFluidMode && focusedFluidPort != null)
+                {
+                    TrySelectFluidPort(focusedFluidPort);
+                }
+                else if (IsMaterialMode && focusedMaterialPort != null)
+                {
+                    TrySelectMaterialPort(focusedMaterialPort);
+                }
             }
         }
 
-        private CaravanElectricalPort FindTargetedCommunicationPort()
+        private CaravanElectricalPort FindTargetedElectricalPort()
         {
             if (!Physics.Raycast(
                     viewCamera.transform.position,
@@ -411,9 +707,108 @@ namespace Steppe.Caravan
             }
 
             var module = hit.collider.GetComponentInParent<CaravanModule>();
-            return module != null
-                ? module.GetComponentInChildren<CaravanElectricalPort>(true)
+            return FindClosestPort(
+                module != null
+                    ? module.GetComponentsInChildren<CaravanElectricalPort>(true)
+                    : null,
+                hit.point);
+        }
+
+        private CaravanFluidPort FindTargetedFluidPort()
+        {
+            if (!Physics.Raycast(
+                    viewCamera.transform.position,
+                    viewCamera.transform.forward,
+                    out var hit,
+                    8f,
+                    CaravanFirstPersonController.WorldQueryMask,
+                    QueryTriggerInteraction.Collide))
+            {
+                return null;
+            }
+
+            var directPort = hit.collider.GetComponentInParent<CaravanFluidPort>();
+            if (directPort != null)
+            {
+                return directPort;
+            }
+
+            var module = hit.collider.GetComponentInParent<CaravanModule>();
+            return FindClosestPort(
+                module != null
+                    ? module.GetComponentsInChildren<CaravanFluidPort>(true)
+                    : null,
+                hit.point);
+        }
+
+        private CaravanMaterialPort FindTargetedMaterialPort()
+        {
+            if (!Physics.Raycast(
+                    viewCamera.transform.position,
+                    viewCamera.transform.forward,
+                    out var hit,
+                    8f,
+                    CaravanFirstPersonController.WorldQueryMask,
+                    QueryTriggerInteraction.Collide))
+            {
+                return null;
+            }
+
+            var directPort =
+                hit.collider.GetComponentInParent<CaravanMaterialPort>();
+            if (directPort != null
+                && directPort.NetworkKind
+                == ActiveMaterialNetwork?.Kind)
+            {
+                return directPort;
+            }
+
+            var module = hit.collider.GetComponentInParent<CaravanModule>();
+            var candidates = module != null
+                ? module.GetComponentsInChildren<CaravanMaterialPort>(true)
                 : null;
+            if (candidates == null)
+            {
+                return null;
+            }
+
+            var matching = new System.Collections.Generic.List<CaravanMaterialPort>();
+            for (var index = 0; index < candidates.Length; index++)
+            {
+                if (candidates[index].NetworkKind
+                    == ActiveMaterialNetwork?.Kind)
+                {
+                    matching.Add(candidates[index]);
+                }
+            }
+            return FindClosestPort(matching.ToArray(), hit.point);
+        }
+
+        private static TPort FindClosestPort<TPort>(
+            TPort[] candidates,
+            Vector3 point)
+            where TPort : Component
+        {
+            if (candidates == null || candidates.Length == 0)
+            {
+                return null;
+            }
+
+            var closest = candidates[0];
+            var closestDistance = Vector3.SqrMagnitude(
+                closest.transform.position - point);
+            for (var index = 1; index < candidates.Length; index++)
+            {
+                var distance = Vector3.SqrMagnitude(
+                    candidates[index].transform.position - point);
+                if (distance < closestDistance)
+                {
+                    closest = candidates[index];
+                    closestDistance = distance;
+                }
+            }
+
+            return closest;
         }
 
         private bool ContainsElectricalPort(CaravanElectricalPort port)
@@ -429,60 +824,169 @@ namespace Steppe.Caravan
             return false;
         }
 
+        private bool ContainsFluidPort(CaravanFluidPort port)
+        {
+            for (var index = 0; index < fluidNetwork.Ports.Count; index++)
+            {
+                if (fluidNetwork.Ports[index] == port)
+                {
+                    return true;
+                }
+            }
+
+            return false;
+        }
+
+        private static bool ContainsMaterialPort(
+            CaravanMaterialNetwork network,
+            CaravanMaterialPort port)
+        {
+            for (var index = 0; index < network.Ports.Count; index++)
+            {
+                if (network.Ports[index] == port)
+                {
+                    return true;
+                }
+            }
+            return false;
+        }
+
         private void CancelCommunicationSelection()
         {
             selectedCommunicationPort = null;
-            RefreshCommunicationPresentation(focusedCommunicationPort);
-            UpdateCommunicationPreview(focusedCommunicationPort);
+            selectedFluidPort = null;
+            selectedMaterialPort = null;
+            RefreshCommunicationPresentation(
+                focusedCommunicationPort,
+                focusedFluidPort);
+            UpdateCommunicationPreview(
+                focusedCommunicationPort,
+                focusedFluidPort);
         }
 
-        private void RefreshCommunicationPresentation(CaravanElectricalPort focusedPort)
+        private void RefreshCommunicationPresentation(
+            CaravanElectricalPort focusedElectrical,
+            CaravanFluidPort focusedFluid)
         {
-            if (electricalNetwork == null)
+            if (electricalNetwork != null)
+            {
+                for (var index = 0; index < electricalNetwork.Ports.Count; index++)
+                {
+                    var port = electricalNetwork.Ports[index];
+                    var selected = port == selectedCommunicationPort;
+                    var compatible = selectedCommunicationPort == null
+                        ? !port.IsAtCapacity
+                        : selected || electricalNetwork.CanConnect(
+                            selectedCommunicationPort,
+                            port);
+                    port.SetBuildPresentation(
+                        IsActive && IsElectricalMode,
+                        selected,
+                        compatible,
+                        port == focusedElectrical);
+                }
+            }
+
+            if (fluidNetwork == null)
             {
                 return;
             }
 
-            for (var index = 0; index < electricalNetwork.Ports.Count; index++)
+            for (var index = 0; index < fluidNetwork.Ports.Count; index++)
             {
-                var port = electricalNetwork.Ports[index];
-                var selected = port == selectedCommunicationPort;
-                var compatible = selectedCommunicationPort == null
+                var port = fluidNetwork.Ports[index];
+                var selected = port == selectedFluidPort;
+                var compatible = selectedFluidPort == null
                     ? !port.IsAtCapacity
-                    : selected || electricalNetwork.CanConnect(selectedCommunicationPort, port);
+                    : selected || fluidNetwork.CanConnect(selectedFluidPort, port);
                 port.SetBuildPresentation(
-                    IsActive && IsCommunicationMode,
+                    IsActive && IsFluidMode,
                     selected,
                     compatible,
-                    port == focusedPort);
+                    port == focusedFluid);
+            }
+
+            RefreshMaterialNetworkPresentation(
+                biomassNetwork,
+                IsBiomassMode);
+            RefreshMaterialNetworkPresentation(
+                mechanicalNetwork,
+                IsMechanicalMode);
+        }
+
+        private void RefreshMaterialNetworkPresentation(
+            CaravanMaterialNetwork network,
+            bool layerVisible)
+        {
+            if (network == null)
+            {
+                return;
+            }
+
+            for (var index = 0; index < network.Ports.Count; index++)
+            {
+                var port = network.Ports[index];
+                var selected = port == selectedMaterialPort;
+                var compatible = selectedMaterialPort == null
+                    ? !port.IsAtCapacity
+                    : selected || network.CanConnect(
+                        selectedMaterialPort,
+                        port);
+                port.SetBuildPresentation(
+                    IsActive && layerVisible,
+                    selected,
+                    compatible,
+                    port == focusedMaterialPort);
             }
         }
 
-        private void UpdateCommunicationPreview(CaravanElectricalPort focusedPort)
+        private void UpdateCommunicationPreview(
+            CaravanElectricalPort focusedElectrical,
+            CaravanFluidPort focusedFluid)
         {
             if (communicationPreview == null)
             {
                 return;
             }
 
-            var visible = IsActive
-                          && IsCommunicationMode
-                          && selectedCommunicationPort != null;
+            var selectedTransform = IsElectricalMode
+                ? selectedCommunicationPort?.transform
+                : IsFluidMode
+                    ? selectedFluidPort?.transform
+                    : selectedMaterialPort?.transform;
+            var focusedTransform = IsElectricalMode
+                ? focusedElectrical?.transform
+                : IsFluidMode
+                    ? focusedFluid?.transform
+                    : focusedMaterialPort?.transform;
+            var visible = IsActive && IsCommunicationMode
+                          && selectedTransform != null;
             communicationPreview.enabled = visible;
             if (!visible)
             {
                 return;
             }
 
-            var validTarget = focusedPort != null
-                              && electricalNetwork.CanConnect(
-                                  selectedCommunicationPort,
-                                  focusedPort);
+            var validTarget = IsElectricalMode
+                ? focusedElectrical != null
+                  && electricalNetwork.CanConnect(
+                      selectedCommunicationPort,
+                      focusedElectrical)
+                : IsFluidMode
+                    ? focusedFluid != null
+                      && fluidNetwork.CanConnect(
+                          selectedFluidPort,
+                          focusedFluid)
+                    : focusedMaterialPort != null
+                      && ActiveMaterialNetwork != null
+                      && ActiveMaterialNetwork.CanConnect(
+                          selectedMaterialPort,
+                          focusedMaterialPort);
             var ray = new Ray(viewCamera.transform.position, viewCamera.transform.forward);
             var end = ray.GetPoint(6f);
-            if (focusedPort != null)
+            if (focusedTransform != null)
             {
-                end = focusedPort.transform.position;
+                end = focusedTransform.position;
             }
             else if (Physics.Raycast(
                          ray,
@@ -496,7 +1000,7 @@ namespace Steppe.Caravan
 
             communicationPreview.sharedMaterial =
                 validTarget ? validGhostMaterial : invalidGhostMaterial;
-            var start = selectedCommunicationPort.transform.position;
+            var start = selectedTransform.position;
             var up = chassis.transform.up * 0.28f;
             communicationPreview.SetPosition(0, start);
             communicationPreview.SetPosition(1, start + up);
@@ -513,7 +1017,45 @@ namespace Steppe.Caravan
 
             ghost = null;
             heldModule = null;
+            heldModuleIsNew = false;
             candidateValid = false;
+        }
+
+        private void OnGUI()
+        {
+            if (!IsActive)
+            {
+                return;
+            }
+
+            GUILayout.BeginArea(new Rect(18f, 18f, 390f, 126f), GUI.skin.box);
+            GUILayout.Label($"Caravan construction — {InteractionMode}");
+            if (InteractionMode == CaravanBuildInteractionMode.Modules)
+            {
+                var definition = CaravanPartCatalog.Get(SelectedConstructionKind);
+                GUILayout.Label($"Blueprint: {definition.DisplayName}");
+                GUILayout.Label(heldModule == null
+                    ? "Q/E select  •  F construct  •  LMB move"
+                    : "R rotate  •  LMB place  •  RMB cancel");
+            }
+            else if (IsElectricalMode)
+            {
+                GUILayout.Label("LMB connect power ports  •  RMB cancel/remove");
+            }
+            else if (IsFluidMode)
+            {
+                GUILayout.Label("LMB connect fluid ports  •  RMB cancel/remove");
+            }
+            else if (IsBiomassMode)
+            {
+                GUILayout.Label("LMB connect biomass ports  •  RMB cancel/remove");
+            }
+            else
+            {
+                GUILayout.Label("LMB connect drive ports  •  RMB cancel/remove");
+            }
+            GUILayout.Label("Tab changes layer  •  B exits");
+            GUILayout.EndArea();
         }
 
         private void SetGhostMaterial(Material material)

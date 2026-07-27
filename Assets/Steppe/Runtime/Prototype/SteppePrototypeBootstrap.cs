@@ -69,11 +69,22 @@ namespace Steppe.Prototype
             const float initialX = 32f;
             const float initialZ = -64f;
             var initialGroundHeight = (float)new TerrainHeightGenerator(runtimeSettings).SampleHeight(initialX, initialZ);
+            var initialWeather = new SteppeWeatherModel(runtimeSettings).Sample(
+                initialX,
+                initialZ,
+                0.0);
+            var initialWind = new Vector3(
+                initialWeather.SurfaceWind.x,
+                0f,
+                initialWeather.SurfaceWind.y);
+            var initialRotation = initialWind.sqrMagnitude > 0.001f
+                ? Quaternion.LookRotation(initialWind.normalized, Vector3.up)
+                : Quaternion.identity;
             var caravanRig = CaravanDemoFactory.Create(new Vector3(
                 initialX,
                 initialGroundHeight + 1.35f,
                 initialZ),
-                Quaternion.identity);
+                initialRotation);
             caravanRig.Root.transform.SetParent(transform, true);
 
             camera.transform.position = caravanRig.Root.transform.position + new Vector3(0f, 2.2f, -3f);
@@ -144,7 +155,11 @@ namespace Steppe.Prototype
                 firstPerson,
                 caravanRig.Chassis,
                 caravanRig.MountGrid,
-                caravanRig.ElectricalNetwork);
+                caravanRig.ElectricalNetwork,
+                caravanRig.FluidNetwork,
+                caravanRig.BiomassNetwork,
+                caravanRig.MechanicalNetwork,
+                caravanRig.Construction);
             var interactor = playerObject.AddComponent<CaravanPlayerInteractor>();
             interactor.Configure(camera, firstPerson, buildMode);
 

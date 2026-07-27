@@ -6,12 +6,16 @@ namespace Steppe.Caravan
 {
     [DisallowMultipleComponent]
     [RequireComponent(typeof(CaravanModule))]
-    public sealed class CaravanSailModule : MonoBehaviour
+    public sealed class CaravanSailModule :
+        MonoBehaviour,
+        ICaravanControlTarget
     {
         private Rigidbody caravanBody;
         private CaravanChassisController chassis;
         private CaravanEnvironmentSampler environment;
         private CaravanModule module;
+        private CaravanPart part;
+        private CaravanFluidNetwork fluidNetwork;
         private Transform sailPivot;
         private Transform cloth;
         private float area;
@@ -21,6 +25,7 @@ namespace Steppe.Caravan
 
         public float TrimDegrees => trimDegrees;
         public float NormalizedTrim => trimDegrees / 82f;
+        public float ControlNormalized => NormalizedTrim;
         public CaravanSailForceSample CurrentForce { get; private set; }
         public CaravanModule Module => module;
 
@@ -40,12 +45,19 @@ namespace Steppe.Caravan
             area = Mathf.Max(0.5f, sailArea);
             maximumForce = Mathf.Max(100f, forceLimit);
             module = GetComponent<CaravanModule>();
+            part = GetComponent<CaravanPart>();
+            fluidNetwork = GetComponentInParent<CaravanFluidNetwork>();
             SetTrimDegrees(28f);
         }
 
         public void SetTrimNormalized(float value)
         {
             SetTrimDegrees(Mathf.Clamp(value, -1f, 1f) * 82f);
+        }
+
+        public void SetControlNormalized(float value)
+        {
+            SetTrimNormalized(value);
         }
 
         public void SetTrimDegrees(float value)
@@ -74,12 +86,17 @@ namespace Steppe.Caravan
             }
 
             var wind = new Vector3(sample.Weather.SurfaceWind.x, 0f, sample.Weather.SurfaceWind.y);
+            var hydraulicSupport = fluidNetwork != null
+                                   && fluidNetwork.IsPartConnected(part)
+                                   && fluidNetwork.LiquidFraction > 0.05f
+                ? Mathf.Lerp(0.55f, 1f, fluidNetwork.LiquidFraction)
+                : 0.48f;
             CurrentForce = CaravanSailAerodynamics.Evaluate(
                 wind,
                 caravanBody.linearVelocity,
                 sailPivot.forward,
                 area,
-                module.State.Efficiency,
+                module.State.Efficiency * hydraulicSupport,
                 maximumForce);
             module.SetLoad(CurrentForce.NormalizedLoad);
 

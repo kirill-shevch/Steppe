@@ -12,105 +12,27 @@ namespace Steppe.Caravan
         Consumer
     }
 
-    public readonly struct CaravanElectricalFlow
+    public interface ICaravanElectricalGenerator
     {
-        public CaravanElectricalFlow(
-            float generatedKilowatts,
-            float requestedKilowatts,
-            float deliveredKilowatts,
-            float batteryChargeKilowatts,
-            float batteryDischargeKilowatts,
-            float spilledKilowatts,
-            float deficitKilowatts,
-            float storedKilowattHours)
-        {
-            GeneratedKilowatts = generatedKilowatts;
-            RequestedKilowatts = requestedKilowatts;
-            DeliveredKilowatts = deliveredKilowatts;
-            BatteryChargeKilowatts = batteryChargeKilowatts;
-            BatteryDischargeKilowatts = batteryDischargeKilowatts;
-            SpilledKilowatts = spilledKilowatts;
-            DeficitKilowatts = deficitKilowatts;
-            StoredKilowattHours = storedKilowattHours;
-        }
-
-        public float GeneratedKilowatts { get; }
-        public float RequestedKilowatts { get; }
-        public float DeliveredKilowatts { get; }
-        public float BatteryChargeKilowatts { get; }
-        public float BatteryDischargeKilowatts { get; }
-        public float SpilledKilowatts { get; }
-        public float DeficitKilowatts { get; }
-        public float StoredKilowattHours { get; }
+        CaravanPart ElectricalPart { get; }
+        float AvailableGenerationKilowatts { get; }
     }
 
-    /// <summary>
-    /// Stateless power-balance calculation. Power is measured in kW and stored
-    /// energy in kWh, so a simulation step can be tested without Unity physics.
-    /// </summary>
-    public static class CaravanElectricalModel
+    public interface ICaravanElectricalStorage
     {
-        public static CaravanElectricalFlow Evaluate(
-            float availableGenerationKilowatts,
-            float requestedLoadKilowatts,
-            float storedKilowattHours,
-            float capacityKilowattHours,
-            float maximumChargeKilowatts,
-            float maximumDischargeKilowatts,
-            float chargeEfficiency,
-            float dischargeEfficiency,
-            float deltaTimeHours,
-            bool generatorConnected = true,
-            bool consumerConnected = true)
-        {
-            var generation = generatorConnected
-                ? Mathf.Max(0f, availableGenerationKilowatts)
-                : 0f;
-            var request = Mathf.Max(0f, requestedLoadKilowatts);
-            var connectedRequest = consumerConnected ? request : 0f;
-            var capacity = Mathf.Max(0f, capacityKilowattHours);
-            var stored = Mathf.Clamp(storedKilowattHours, 0f, capacity);
-            var hours = Mathf.Max(0f, deltaTimeHours);
-            var chargeEfficiencyClamped = Mathf.Clamp(chargeEfficiency, 0.01f, 1f);
-            var dischargeEfficiencyClamped = Mathf.Clamp(dischargeEfficiency, 0.01f, 1f);
+        CaravanPart ElectricalPart { get; }
+        void BeginPowerStep();
+        float AcceptCharge(float availableInputKilowatts, float deltaTimeHours);
+        float SupplyPower(float requestedOutputKilowatts, float deltaTimeHours);
+        void CompletePowerStep();
+    }
 
-            var directToLoad = Mathf.Min(generation, connectedRequest);
-            var remainingLoad = connectedRequest - directToLoad;
-            var availableDischarge = hours > 0f
-                ? stored * dischargeEfficiencyClamped / hours
-                : 0f;
-            var batteryDischarge = Mathf.Min(
-                remainingLoad,
-                Mathf.Max(0f, maximumDischargeKilowatts),
-                availableDischarge);
-            var delivered = directToLoad + batteryDischarge;
-
-            var surplus = generation - directToLoad;
-            var availableChargeInput = hours > 0f
-                ? (capacity - stored) / (chargeEfficiencyClamped * hours)
-                : 0f;
-            var batteryCharge = Mathf.Min(
-                surplus,
-                Mathf.Max(0f, maximumChargeKilowatts),
-                availableChargeInput);
-
-            if (hours > 0f)
-            {
-                stored += batteryCharge * chargeEfficiencyClamped * hours;
-                stored -= batteryDischarge / dischargeEfficiencyClamped * hours;
-                stored = Mathf.Clamp(stored, 0f, capacity);
-            }
-
-            return new CaravanElectricalFlow(
-                generation,
-                request,
-                delivered,
-                batteryCharge,
-                batteryDischarge,
-                Mathf.Max(0f, surplus - batteryCharge),
-                Mathf.Max(0f, request - delivered),
-                stored);
-        }
+    public interface ICaravanElectricalConsumer
+    {
+        CaravanPart ElectricalPart { get; }
+        float RequestedPowerKilowatts { get; }
+        float DeliveredElectricalKilowatts { get; }
+        void ApplyDeliveredPower(float electricalKilowatts);
     }
 
     [DisallowMultipleComponent]
@@ -123,21 +45,47 @@ namespace Steppe.Caravan
         private Light buildMarkerLight;
         private MaterialPropertyBlock buildMarkerProperties;
         private Vector3 buildMarkerBaseScale;
+        private int maximumConnections = 1;
 
         public CaravanElectricalPortKind Kind { get; private set; }
         public CaravanPart Part { get; private set; }
+        public string PortId { get; private set; }
+        public ICaravanElectricalGenerator Generator { get; private set; }
+        public ICaravanElectricalStorage Storage { get; private set; }
+        public ICaravanElectricalConsumer Consumer { get; private set; }
         public int ConnectedCableCount => cables.Count;
-        public int MaximumConnections => Kind == CaravanElectricalPortKind.Storage ? 2 : 1;
+        public int MaximumConnections => maximumConnections;
         public bool IsAtCapacity => ConnectedCableCount >= MaximumConnections;
         public bool IsBuildMarkerVisible => buildMarker != null && buildMarker.activeSelf;
 
         public void Configure(
             CaravanPart part,
             CaravanElectricalPortKind kind,
-            GameObject communicationBuildMarker = null)
+            GameObject communicationBuildMarker = null,
+            int connectionCapacity = 0,
+            string portId = null)
         {
             Part = part != null ? part : throw new ArgumentNullException(nameof(part));
             Kind = kind;
+            maximumConnections = connectionCapacity > 0
+                ? connectionCapacity
+                : Kind == CaravanElectricalPortKind.Storage
+                    ? 2
+                    : 1;
+            var module = Part.GetComponent<CaravanModule>();
+            PortId = string.IsNullOrWhiteSpace(portId)
+                ? $"{module?.InstanceId ?? Part.name}:electrical"
+                : portId;
+            Generator = null;
+            Storage = null;
+            Consumer = null;
+            var behaviours = Part.GetComponents<MonoBehaviour>();
+            for (var index = 0; index < behaviours.Length; index++)
+            {
+                Generator ??= behaviours[index] as ICaravanElectricalGenerator;
+                Storage ??= behaviours[index] as ICaravanElectricalStorage;
+                Consumer ??= behaviours[index] as ICaravanElectricalConsumer;
+            }
             buildMarker = communicationBuildMarker;
             if (buildMarker != null)
             {
@@ -210,7 +158,7 @@ namespace Steppe.Caravan
     [DisallowMultipleComponent]
     [RequireComponent(typeof(CaravanPart))]
     [RequireComponent(typeof(CaravanModule))]
-    public sealed class CaravanBatteryModule : MonoBehaviour
+    public sealed class CaravanBatteryModule : MonoBehaviour, ICaravanElectricalStorage
     {
         private CaravanPart part;
         private CaravanModule module;
@@ -219,6 +167,7 @@ namespace Steppe.Caravan
         private Vector3 chargeWindowBasePosition;
 
         public float StoredEnergyKilowattHours => part != null ? part.StoredAmount : 0f;
+        public CaravanPart ElectricalPart => part;
         public float CapacityKilowattHours => part != null ? part.Capacity : 0f;
         public float StateOfCharge => CapacityKilowattHours > 0f
             ? StoredEnergyKilowattHours / CapacityKilowattHours
@@ -261,9 +210,64 @@ namespace Steppe.Caravan
 
         internal void ApplyFlow(CaravanElectricalFlow flow)
         {
+            BeginPowerStep();
             part.SetStoredAmount(flow.StoredKilowattHours);
             CurrentChargeKilowatts = flow.BatteryChargeKilowatts;
             CurrentDischargeKilowatts = flow.BatteryDischargeKilowatts;
+            CompletePowerStep();
+        }
+
+        public void BeginPowerStep()
+        {
+            CurrentChargeKilowatts = 0f;
+            CurrentDischargeKilowatts = 0f;
+        }
+
+        public float AcceptCharge(float availableInputKilowatts, float deltaTimeHours)
+        {
+            var available = Mathf.Max(0f, availableInputKilowatts);
+            var hours = Mathf.Max(0f, deltaTimeHours);
+            if (available <= 0f || hours <= 0f || CapacityKilowattHours <= 0f)
+            {
+                return 0f;
+            }
+
+            var availableCapacityInput =
+                (CapacityKilowattHours - StoredEnergyKilowattHours)
+                / (ChargeEfficiency * hours);
+            var accepted = Mathf.Min(
+                available,
+                MaximumChargeKilowatts,
+                Mathf.Max(0f, availableCapacityInput));
+            part.SetStoredAmount(
+                StoredEnergyKilowattHours + accepted * ChargeEfficiency * hours);
+            CurrentChargeKilowatts += accepted;
+            return accepted;
+        }
+
+        public float SupplyPower(float requestedOutputKilowatts, float deltaTimeHours)
+        {
+            var request = Mathf.Max(0f, requestedOutputKilowatts);
+            var hours = Mathf.Max(0f, deltaTimeHours);
+            if (request <= 0f || hours <= 0f || StoredEnergyKilowattHours <= 0f)
+            {
+                return 0f;
+            }
+
+            var storedOutputLimit =
+                StoredEnergyKilowattHours * DischargeEfficiency / hours;
+            var supplied = Mathf.Min(
+                request,
+                MaximumDischargeKilowatts,
+                storedOutputLimit);
+            part.SetStoredAmount(
+                StoredEnergyKilowattHours - supplied / DischargeEfficiency * hours);
+            CurrentDischargeKilowatts += supplied;
+            return supplied;
+        }
+
+        public void CompletePowerStep()
+        {
             part.SetCurrentOutput(CurrentDischargeKilowatts);
             var load = Mathf.Max(
                 MaximumChargeKilowatts > 0f
@@ -296,7 +300,10 @@ namespace Steppe.Caravan
     [DisallowMultipleComponent]
     [RequireComponent(typeof(CaravanPart))]
     [RequireComponent(typeof(CaravanModule))]
-    public sealed class CaravanElectricMotorModule : MonoBehaviour
+    public sealed class CaravanElectricMotorModule :
+        MonoBehaviour,
+        ICaravanElectricalConsumer,
+        ICaravanDriveSource
     {
         private CaravanPart part;
         private CaravanModule module;
@@ -304,9 +311,12 @@ namespace Steppe.Caravan
         private float shaftAngle;
 
         public float MaximumPowerKilowatts => part != null ? part.Capacity : 0f;
+        public CaravanPart ElectricalPart => part;
         public float RequestedThrottle { get; private set; }
         public float RequestedPowerKilowatts =>
             MaximumPowerKilowatts * RequestedThrottle * (module != null ? module.State.Efficiency : 1f);
+        public float RequestedMechanicalKilowatts =>
+            RequestedPowerKilowatts * MechanicalEfficiency;
         public float DeliveredElectricalKilowatts { get; private set; }
         public float DeliveredMechanicalKilowatts { get; private set; }
         public float MechanicalEfficiency { get; private set; } = 0.9f;
@@ -333,7 +343,7 @@ namespace Steppe.Caravan
             RequestedThrottle = Mathf.Clamp01(normalizedThrottle);
         }
 
-        internal void ApplyDeliveredPower(float electricalKilowatts)
+        public void ApplyDeliveredPower(float electricalKilowatts)
         {
             DeliveredElectricalKilowatts = Mathf.Clamp(
                 electricalKilowatts,
@@ -491,6 +501,7 @@ namespace Steppe.Caravan
     [DisallowMultipleComponent]
     public sealed class CaravanElectricalNetwork : MonoBehaviour
     {
+        private CaravanChassisController chassis;
         private CaravanPhotovoltaicModule photovoltaic;
         private CaravanBatteryModule battery;
         private CaravanElectricMotorModule motor;
@@ -500,9 +511,36 @@ namespace Steppe.Caravan
         private Material positiveCableMaterial;
         private Material returnCableMaterial;
         private readonly List<CaravanElectricalPort> ports =
-            new List<CaravanElectricalPort>(3);
+            new List<CaravanElectricalPort>(8);
         private readonly List<CaravanElectricalCable> cables =
-            new List<CaravanElectricalCable>(2);
+            new List<CaravanElectricalCable>(8);
+        private readonly List<CaravanPhotovoltaicModule> generators =
+            new List<CaravanPhotovoltaicModule>(4);
+        private readonly List<CaravanBatteryModule> batteries =
+            new List<CaravanBatteryModule>(4);
+        private readonly List<CaravanElectricMotorModule> motors =
+            new List<CaravanElectricMotorModule>(4);
+        private readonly List<ICaravanElectricalGenerator> powerGenerators =
+            new List<ICaravanElectricalGenerator>(4);
+        private readonly List<ICaravanElectricalStorage> powerStorages =
+            new List<ICaravanElectricalStorage>(4);
+        private readonly List<ICaravanElectricalConsumer> powerConsumers =
+            new List<ICaravanElectricalConsumer>(8);
+        private readonly Dictionary<CaravanElectricalPort, List<CaravanElectricalPort>>
+            adjacency =
+                new Dictionary<CaravanElectricalPort, List<CaravanElectricalPort>>();
+        private readonly HashSet<CaravanElectricalPort> visited =
+            new HashSet<CaravanElectricalPort>();
+        private readonly Queue<CaravanElectricalPort> traversal =
+            new Queue<CaravanElectricalPort>();
+        private readonly List<CaravanElectricalPort> componentPorts =
+            new List<CaravanElectricalPort>(8);
+        private readonly List<ICaravanElectricalGenerator> componentGenerators =
+            new List<ICaravanElectricalGenerator>(4);
+        private readonly List<ICaravanElectricalStorage> componentStorages =
+            new List<ICaravanElectricalStorage>(4);
+        private readonly List<ICaravanElectricalConsumer> componentConsumers =
+            new List<ICaravanElectricalConsumer>(8);
 
         public CaravanPhotovoltaicModule Photovoltaic => photovoltaic;
         public CaravanBatteryModule Battery => battery;
@@ -512,7 +550,11 @@ namespace Steppe.Caravan
         public CaravanElectricalPort MotorPort => motorPort;
         public IReadOnlyList<CaravanElectricalPort> Ports => ports;
         public IReadOnlyList<CaravanElectricalCable> Cables => cables;
+        public IReadOnlyList<CaravanPhotovoltaicModule> Generators => generators;
+        public IReadOnlyList<CaravanBatteryModule> Batteries => batteries;
+        public IReadOnlyList<CaravanElectricMotorModule> Motors => motors;
         public int CableCount => cables.Count;
+        public int ConnectedComponentCount { get; private set; }
         public CaravanElectricalCable PanelToBatteryCable =>
             FindCable(photovoltaicPort, batteryPort);
         public CaravanElectricalCable BatteryToMotorCable =>
@@ -538,40 +580,202 @@ namespace Steppe.Caravan
             Material positiveMaterial,
             Material returnMaterial)
         {
-            photovoltaic = photovoltaicModule != null
-                ? photovoltaicModule
-                : throw new ArgumentNullException(nameof(photovoltaicModule));
-            battery = batteryModule != null
-                ? batteryModule
-                : throw new ArgumentNullException(nameof(batteryModule));
-            motor = motorModule != null
-                ? motorModule
-                : throw new ArgumentNullException(nameof(motorModule));
-            if (chassis == null)
+            if (photovoltaicModule == null)
             {
-                throw new ArgumentNullException(nameof(chassis));
+                throw new ArgumentNullException(nameof(photovoltaicModule));
+            }
+            if (batteryModule == null)
+            {
+                throw new ArgumentNullException(nameof(batteryModule));
+            }
+            if (motorModule == null)
+            {
+                throw new ArgumentNullException(nameof(motorModule));
             }
 
-            this.photovoltaicPort = photovoltaicPort != null
-                ? photovoltaicPort
-                : throw new ArgumentNullException(nameof(photovoltaicPort));
-            this.batteryPort = batteryPort != null
-                ? batteryPort
-                : throw new ArgumentNullException(nameof(batteryPort));
-            this.motorPort = motorPort != null
-                ? motorPort
-                : throw new ArgumentNullException(nameof(motorPort));
+            Configure(
+                chassis,
+                new[] { photovoltaicPort, batteryPort, motorPort },
+                positiveMaterial,
+                returnMaterial);
+            photovoltaic = photovoltaicModule;
+            battery = batteryModule;
+            motor = motorModule;
+            this.photovoltaicPort = photovoltaicPort;
+            this.batteryPort = batteryPort;
+            this.motorPort = motorPort;
+        }
+
+        public void Configure(
+            CaravanChassisController caravan,
+            IEnumerable<CaravanElectricalPort> initialPorts,
+            Material positiveMaterial,
+            Material returnMaterial)
+        {
+            chassis = caravan != null
+                ? caravan
+                : throw new ArgumentNullException(nameof(caravan));
             positiveCableMaterial = positiveMaterial != null
                 ? positiveMaterial
                 : throw new ArgumentNullException(nameof(positiveMaterial));
             returnCableMaterial = returnMaterial != null
                 ? returnMaterial
                 : throw new ArgumentNullException(nameof(returnMaterial));
+            if (initialPorts == null)
+            {
+                throw new ArgumentNullException(nameof(initialPorts));
+            }
+
+            ClearConnections();
+            for (var index = motors.Count - 1; index >= 0; index--)
+            {
+                chassis.DetachElectricMotor(motors[index]);
+            }
             ports.Clear();
-            ports.Add(this.photovoltaicPort);
-            ports.Add(this.batteryPort);
-            ports.Add(this.motorPort);
-            chassis.AttachElectricMotor(motor);
+            generators.Clear();
+            batteries.Clear();
+            motors.Clear();
+            powerGenerators.Clear();
+            powerStorages.Clear();
+            powerConsumers.Clear();
+            adjacency.Clear();
+            photovoltaic = null;
+            battery = null;
+            motor = null;
+            photovoltaicPort = null;
+            batteryPort = null;
+            motorPort = null;
+
+            foreach (var port in initialPorts)
+            {
+                RegisterPort(port);
+            }
+        }
+
+        public int RegisterModule(CaravanModule module)
+        {
+            if (module == null)
+            {
+                return 0;
+            }
+
+            var modulePorts = module.GetComponentsInChildren<CaravanElectricalPort>(true);
+            var added = 0;
+            for (var index = 0; index < modulePorts.Length; index++)
+            {
+                if (RegisterPort(modulePorts[index]))
+                {
+                    added++;
+                }
+            }
+
+            return added;
+        }
+
+        public bool RegisterPort(CaravanElectricalPort port)
+        {
+            if (port == null || port.Part == null || ports.Contains(port))
+            {
+                return false;
+            }
+
+            ports.Add(port);
+            adjacency.Add(port, new List<CaravanElectricalPort>(2));
+            var electricalGenerator = port.Generator;
+            if (electricalGenerator != null
+                && !powerGenerators.Contains(electricalGenerator))
+            {
+                powerGenerators.Add(electricalGenerator);
+            }
+            var electricalStorage = port.Storage;
+            if (electricalStorage != null
+                && !powerStorages.Contains(electricalStorage))
+            {
+                powerStorages.Add(electricalStorage);
+            }
+            var electricalConsumer = port.Consumer;
+            if (electricalConsumer != null
+                && !powerConsumers.Contains(electricalConsumer))
+            {
+                powerConsumers.Add(electricalConsumer);
+            }
+            if (port.Part.TryGetComponent<CaravanPhotovoltaicModule>(out var generator)
+                && !generators.Contains(generator))
+            {
+                generators.Add(generator);
+            }
+            if (port.Part.TryGetComponent<CaravanBatteryModule>(out var storage)
+                && !batteries.Contains(storage))
+            {
+                batteries.Add(storage);
+            }
+            if (port.Part.TryGetComponent<CaravanElectricMotorModule>(out var consumer)
+                && !motors.Contains(consumer))
+            {
+                motors.Add(consumer);
+                chassis?.AttachElectricMotor(consumer);
+            }
+
+            RefreshPrimaryComponents();
+            return true;
+        }
+
+        public bool UnregisterPort(
+            CaravanElectricalPort port,
+            bool removeConnections = true)
+        {
+            if (port == null || !ports.Contains(port))
+            {
+                return false;
+            }
+
+            if (removeConnections)
+            {
+                DisconnectPort(port);
+            }
+            else if (port.ConnectedCableCount > 0)
+            {
+                return false;
+            }
+
+            ports.Remove(port);
+            adjacency.Remove(port);
+            var part = port.Part;
+            if (part != null && !HasRegisteredPort(part))
+            {
+                var electricalGenerator = port.Generator;
+                if (electricalGenerator != null)
+                {
+                    powerGenerators.Remove(electricalGenerator);
+                }
+                var electricalStorage = port.Storage;
+                if (electricalStorage != null)
+                {
+                    powerStorages.Remove(electricalStorage);
+                }
+                var electricalConsumer = port.Consumer;
+                if (electricalConsumer != null)
+                {
+                    powerConsumers.Remove(electricalConsumer);
+                    electricalConsumer.ApplyDeliveredPower(0f);
+                }
+                if (part.TryGetComponent<CaravanPhotovoltaicModule>(out var generator))
+                {
+                    generators.Remove(generator);
+                }
+                if (part.TryGetComponent<CaravanBatteryModule>(out var storage))
+                {
+                    batteries.Remove(storage);
+                }
+                if (part.TryGetComponent<CaravanElectricMotorModule>(out var consumer))
+                {
+                    motors.Remove(consumer);
+                    chassis?.DetachElectricMotor(consumer);
+                }
+            }
+
+            RefreshPrimaryComponents();
+            return true;
         }
 
         public bool CanConnect(
@@ -590,7 +794,9 @@ namespace Steppe.Caravan
                 return false;
             }
 
-            return IsCompatiblePair(first.Kind, second.Kind);
+            return CaravanConnectionRules.AreCompatible(
+                first.Kind,
+                second.Kind);
         }
 
         public bool TryConnect(
@@ -661,40 +867,92 @@ namespace Steppe.Caravan
 
         public void Simulate(float deltaTimeSeconds)
         {
-            if (photovoltaic == null || battery == null || motor == null)
+            var hours = Mathf.Max(0f, deltaTimeSeconds) / 3600f;
+            GeneratedKilowatts = 0f;
+            RequestedKilowatts = 0f;
+            DeliveredKilowatts = 0f;
+            DeficitKilowatts = 0f;
+            SpilledKilowatts = 0f;
+            ConnectedComponentCount = 0;
+
+            for (var index = 0; index < powerStorages.Count; index++)
             {
-                return;
+                var storage = powerStorages[index];
+                if (IsAlive(storage))
+                {
+                    storage.BeginPowerStep();
+                }
+            }
+            for (var index = 0; index < powerConsumers.Count; index++)
+            {
+                var consumer = powerConsumers[index];
+                if (!IsAlive(consumer))
+                {
+                    continue;
+                }
+
+                RequestedKilowatts += consumer.RequestedPowerKilowatts;
+                consumer.ApplyDeliveredPower(0f);
+            }
+            for (var index = 0; index < cables.Count; index++)
+            {
+                cables[index]?.SetCurrent(0f);
             }
 
-            var panelToBattery = PanelToBatteryCable;
-            var batteryToMotor = BatteryToMotorCable;
-            var sourceConnected = panelToBattery != null && panelToBattery.IsConductive;
-            var consumerConnected = batteryToMotor != null && batteryToMotor.IsConductive;
-            var flow = CaravanElectricalModel.Evaluate(
-                photovoltaic.CurrentGenerationKilowatts,
-                motor.RequestedPowerKilowatts,
-                battery.StoredEnergyKilowattHours,
-                battery.CapacityKilowattHours,
-                battery.MaximumChargeKilowatts,
-                battery.MaximumDischargeKilowatts,
-                battery.ChargeEfficiency,
-                battery.DischargeEfficiency,
-                Mathf.Max(0f, deltaTimeSeconds) / 3600f,
-                sourceConnected,
-                consumerConnected);
+            BuildAdjacency();
+            visited.Clear();
+            for (var index = 0; index < ports.Count; index++)
+            {
+                var start = ports[index];
+                if (start == null
+                    || visited.Contains(start)
+                    || !adjacency.TryGetValue(start, out var neighbours)
+                    || neighbours.Count == 0)
+                {
+                    continue;
+                }
 
-            GeneratedKilowatts = flow.GeneratedKilowatts;
-            RequestedKilowatts = flow.RequestedKilowatts;
-            DeliveredKilowatts = flow.DeliveredKilowatts;
-            DeficitKilowatts = flow.DeficitKilowatts;
-            SpilledKilowatts = flow.SpilledKilowatts;
-            battery.ApplyFlow(flow);
-            motor.ApplyDeliveredPower(flow.DeliveredKilowatts);
-            panelToBattery?.SetCurrent(
-                Mathf.Max(
-                    0f,
-                    flow.GeneratedKilowatts - flow.SpilledKilowatts));
-            batteryToMotor?.SetCurrent(flow.DeliveredKilowatts);
+                componentPorts.Clear();
+                traversal.Clear();
+                traversal.Enqueue(start);
+                visited.Add(start);
+                while (traversal.Count > 0)
+                {
+                    var current = traversal.Dequeue();
+                    componentPorts.Add(current);
+                    if (!adjacency.TryGetValue(current, out var connected))
+                    {
+                        continue;
+                    }
+
+                    for (var neighbourIndex = 0;
+                         neighbourIndex < connected.Count;
+                         neighbourIndex++)
+                    {
+                        var neighbour = connected[neighbourIndex];
+                        if (visited.Add(neighbour))
+                        {
+                            traversal.Enqueue(neighbour);
+                        }
+                    }
+                }
+
+                ConnectedComponentCount++;
+                SimulateComponent(componentPorts, hours);
+            }
+
+            for (var index = 0; index < powerStorages.Count; index++)
+            {
+                var storage = powerStorages[index];
+                if (IsAlive(storage))
+                {
+                    storage.CompletePowerStep();
+                }
+            }
+
+            DeficitKilowatts = Mathf.Max(
+                0f,
+                RequestedKilowatts - DeliveredKilowatts);
         }
 
         private CaravanElectricalCable FindCable(
@@ -732,13 +990,237 @@ namespace Steppe.Caravan
             return cable;
         }
 
-        private static bool IsCompatiblePair(
-            CaravanElectricalPortKind first,
-            CaravanElectricalPortKind second)
+        private void RefreshPrimaryComponents()
         {
-            return first == CaravanElectricalPortKind.Storage
-                ? second != CaravanElectricalPortKind.Storage
-                : second == CaravanElectricalPortKind.Storage;
+            photovoltaic = generators.Count > 0 ? generators[0] : null;
+            battery = batteries.Count > 0 ? batteries[0] : null;
+            motor = motors.Count > 0 ? motors[0] : null;
+            photovoltaicPort = FindPort(photovoltaic);
+            batteryPort = FindPort(battery);
+            motorPort = FindPort(motor);
+        }
+
+        private CaravanElectricalPort FindPort(Component component)
+        {
+            if (component == null)
+            {
+                return null;
+            }
+
+            for (var index = 0; index < ports.Count; index++)
+            {
+                var port = ports[index];
+                if (port != null && port.Part != null
+                    && port.Part.gameObject == component.gameObject)
+                {
+                    return port;
+                }
+            }
+
+            return null;
+        }
+
+        private bool HasRegisteredPort(Component component)
+        {
+            return FindPort(component) != null;
+        }
+
+        private void BuildAdjacency()
+        {
+            foreach (var neighbours in adjacency.Values)
+            {
+                neighbours.Clear();
+            }
+
+            for (var index = 0; index < cables.Count; index++)
+            {
+                var cable = cables[index];
+                if (cable == null
+                    || !cable.IsConductive
+                    || !ports.Contains(cable.Start)
+                    || !ports.Contains(cable.End))
+                {
+                    continue;
+                }
+
+                AddNeighbour(cable.Start, cable.End);
+                AddNeighbour(cable.End, cable.Start);
+            }
+        }
+
+        private void AddNeighbour(
+            CaravanElectricalPort port,
+            CaravanElectricalPort neighbour)
+        {
+            if (!adjacency.TryGetValue(port, out var neighbours))
+            {
+                neighbours = new List<CaravanElectricalPort>(2);
+                adjacency.Add(port, neighbours);
+            }
+
+            neighbours.Add(neighbour);
+        }
+
+        private void SimulateComponent(
+            IReadOnlyList<CaravanElectricalPort> component,
+            float hours)
+        {
+            componentGenerators.Clear();
+            componentStorages.Clear();
+            componentConsumers.Clear();
+            for (var index = 0; index < component.Count; index++)
+            {
+                var part = component[index].Part;
+                if (part == null)
+                {
+                    continue;
+                }
+
+                var generator = component[index].Generator;
+                if (generator != null
+                    && !componentGenerators.Contains(generator))
+                {
+                    componentGenerators.Add(generator);
+                }
+                var storage = component[index].Storage;
+                if (storage != null
+                    && !componentStorages.Contains(storage))
+                {
+                    componentStorages.Add(storage);
+                }
+                var consumer = component[index].Consumer;
+                if (consumer != null
+                    && !componentConsumers.Contains(consumer))
+                {
+                    componentConsumers.Add(consumer);
+                }
+            }
+
+            var generation = 0f;
+            for (var index = 0; index < componentGenerators.Count; index++)
+            {
+                generation += Mathf.Max(
+                    0f,
+                    componentGenerators[index].AvailableGenerationKilowatts);
+            }
+
+            var request = 0f;
+            for (var index = 0; index < componentConsumers.Count; index++)
+            {
+                request += Mathf.Max(
+                    0f,
+                    componentConsumers[index].RequestedPowerKilowatts);
+            }
+
+            GeneratedKilowatts += generation;
+            var delivered = Mathf.Min(generation, request);
+            var remainingRequest = request - delivered;
+            for (var index = 0;
+                 index < componentStorages.Count && remainingRequest > 0.0001f;
+                 index++)
+            {
+                var supplied = componentStorages[index].SupplyPower(
+                    remainingRequest,
+                    hours);
+                delivered += supplied;
+                remainingRequest -= supplied;
+            }
+
+            var surplus = generation - Mathf.Min(generation, request);
+            var totalCharge = 0f;
+            for (var index = 0;
+                 index < componentStorages.Count && surplus > 0.0001f;
+                 index++)
+            {
+                var accepted = componentStorages[index].AcceptCharge(surplus, hours);
+                totalCharge += accepted;
+                surplus -= accepted;
+            }
+
+            DeliveredKilowatts += delivered;
+            SpilledKilowatts += Mathf.Max(0f, surplus);
+            for (var index = 0; index < componentConsumers.Count; index++)
+            {
+                var consumer = componentConsumers[index];
+                var share = request > 0.0001f
+                    ? delivered * consumer.RequestedPowerKilowatts / request
+                    : 0f;
+                consumer.ApplyDeliveredPower(share);
+            }
+
+            var usedGeneration = Mathf.Min(
+                generation,
+                delivered + totalCharge);
+            UpdateComponentCableCurrents(
+                component,
+                generation,
+                usedGeneration);
+        }
+
+        private void UpdateComponentCableCurrents(
+            IReadOnlyList<CaravanElectricalPort> component,
+            float generation,
+            float usedGeneration)
+        {
+            for (var index = 0; index < cables.Count; index++)
+            {
+                var cable = cables[index];
+                if (cable == null
+                    || !cable.IsConductive
+                    || !ContainsPort(component, cable.Start)
+                    || !ContainsPort(component, cable.End))
+                {
+                    continue;
+                }
+
+                var generatorPort = cable.Start.Kind == CaravanElectricalPortKind.Generator
+                    ? cable.Start
+                    : cable.End.Kind == CaravanElectricalPortKind.Generator
+                        ? cable.End
+                        : null;
+                if (generatorPort != null
+                    && generatorPort.Generator is { } generator)
+                {
+                    var contribution = generation > 0.0001f
+                        ? usedGeneration
+                          * generator.AvailableGenerationKilowatts
+                          / generation
+                        : 0f;
+                    cable.SetCurrent(contribution);
+                    continue;
+                }
+
+                var consumerPort = cable.Start.Kind == CaravanElectricalPortKind.Consumer
+                    ? cable.Start
+                    : cable.End.Kind == CaravanElectricalPortKind.Consumer
+                        ? cable.End
+                        : null;
+                if (consumerPort != null
+                    && consumerPort.Consumer is { } consumer)
+                {
+                    cable.SetCurrent(consumer.DeliveredElectricalKilowatts);
+                }
+            }
+        }
+
+        private static bool IsAlive(object contract)
+        {
+            return contract is MonoBehaviour behaviour && behaviour != null;
+        }
+
+        private static bool ContainsPort(
+            IReadOnlyList<CaravanElectricalPort> source,
+            CaravanElectricalPort port)
+        {
+            for (var index = 0; index < source.Count; index++)
+            {
+                if (source[index] == port)
+                {
+                    return true;
+                }
+            }
+
+            return false;
         }
 
         private void FixedUpdate()

@@ -150,6 +150,40 @@ namespace Steppe.Ecology
             return false;
         }
 
+        public bool TryExtractResources(
+            double worldX,
+            double worldZ,
+            double requestedSurfaceWater,
+            double requestedRootWater,
+            double requestedSnowWater,
+            double requestedBiomass,
+            out SteppeEcoExtraction extraction)
+        {
+            extraction = default;
+            if (settings == null)
+            {
+                return false;
+            }
+
+            var coordinate = EcoCellCoordinate.FromWorld(
+                worldX,
+                worldZ,
+                settings.EcologyCellSize);
+            if (!records.TryGetValue(coordinate, out var record))
+            {
+                return false;
+            }
+
+            record.State = record.State.Extract(
+                requestedSurfaceWater,
+                requestedRootWater,
+                requestedSnowWater,
+                requestedBiomass,
+                out extraction);
+            WriteRecordToStateMap(coordinate, record);
+            return true;
+        }
+
         public bool IsActive(EcoCellCoordinate coordinate)
         {
             return activeCells.Contains(coordinate);

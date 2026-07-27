@@ -44,41 +44,30 @@ namespace Steppe.Caravan
 
     internal static class CaravanGreyboxPartFactory
     {
-        private readonly struct PartSpec
-        {
-            public PartSpec(
-                string id,
-                string displayName,
-                int width,
-                int length,
-                float mass,
-                float capacity)
-            {
-                Id = id;
-                DisplayName = displayName;
-                Width = width;
-                Length = length;
-                Mass = mass;
-                Capacity = capacity;
-            }
-
-            public string Id { get; }
-            public string DisplayName { get; }
-            public int Width { get; }
-            public int Length { get; }
-            public float Mass { get; }
-            public float Capacity { get; }
-        }
-
         public static IReadOnlyList<CaravanModule> CreateInitialParts(
             CaravanMountGrid grid,
             CaravanPartPalette palette)
         {
             var modules = new List<CaravanModule>
             {
-                Create(grid, palette, CaravanPartKind.Battery, new CaravanGridPlacement(0, 4, 2, 2, 0)),
-                Create(grid, palette, CaravanPartKind.ElectricMotor, new CaravanGridPlacement(2, 4, 2, 2, 0)),
-                Create(grid, palette, CaravanPartKind.PhotovoltaicLeaves, new CaravanGridPlacement(0, 8, 3, 3, 0))
+                Create(
+                    grid,
+                    palette,
+                    CaravanPartKind.Battery,
+                    new CaravanGridPlacement(0, 4, 2, 2, 0),
+                    "starter-battery"),
+                Create(
+                    grid,
+                    palette,
+                    CaravanPartKind.ElectricMotor,
+                    new CaravanGridPlacement(2, 4, 2, 2, 0),
+                    "starter-electric-motor"),
+                Create(
+                    grid,
+                    palette,
+                    CaravanPartKind.PhotovoltaicLeaves,
+                    new CaravanGridPlacement(0, 8, 3, 3, 0),
+                    "starter-photovoltaic-leaves")
             };
 
             return modules;
@@ -88,9 +77,26 @@ namespace Steppe.Caravan
             CaravanMountGrid grid,
             CaravanPartPalette palette,
             CaravanPartKind kind,
-            CaravanGridPlacement placement)
+            CaravanGridPlacement placement,
+            string instanceId = null)
         {
-            var spec = GetSpec(kind);
+            var module = CreateUnplaced(palette, kind, instanceId);
+            if (!grid.Register(module, placement))
+            {
+                UnityEngine.Object.Destroy(module.gameObject);
+                throw new InvalidOperationException(
+                    $"Could not place initial caravan part '{module.name}'.");
+            }
+
+            return module;
+        }
+
+        internal static CaravanModule CreateUnplaced(
+            CaravanPartPalette palette,
+            CaravanPartKind kind,
+            string instanceId = null)
+        {
+            var spec = CaravanPartCatalog.Get(kind);
             var root = new GameObject(spec.DisplayName);
             var visual = new GameObject("Visual");
             visual.transform.SetParent(root.transform, false);
@@ -99,16 +105,16 @@ namespace Steppe.Caravan
             var collider = root.AddComponent<BoxCollider>();
             collider.center = new Vector3(0f, 0.72f, 0f);
             collider.size = new Vector3(
-                Mathf.Max(0.72f, spec.Width * 0.82f),
+                Mathf.Max(0.72f, spec.FootprintWidth * 0.82f),
                 1.45f,
-                Mathf.Max(0.72f, spec.Length * 0.82f));
+                Mathf.Max(0.72f, spec.FootprintLength * 0.82f));
 
             var display = CreateStatusDisplay(
                 visual.transform,
                 new Vector3(
-                    -spec.Width * 0.24f,
+                    -spec.FootprintWidth * 0.24f,
                     0.72f,
-                    -spec.Length * 0.34f),
+                    -spec.FootprintLength * 0.34f),
                 Quaternion.Euler(12f, 0f, 0f),
                 palette);
             var module = root.AddComponent<CaravanModule>();
@@ -116,76 +122,106 @@ namespace Steppe.Caravan
                 spec.Id,
                 visual.transform,
                 true,
-                spec.Width,
-                spec.Length,
+                spec.FootprintWidth,
+                spec.FootprintLength,
                 display,
-                spec.Mass,
-                new Vector3(0f, 0.62f, 0f));
+                spec.MassKilograms,
+                new Vector3(0f, 0.62f, 0f),
+                instanceId);
             module.State.SetForTests(0.08f, 0.96f, 0f);
             var part = root.AddComponent<CaravanPart>();
-            part.Configure(kind, spec.Capacity, spec.Capacity * 0.35f);
-            if (kind == CaravanPartKind.PhotovoltaicLeaves)
+            var initialStoredAmount = kind switch
             {
-                root.AddComponent<CaravanPhotovoltaicModule>();
-                CreateElectricalPort(root.transform, part, kind, palette);
-            }
-            else if (kind == CaravanPartKind.Battery)
+                CaravanPartKind.Battery => spec.Capacity * 0.35f,
+                CaravanPartKind.WaterReservoir => spec.Capacity * 0.35f,
+                _ => 0f
+            };
+            part.Configure(kind, spec.Capacity, initialStoredAmount);
+            switch (kind)
             {
-                var battery = root.AddComponent<CaravanBatteryModule>();
-                battery.Configure(visual.transform.Find("Charge Window"));
-                CreateElectricalPort(root.transform, part, kind, palette);
-            }
-            else if (kind == CaravanPartKind.ElectricMotor)
-            {
-                var motor = root.AddComponent<CaravanElectricMotorModule>();
-                motor.Configure(visual.transform.Find("Motor Shaft"));
-                root.AddComponent<CaravanControlStation>();
-                CreateElectricalPort(root.transform, part, kind, palette);
-            }
-
-            if (!grid.Register(module, placement))
-            {
-                UnityEngine.Object.Destroy(root);
-                throw new InvalidOperationException(
-                    $"Could not place initial caravan part '{spec.DisplayName}'.");
+                case CaravanPartKind.Sail:
+                    root.AddComponent<CaravanSailModule>();
+                    root.AddComponent<CaravanWindVane>();
+                    CreateFluidTap(root.transform, part, palette);
+                    CreateModuleControl(root.transform, visual.transform, palette);
+                    break;
+                case CaravanPartKind.PhotovoltaicLeaves:
+                    root.AddComponent<CaravanPhotovoltaicModule>();
+                    CreateElectricalPort(root.transform, part, kind, palette);
+                    CreateFluidTap(root.transform, part, palette);
+                    CreateModuleControl(root.transform, visual.transform, palette);
+                    break;
+                case CaravanPartKind.Battery:
+                    var battery = root.AddComponent<CaravanBatteryModule>();
+                    battery.Configure(visual.transform.Find("Charge Window"));
+                    CreateElectricalPort(root.transform, part, kind, palette);
+                    break;
+                case CaravanPartKind.WaterReservoir:
+                    root.AddComponent<CaravanWaterReservoirModule>().Configure();
+                    CreateFluidPorts(root.transform, part, kind, palette);
+                    break;
+                case CaravanPartKind.DualModePump:
+                    root.AddComponent<CaravanElectricPumpModule>().Configure();
+                    CreateElectricalPort(root.transform, part, kind, palette);
+                    CreateFluidPorts(root.transform, part, kind, palette);
+                    CreateMaterialPorts(root.transform, part, kind, palette);
+                    CreateModuleControl(root.transform, visual.transform, palette);
+                    break;
+                case CaravanPartKind.Radiator:
+                    root.AddComponent<CaravanRadiatorModule>().Configure();
+                    CreateFluidPorts(root.transform, part, kind, palette);
+                    CreateModuleControl(root.transform, visual.transform, palette);
+                    break;
+                case CaravanPartKind.Biofurnace:
+                    root.AddComponent<CaravanBiofurnaceModule>().Configure();
+                    CreateFluidTap(root.transform, part, palette);
+                    CreateMaterialPorts(root.transform, part, kind, palette);
+                    CreateModuleControl(root.transform, visual.transform, palette);
+                    break;
+                case CaravanPartKind.BiofuelEngine:
+                    root.AddComponent<CaravanBiofuelEngineModule>().Configure();
+                    CreateFluidTap(root.transform, part, palette);
+                    CreateMaterialPorts(root.transform, part, kind, palette);
+                    CreateModuleControl(root.transform, visual.transform, palette);
+                    break;
+                case CaravanPartKind.ElectricMotor:
+                    var motor = root.AddComponent<CaravanElectricMotorModule>();
+                    motor.Configure(visual.transform.Find("Motor Shaft"));
+                    root.AddComponent<CaravanControlStation>();
+                    CreateElectricalPort(root.transform, part, kind, palette);
+                    CreateMaterialPorts(root.transform, part, kind, palette);
+                    break;
+                case CaravanPartKind.Harvester:
+                    root.AddComponent<CaravanHarvesterModule>().Configure();
+                    CreateElectricalPort(root.transform, part, kind, palette);
+                    CreateMaterialPorts(root.transform, part, kind, palette);
+                    CreateModuleControl(root.transform, visual.transform, palette);
+                    break;
+                case CaravanPartKind.GrassDryer:
+                    root.AddComponent<CaravanGrassDryerModule>().Configure();
+                    CreateElectricalPort(root.transform, part, kind, palette);
+                    CreateMaterialPorts(root.transform, part, kind, palette);
+                    CreateModuleControl(root.transform, visual.transform, palette);
+                    break;
+                case CaravanPartKind.BiomassStorage:
+                    root.AddComponent<CaravanBiomassStorageModule>().Configure();
+                    CreateMaterialPorts(root.transform, part, kind, palette);
+                    break;
+                case CaravanPartKind.Transmission:
+                    root.AddComponent<CaravanTransmissionModule>().Configure();
+                    CreateMaterialPorts(root.transform, part, kind, palette);
+                    CreateModuleControl(root.transform, visual.transform, palette);
+                    break;
+                case CaravanPartKind.CouplingRope:
+                    root.AddComponent<CaravanCouplingRopeModule>().Configure();
+                    CreateMaterialPorts(root.transform, part, kind, palette);
+                    break;
+                default:
+                    throw new ArgumentOutOfRangeException(nameof(kind), kind, null);
             }
 
             module.RefreshRendererCache();
             return module;
-        }
-
-        private static PartSpec GetSpec(CaravanPartKind kind)
-        {
-            return kind switch
-            {
-                CaravanPartKind.PhotovoltaicLeaves => new PartSpec(
-                    "photovoltaic-leaves", "Photovoltaic Leaves", 3, 3, 180f, 18f),
-                CaravanPartKind.Battery => new PartSpec(
-                    "battery", "Electric Battery", 2, 2, 310f, 120f),
-                CaravanPartKind.WaterReservoir => new PartSpec(
-                    "water-reservoir", "Water Reservoir", 2, 3, 820f, 900f),
-                CaravanPartKind.DualModePump => new PartSpec(
-                    "dual-mode-pump", "Dual-mode Pump", 1, 2, 125f, 24f),
-                CaravanPartKind.Radiator => new PartSpec(
-                    "radiator", "Wind Radiator", 2, 2, 175f, 32f),
-                CaravanPartKind.Biofurnace => new PartSpec(
-                    "biofurnace", "Biofurnace", 2, 2, 285f, 80f),
-                CaravanPartKind.BiofuelEngine => new PartSpec(
-                    "biofuel-engine", "Biofuel Engine", 2, 2, 430f, 55f),
-                CaravanPartKind.ElectricMotor => new PartSpec(
-                    "electric-motor", "Electric Motor", 2, 2, 255f, 55f),
-                CaravanPartKind.Harvester => new PartSpec(
-                    "harvester", "Biomass Harvester", 4, 2, 380f, 90f),
-                CaravanPartKind.GrassDryer => new PartSpec(
-                    "grass-dryer", "Grass Dryer", 2, 3, 315f, 240f),
-                CaravanPartKind.BiomassStorage => new PartSpec(
-                    "biomass-storage", "Dry Biomass Storage", 2, 3, 270f, 600f),
-                CaravanPartKind.Transmission => new PartSpec(
-                    "transmission", "Transmission", 1, 2, 190f, 8f),
-                CaravanPartKind.CouplingRope => new PartSpec(
-                    "coupling-rope", "Coupling Rope", 2, 1, 95f, 24f),
-                _ => throw new ArgumentOutOfRangeException(nameof(kind), kind, null)
-            };
         }
 
         private static void BuildVisual(
@@ -195,6 +231,9 @@ namespace Steppe.Caravan
         {
             switch (kind)
             {
+                case CaravanPartKind.Sail:
+                    BuildSail(root, palette);
+                    break;
                 case CaravanPartKind.PhotovoltaicLeaves:
                     BuildPhotovoltaicLeaves(root, palette);
                     break;
@@ -237,6 +276,61 @@ namespace Steppe.Caravan
                 default:
                     throw new ArgumentOutOfRangeException(nameof(kind), kind, null);
             }
+        }
+
+        private static void BuildSail(Transform root, CaravanPartPalette p)
+        {
+            Primitive(
+                "Mast",
+                PrimitiveType.Cylinder,
+                root,
+                new Vector3(-0.72f, 2.15f, 0f),
+                new Vector3(0.1f, 2.28f, 0.1f),
+                p.DarkMetal);
+            var pivot = new GameObject("Sail Pivot");
+            pivot.transform.SetParent(root, false);
+            pivot.transform.localPosition = new Vector3(-0.66f, 2.2f, 0f);
+            Primitive(
+                "Top Spar",
+                PrimitiveType.Cube,
+                pivot.transform,
+                new Vector3(1.32f, 1.75f, 0f),
+                new Vector3(2.82f, 0.08f, 0.08f),
+                p.DarkMetal);
+            Primitive(
+                "Bottom Spar",
+                PrimitiveType.Cube,
+                pivot.transform,
+                new Vector3(1.32f, -1.65f, 0f),
+                new Vector3(2.82f, 0.08f, 0.08f),
+                p.DarkMetal);
+            Primitive(
+                "Sail Cloth",
+                PrimitiveType.Cube,
+                pivot.transform,
+                new Vector3(1.32f, 0.05f, 0f),
+                new Vector3(2.55f, 3.25f, 0.04f),
+                p.Solar);
+
+            var vane = new GameObject("Wind Vane");
+            vane.transform.SetParent(root, false);
+            vane.transform.localPosition = new Vector3(-0.72f, 4.58f, 0f);
+            var vanePivot = new GameObject("Vane Pivot");
+            vanePivot.transform.SetParent(vane.transform, false);
+            Primitive(
+                "Vane Arrow",
+                PrimitiveType.Cube,
+                vanePivot.transform,
+                new Vector3(0f, 0f, 0.4f),
+                new Vector3(0.08f, 0.08f, 1.15f),
+                p.Copper);
+            Primitive(
+                "Vane Tail",
+                PrimitiveType.Cube,
+                vanePivot.transform,
+                new Vector3(0f, 0.18f, -0.48f),
+                new Vector3(0.5f, 0.42f, 0.06f),
+                p.Solar);
         }
 
         private static void BuildPhotovoltaicLeaves(Transform root, CaravanPartPalette p)
@@ -401,6 +495,9 @@ namespace Steppe.Caravan
                 CaravanPartKind.PhotovoltaicLeaves => new Vector3(-1.08f, 0.38f, -1.08f),
                 CaravanPartKind.Battery => new Vector3(0.62f, 0.78f, -0.62f),
                 CaravanPartKind.ElectricMotor => new Vector3(-0.68f, 0.74f, -0.58f),
+                CaravanPartKind.DualModePump => new Vector3(0f, 1.42f, -0.28f),
+                CaravanPartKind.Harvester => new Vector3(-1.35f, 0.82f, -0.58f),
+                CaravanPartKind.GrassDryer => new Vector3(-0.7f, 1.45f, -0.88f),
                 _ => Vector3.zero
             };
             Primitive("Terminal Block", PrimitiveType.Cube, portRoot.transform,
@@ -428,10 +525,329 @@ namespace Steppe.Caravan
                 CaravanPartKind.PhotovoltaicLeaves => CaravanElectricalPortKind.Generator,
                 CaravanPartKind.Battery => CaravanElectricalPortKind.Storage,
                 CaravanPartKind.ElectricMotor => CaravanElectricalPortKind.Consumer,
+                CaravanPartKind.DualModePump => CaravanElectricalPortKind.Consumer,
+                CaravanPartKind.Harvester => CaravanElectricalPortKind.Consumer,
+                CaravanPartKind.GrassDryer => CaravanElectricalPortKind.Consumer,
                 _ => throw new ArgumentOutOfRangeException(nameof(kind), kind, null)
             };
             port.Configure(part, portKind, buildMarker);
             return port;
+        }
+
+        private static void CreateFluidPorts(
+            Transform moduleRoot,
+            CaravanPart part,
+            CaravanPartKind kind,
+            CaravanPartPalette palette)
+        {
+            switch (kind)
+            {
+                case CaravanPartKind.WaterReservoir:
+                    CreateFluidPort(
+                        moduleRoot,
+                        part,
+                        CaravanFluidPortRole.ReservoirSupply,
+                        new Vector3(-0.72f, 0.42f, -0.92f),
+                        palette);
+                    CreateFluidPort(
+                        moduleRoot,
+                        part,
+                        CaravanFluidPortRole.ReservoirReturn,
+                        new Vector3(0.72f, 0.42f, -0.92f),
+                        palette);
+                    break;
+                case CaravanPartKind.DualModePump:
+                    CreateFluidPort(
+                        moduleRoot,
+                        part,
+                        CaravanFluidPortRole.PumpInlet,
+                        new Vector3(-0.42f, 0.3f, 0f),
+                        palette);
+                    CreateFluidPort(
+                        moduleRoot,
+                        part,
+                        CaravanFluidPortRole.PumpOutlet,
+                        new Vector3(0.42f, 0.78f, 0f),
+                        palette);
+                    break;
+                case CaravanPartKind.Radiator:
+                    CreateFluidPort(
+                        moduleRoot,
+                        part,
+                        CaravanFluidPortRole.RadiatorInlet,
+                        new Vector3(-0.72f, 0.92f, -0.24f),
+                        palette);
+                    CreateFluidPort(
+                        moduleRoot,
+                        part,
+                        CaravanFluidPortRole.RadiatorOutlet,
+                        new Vector3(0.72f, 0.92f, -0.24f),
+                        palette);
+                    break;
+                default:
+                    throw new ArgumentOutOfRangeException(nameof(kind), kind, null);
+            }
+        }
+
+        private static CaravanFluidPort CreateFluidPort(
+            Transform moduleRoot,
+            CaravanPart part,
+            CaravanFluidPortRole role,
+            Vector3 position,
+            CaravanPartPalette palette)
+        {
+            var portRoot = new GameObject(role.ToString());
+            portRoot.transform.SetParent(moduleRoot, false);
+            portRoot.transform.localPosition = position;
+            Primitive(
+                "Pipe Socket",
+                PrimitiveType.Cylinder,
+                portRoot.transform,
+                Vector3.zero,
+                new Vector3(0.13f, 0.16f, 0.13f),
+                palette.Water).transform.localRotation =
+                Quaternion.Euler(90f, 0f, 0f);
+            var buildMarker = Primitive(
+                "Fluid Build Marker",
+                PrimitiveType.Sphere,
+                portRoot.transform,
+                new Vector3(0f, 0.3f, 0f),
+                new Vector3(0.14f, 0.14f, 0.14f),
+                palette.Condition);
+            var markerLight = buildMarker.AddComponent<Light>();
+            markerLight.type = LightType.Point;
+            markerLight.range = 0.75f;
+            markerLight.intensity = 0.45f;
+            markerLight.shadows = LightShadows.None;
+            var port = portRoot.AddComponent<CaravanFluidPort>();
+            port.Configure(part, role, buildMarker);
+            return port;
+        }
+
+        private static void CreateFluidTap(
+            Transform moduleRoot,
+            CaravanPart part,
+            CaravanPartPalette palette)
+        {
+            CreateFluidPort(
+                moduleRoot,
+                part,
+                CaravanFluidPortRole.ThermalTap,
+                new Vector3(0.72f, 0.48f, -0.72f),
+                palette);
+        }
+
+        private static void CreateMaterialPorts(
+            Transform moduleRoot,
+            CaravanPart part,
+            CaravanPartKind kind,
+            CaravanPartPalette palette)
+        {
+            switch (kind)
+            {
+                case CaravanPartKind.DualModePump:
+                    CreateMaterialPort(
+                        moduleRoot,
+                        part,
+                        CaravanMaterialPortRole.MechanicalConsumer,
+                        new Vector3(0.36f, 1.22f, 0.42f),
+                        palette);
+                    break;
+                case CaravanPartKind.Biofurnace:
+                    CreateMaterialPort(
+                        moduleRoot,
+                        part,
+                        CaravanMaterialPortRole.DryBiomassInput,
+                        new Vector3(-0.62f, 0.42f, -0.52f),
+                        palette);
+                    break;
+                case CaravanPartKind.BiofuelEngine:
+                    CreateMaterialPort(
+                        moduleRoot,
+                        part,
+                        CaravanMaterialPortRole.DryBiomassInput,
+                        new Vector3(-0.62f, 0.42f, -0.62f),
+                        palette);
+                    CreateMaterialPort(
+                        moduleRoot,
+                        part,
+                        CaravanMaterialPortRole.MechanicalSource,
+                        new Vector3(0.72f, 0.62f, 0.48f),
+                        palette);
+                    break;
+                case CaravanPartKind.ElectricMotor:
+                    CreateMaterialPort(
+                        moduleRoot,
+                        part,
+                        CaravanMaterialPortRole.MechanicalSource,
+                        new Vector3(0.72f, 0.7f, 0.58f),
+                        palette);
+                    break;
+                case CaravanPartKind.Harvester:
+                    CreateMaterialPort(
+                        moduleRoot,
+                        part,
+                        CaravanMaterialPortRole.WetBiomassOutput,
+                        new Vector3(1.45f, 0.42f, -0.72f),
+                        palette);
+                    CreateMaterialPort(
+                        moduleRoot,
+                        part,
+                        CaravanMaterialPortRole.MechanicalConsumer,
+                        new Vector3(-1.45f, 0.62f, -0.72f),
+                        palette);
+                    break;
+                case CaravanPartKind.GrassDryer:
+                    CreateMaterialPort(
+                        moduleRoot,
+                        part,
+                        CaravanMaterialPortRole.WetBiomassInput,
+                        new Vector3(-0.72f, 0.38f, -0.92f),
+                        palette);
+                    CreateMaterialPort(
+                        moduleRoot,
+                        part,
+                        CaravanMaterialPortRole.DryBiomassOutput,
+                        new Vector3(0.72f, 0.38f, -0.92f),
+                        palette);
+                    break;
+                case CaravanPartKind.BiomassStorage:
+                    CreateMaterialPort(
+                        moduleRoot,
+                        part,
+                        CaravanMaterialPortRole.DryBiomassInput,
+                        new Vector3(-0.72f, 0.42f, -1.02f),
+                        palette);
+                    CreateMaterialPort(
+                        moduleRoot,
+                        part,
+                        CaravanMaterialPortRole.DryBiomassOutput,
+                        new Vector3(0.72f, 0.42f, -1.02f),
+                        palette,
+                        2);
+                    break;
+                case CaravanPartKind.Transmission:
+                    CreateMaterialPort(
+                        moduleRoot,
+                        part,
+                        CaravanMaterialPortRole.TransmissionInput,
+                        new Vector3(0f, 0.48f, -0.72f),
+                        palette,
+                        2);
+                    CreateMaterialPort(
+                        moduleRoot,
+                        part,
+                        CaravanMaterialPortRole.TransmissionOutput,
+                        new Vector3(0f, 0.48f, 0.72f),
+                        palette,
+                        2);
+                    break;
+                case CaravanPartKind.CouplingRope:
+                    CreateMaterialPort(
+                        moduleRoot,
+                        part,
+                        CaravanMaterialPortRole.CouplingEndpoint,
+                        new Vector3(0f, 0.42f, -0.62f),
+                        palette);
+                    break;
+                default:
+                    throw new ArgumentOutOfRangeException(nameof(kind), kind, null);
+            }
+        }
+
+        private static CaravanMaterialPort CreateMaterialPort(
+            Transform moduleRoot,
+            CaravanPart part,
+            CaravanMaterialPortRole role,
+            Vector3 position,
+            CaravanPartPalette palette,
+            int connectionCapacity = 1)
+        {
+            var portRoot = new GameObject(role.ToString());
+            portRoot.transform.SetParent(moduleRoot, false);
+            portRoot.transform.localPosition = position;
+            var material = role <= CaravanMaterialPortRole.DryBiomassInput
+                ? palette.Biomass
+                : palette.Copper;
+            Primitive(
+                "Material Socket",
+                PrimitiveType.Cylinder,
+                portRoot.transform,
+                Vector3.zero,
+                new Vector3(0.14f, 0.17f, 0.14f),
+                material).transform.localRotation =
+                Quaternion.Euler(90f, 0f, 0f);
+            var marker = Primitive(
+                "Material Build Marker",
+                PrimitiveType.Sphere,
+                portRoot.transform,
+                new Vector3(0f, 0.31f, 0f),
+                new Vector3(0.14f, 0.14f, 0.14f),
+                palette.Condition);
+            var markerLight = marker.AddComponent<Light>();
+            markerLight.type = LightType.Point;
+            markerLight.range = 0.75f;
+            markerLight.intensity = 0.45f;
+            markerLight.shadows = LightShadows.None;
+            var port = portRoot.AddComponent<CaravanMaterialPort>();
+            port.Configure(
+                part,
+                role,
+                marker,
+                connectionCapacity);
+            return port;
+        }
+
+        private static CaravanControlStation CreateModuleControl(
+            Transform moduleRoot,
+            Transform visualRoot,
+            CaravanPartPalette palette)
+        {
+            var station = moduleRoot.GetComponent<CaravanControlStation>()
+                          ?? moduleRoot.gameObject.AddComponent<CaravanControlStation>();
+            var control = new GameObject("Module Control");
+            control.transform.SetParent(visualRoot, false);
+            control.transform.localPosition = new Vector3(
+                0f,
+                1.52f,
+                -0.54f);
+            Primitive(
+                "Control Base",
+                PrimitiveType.Cylinder,
+                control.transform,
+                Vector3.zero,
+                new Vector3(0.18f, 0.1f, 0.18f),
+                palette.DarkMetal);
+            var controlVisual = new GameObject("Control Visual");
+            controlVisual.transform.SetParent(control.transform, false);
+            Primitive(
+                "Control Lever",
+                PrimitiveType.Cube,
+                controlVisual.transform,
+                new Vector3(0f, 0.28f, 0f),
+                new Vector3(0.08f, 0.54f, 0.08f),
+                palette.Copper);
+            Primitive(
+                "Control Grip",
+                PrimitiveType.Sphere,
+                controlVisual.transform,
+                new Vector3(0f, 0.58f, 0f),
+                new Vector3(0.16f, 0.16f, 0.16f),
+                palette.Metal);
+            var indicator = Primitive(
+                "Focus Indicator",
+                PrimitiveType.Sphere,
+                control.transform,
+                new Vector3(0.34f, 0.22f, -0.04f),
+                new Vector3(0.1f, 0.1f, 0.1f),
+                palette.Condition);
+            var light = indicator.AddComponent<Light>();
+            light.type = LightType.Point;
+            light.range = 0.8f;
+            light.intensity = 0.55f;
+            light.shadows = LightShadows.None;
+            indicator.SetActive(false);
+            return station;
         }
 
         private static void BuildHarvester(Transform root, CaravanPartPalette p)

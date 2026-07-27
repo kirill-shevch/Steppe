@@ -7,7 +7,15 @@ namespace Steppe.Caravan
     {
         Steering,
         SailTrim,
-        ElectricThrottle
+        ElectricThrottle,
+        SolarOrientation,
+        PumpMode,
+        RadiatorOpening,
+        FurnaceIntensity,
+        BiofuelThrottle,
+        HarvesterPower,
+        DryerPower,
+        TransmissionRatio
     }
 
     [DisallowMultipleComponent]
@@ -16,6 +24,7 @@ namespace Steppe.Caravan
         private CaravanControlKind kind;
         private CaravanChassisController chassis;
         private CaravanSailModule sail;
+        private ICaravanControlTarget moduleTarget;
         private Transform controlVisual;
         private GameObject focusIndicator;
         private Vector3 indicatorBaseScale;
@@ -66,6 +75,32 @@ namespace Steppe.Caravan
             kind = CaravanControlKind.ElectricThrottle;
             SetFocused(false);
             SetNormalized(-1f);
+        }
+
+        public void ConfigureModule(
+            CaravanControlKind controlKind,
+            ICaravanControlTarget target,
+            Transform visual,
+            GameObject indicator = null)
+        {
+            if (controlKind <= CaravanControlKind.ElectricThrottle)
+            {
+                throw new ArgumentOutOfRangeException(
+                    nameof(controlKind),
+                    controlKind,
+                    "Use a specialized control configuration for chassis, sail or electric throttle.");
+            }
+
+            moduleTarget = target
+                           ?? throw new ArgumentNullException(nameof(target));
+            controlVisual = visual;
+            focusIndicator = indicator;
+            indicatorBaseScale = indicator != null
+                ? indicator.transform.localScale
+                : Vector3.one;
+            kind = controlKind;
+            SetFocused(false);
+            SetNormalized(moduleTarget.ControlNormalized);
         }
 
         public void SetFocused(bool focused)
@@ -119,6 +154,21 @@ namespace Steppe.Caravan
                     break;
                 case CaravanControlKind.ElectricThrottle:
                     chassis?.SetElectricDriveThrottle((normalizedValue + 1f) * 0.5f);
+                    if (controlVisual != null)
+                    {
+                        controlVisual.localRotation =
+                            Quaternion.Euler(normalizedValue * 42f, 0f, 0f);
+                    }
+                    break;
+                case CaravanControlKind.SolarOrientation:
+                case CaravanControlKind.PumpMode:
+                case CaravanControlKind.RadiatorOpening:
+                case CaravanControlKind.FurnaceIntensity:
+                case CaravanControlKind.BiofuelThrottle:
+                case CaravanControlKind.HarvesterPower:
+                case CaravanControlKind.DryerPower:
+                case CaravanControlKind.TransmissionRatio:
+                    moduleTarget?.SetControlNormalized(normalizedValue);
                     if (controlVisual != null)
                     {
                         controlVisual.localRotation =

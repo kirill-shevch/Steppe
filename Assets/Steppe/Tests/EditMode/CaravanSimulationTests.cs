@@ -2,6 +2,8 @@ using NUnit.Framework;
 using Steppe.Caravan;
 using Steppe.Time;
 using Steppe.Weather;
+using System;
+using System.Collections.Generic;
 using UnityEngine;
 
 namespace Steppe.Tests
@@ -107,6 +109,78 @@ namespace Steppe.Tests
             Assert.That(
                 grid.TryPlace(new object(), new CaravanGridPlacement(3, 7, 2, 2, 0)),
                 Is.False);
+        }
+
+        [Test]
+        public void PartCatalogueOwnsOneStableDefinitionForEveryTechnicalKind()
+        {
+            var ids = new HashSet<string>(StringComparer.Ordinal);
+            var definitions = CaravanPartCatalog.All;
+
+            Assert.That(
+                definitions.Count,
+                Is.EqualTo(Enum.GetValues(typeof(CaravanPartKind)).Length));
+            for (var index = 0; index < definitions.Count; index++)
+            {
+                var definition = definitions[index];
+                Assert.That(ids.Add(definition.Id), Is.True, definition.Id);
+                Assert.That(
+                    CaravanPartCatalog.Get(definition.Kind),
+                    Is.SameAs(definition));
+                Assert.That(
+                    CaravanPartCatalog.TryGet(definition.Id, out var byId),
+                    Is.True);
+                Assert.That(byId, Is.SameAs(definition));
+                Assert.That(definition.FootprintWidth, Is.GreaterThan(0));
+                Assert.That(definition.FootprintLength, Is.GreaterThan(0));
+                Assert.That(definition.MassKilograms, Is.GreaterThan(0f));
+            }
+            Assert.That(
+                CaravanConstructionService.AvailablePartKinds.Count,
+                Is.EqualTo(definitions.Count));
+            for (var index = 0;
+                 index < CaravanConstructionService.AvailablePartKinds.Count;
+                 index++)
+            {
+                Assert.That(
+                    CaravanPartCatalog.Get(
+                        CaravanConstructionService.AvailablePartKinds[index]),
+                    Is.Not.Null);
+            }
+        }
+
+        [Test]
+        public void ModuleInstancesReceiveUniqueIdsAndCanRestoreStableIdentity()
+        {
+            var firstObject = new GameObject("First Module");
+            var secondObject = new GameObject("Second Module");
+            var restoredObject = new GameObject("Restored Module");
+            try
+            {
+                var first = firstObject.AddComponent<CaravanModule>();
+                first.Configure("battery", first.transform, true, 2, 2);
+                var second = secondObject.AddComponent<CaravanModule>();
+                second.Configure("battery", second.transform, true, 2, 2);
+                var restored = restoredObject.AddComponent<CaravanModule>();
+                restored.Configure(
+                    "battery",
+                    restored.transform,
+                    true,
+                    2,
+                    2,
+                    instanceId: "saved-battery-17");
+
+                Assert.That(first.InstanceId, Is.Not.Empty);
+                Assert.That(second.InstanceId, Is.Not.Empty);
+                Assert.That(first.InstanceId, Is.Not.EqualTo(second.InstanceId));
+                Assert.That(restored.InstanceId, Is.EqualTo("saved-battery-17"));
+            }
+            finally
+            {
+                UnityEngine.Object.DestroyImmediate(firstObject);
+                UnityEngine.Object.DestroyImmediate(secondObject);
+                UnityEngine.Object.DestroyImmediate(restoredObject);
+            }
         }
 
         [Test]
@@ -223,6 +297,147 @@ namespace Steppe.Tests
             Assert.That(flow.DeficitKilowatts, Is.EqualTo(55f).Within(0.0001f));
             Assert.That(flow.BatteryChargeKilowatts, Is.EqualTo(18f).Within(0.0001f));
             Assert.That(flow.StoredKilowattHours, Is.EqualTo(18.46f).Within(0.0001f));
+        }
+
+        [Test]
+        public void WaterCircuitRequiresClosedPipesAndPumpPower()
+        {
+            var openCircuit = CaravanWaterCircuitModel.Evaluate(
+                315f,
+                70f,
+                18f,
+                24f,
+                1f,
+                100f,
+                8f,
+                60f,
+                false);
+            var unpoweredCircuit = CaravanWaterCircuitModel.Evaluate(
+                315f,
+                70f,
+                18f,
+                24f,
+                0f,
+                32f,
+                8f,
+                60f,
+                true);
+
+            Assert.That(openCircuit.FlowLitresPerSecond, Is.Zero);
+            Assert.That(openCircuit.CoolingKilowatts, Is.Zero);
+            Assert.That(openCircuit.TemperatureCelsius, Is.EqualTo(70f));
+            Assert.That(unpoweredCircuit.FlowLitresPerSecond, Is.Zero);
+            Assert.That(unpoweredCircuit.CoolingKilowatts, Is.Zero);
+            Assert.That(unpoweredCircuit.TemperatureCelsius, Is.EqualTo(70f));
+        }
+
+        [Test]
+        public void PoweredWaterCircuitCoolsReservoirAndBenefitsFromWind()
+        {
+            var stillAir = CaravanWaterCircuitModel.Evaluate(
+                315f,
+                70f,
+                18f,
+                24f,
+                1f,
+                100f,
+                0f,
+                60f,
+                true);
+            var windy = CaravanWaterCircuitModel.Evaluate(
+                315f,
+                70f,
+                18f,
+                24f,
+                1f,
+                100f,
+                14f,
+                60f,
+                true);
+
+            Assert.That(stillAir.FlowLitresPerSecond, Is.EqualTo(24f));
+            Assert.That(stillAir.CoolingKilowatts, Is.GreaterThan(0f));
+            Assert.That(stillAir.TemperatureCelsius, Is.LessThan(70f));
+            Assert.That(windy.CoolingKilowatts, Is.GreaterThan(stillAir.CoolingKilowatts));
+            Assert.That(windy.TemperatureCelsius, Is.LessThan(stillAir.TemperatureCelsius));
+        }
+
+        [Test]
+        public void BiomassDryingConservesDryMatterAndRecoveredWater()
+        {
+            var result = CaravanBiomassModel.Dry(
+                10f,
+                0.62f,
+                2f,
+                0.75f,
+                0.1f,
+                4f);
+
+            Assert.That(result.ProcessedWetKilograms, Is.EqualTo(6f).Within(0.0001f));
+            Assert.That(result.DryBiomassKilograms, Is.EqualTo(2.28f).Within(0.0001f));
+            Assert.That(result.RecoveredWaterLitres, Is.EqualTo(3.72f).Within(0.0001f));
+            Assert.That(
+                result.DryBiomassKilograms + result.RecoveredWaterLitres,
+                Is.EqualTo(result.ProcessedWetKilograms).Within(0.0001f));
+        }
+
+        [Test]
+        public void EcologyExtractionSubtractsOnlyAvailableResources()
+        {
+            var state = new Steppe.Ecology.SteppeEcoCellState(
+                0.2,
+                0.3,
+                0.4,
+                0.65,
+                0.5,
+                0.1,
+                0.2,
+                0.15,
+                42.0);
+
+            var remaining = state.Extract(
+                0.5,
+                0.1,
+                0.04,
+                0.12,
+                out var extraction);
+
+            Assert.That(extraction.SurfaceWater, Is.EqualTo(0.2).Within(0.000001));
+            Assert.That(extraction.RootWater, Is.EqualTo(0.1).Within(0.000001));
+            Assert.That(extraction.SnowWater, Is.EqualTo(0.04).Within(0.000001));
+            Assert.That(extraction.Biomass, Is.EqualTo(0.12).Within(0.000001));
+            Assert.That(remaining.SurfaceWater, Is.Zero.Within(0.000001));
+            Assert.That(remaining.RootWater, Is.EqualTo(0.2).Within(0.000001));
+            Assert.That(remaining.SnowWater, Is.EqualTo(0.06).Within(0.000001));
+            Assert.That(remaining.Biomass, Is.EqualTo(0.28).Within(0.000001));
+            Assert.That(remaining.GreenFraction, Is.EqualTo(state.GreenFraction));
+        }
+
+        [Test]
+        public void CouplingRopeIsSlackThenLoadsAndBreaksProgressively()
+        {
+            var slack = CaravanCouplingRopeModel.Evaluate(
+                8f,
+                10f,
+                5000f,
+                20000f);
+            var loaded = CaravanCouplingRopeModel.Evaluate(
+                12f,
+                10f,
+                5000f,
+                20000f);
+            var broken = CaravanCouplingRopeModel.Evaluate(
+                15f,
+                10f,
+                5000f,
+                20000f);
+
+            Assert.That(slack.TensionNewtons, Is.Zero);
+            Assert.That(slack.Broken, Is.False);
+            Assert.That(loaded.TensionNewtons, Is.EqualTo(10000f));
+            Assert.That(loaded.Broken, Is.False);
+            Assert.That(broken.TensionNewtons, Is.EqualTo(20000f));
+            Assert.That(broken.Broken, Is.True);
         }
 
         [Test]
