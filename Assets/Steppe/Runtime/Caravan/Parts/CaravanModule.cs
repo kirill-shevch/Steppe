@@ -93,6 +93,12 @@ namespace Steppe.Caravan
             PayloadMassKilograms = Mathf.Max(0f, massKilograms);
         }
 
+        public void RestoreState(float dust, float integrity, float load)
+        {
+            State.Restore(dust, integrity, load);
+            UpdatePresentation();
+        }
+
         public void SetVisualVisible(bool visible)
         {
             if (visualRoot != null)

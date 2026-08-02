@@ -1,5 +1,8 @@
 # P16 — Player readability and onboarding
 
+> **Historical implementation note:** P18 replaces this electrical starting
+> sequence with the sail, salvage, storage and platform-expansion opening.
+
 P16 begins the transition from a simulation prototype to a readable caravan game.
 It does not add another technical system. Instead, it translates existing state into
 player-facing causes and gives the opening minutes a concrete sequence.

@@ -20,16 +20,21 @@ namespace Steppe.Terrain
         private Transform worldSpaceRoot;
         private WorldWorkScheduler workScheduler;
         private TerrainHeightGenerator generator;
+        private TerrainPhysicsSurface physicsSurface;
         private SteppeSurfaceGenerator surfaceGenerator;
         private Material terrainMaterial;
         private bool ownsMaterial;
         private bool hasCenter;
+        private bool physicsRebuildRequested;
         private ChunkCoordinate center;
 
         public int LoadedCount => loaded.Count;
         public int PendingCount => pending.Count;
         public ChunkCoordinate CenterCoordinate => center;
-        public bool HasPendingWorldWork => pending.Count > 0;
+        public bool HasPendingWorldWork => physicsRebuildRequested || pending.Count > 0;
+        public bool PhysicsSurfaceReady => physicsSurface != null && physicsSurface.IsReady;
+        public int PhysicsSurfaceVertexCount => physicsSurface != null ? physicsSurface.VertexCount : 0;
+        public int ActivePhysicsSurfaceCount => physicsSurface != null ? physicsSurface.ActiveColliderCount : 0;
 
         public event Action<ChunkCoordinate, int> ChunkReady;
         public event Action<ChunkCoordinate> ChunkRemoved;
@@ -48,6 +53,7 @@ namespace Steppe.Terrain
             worldSpaceRoot = root != null ? root : throw new ArgumentNullException(nameof(root));
             workScheduler = scheduler != null ? scheduler : throw new ArgumentNullException(nameof(scheduler));
             generator = new TerrainHeightGenerator(settings);
+            physicsSurface = new TerrainPhysicsSurface(worldSpaceRoot);
             surfaceGenerator = new SteppeSurfaceGenerator(settings);
 
             if (material != null)
@@ -89,8 +95,7 @@ namespace Steppe.Terrain
                 return false;
             }
 
-            var coordinate = ChunkCoordinate.FromWorld(worldX, worldZ, settings.ChunkSize);
-            return loaded.TryGetValue(coordinate, out var chunk) && chunk.HasPhysicsCollider;
+            return physicsSurface != null && physicsSurface.Contains(worldX, worldZ);
         }
 
         private void Update()
@@ -163,10 +168,24 @@ namespace Steppe.Terrain
             }
 
             pending.Sort((left, right) => left.DistanceSquared.CompareTo(right.DistanceSquared));
+            physicsRebuildRequested = true;
         }
 
         public void ExecuteWorldWorkStep()
         {
+            if (physicsRebuildRequested)
+            {
+                physicsSurface.Rebuild(
+                    generator,
+                    center,
+                    settings.NearRadius,
+                    settings.ChunkSize,
+                    settings.NearResolution,
+                    floatingOrigin);
+                physicsRebuildRequested = false;
+                return;
+            }
+
             if (pending.Count == 0)
             {
                 return;
@@ -195,7 +214,8 @@ namespace Steppe.Terrain
                 settings.ChunkSize,
                 resolution,
                 settings.SkirtDepth,
-                surfaceGenerator);
+                surfaceGenerator,
+                includeSkirts: request.Lod > 0);
             chunk.Apply(
                 request.Coordinate,
                 request.Lod,
@@ -259,6 +279,8 @@ namespace Steppe.Terrain
 
             loaded.Clear();
             pool.Clear();
+            physicsSurface?.Dispose();
+            physicsSurface = null;
 
             if (ownsMaterial && terrainMaterial != null)
             {

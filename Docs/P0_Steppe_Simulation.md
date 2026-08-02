@@ -37,6 +37,12 @@ Future weather systems must query the camera through `FloatingOriginSystem.Local
 - Negative and very large coordinates map to stable chunk coordinates.
 - Adjacent chunks share height samples even when rendered at different LODs.
 - Moving across chunk boundaries streams new terrain without changing previously defined coordinates.
+- Middle- and far-LOD render meshes use outward-facing skirts to hide gaps between
+  different LOD edges. Near chunks omit skirts and all terrain renderers disable
+  terrain shadow casting so vertical LOD walls cannot paint rectangular shadows.
+- Rolling physics uses one double-buffered `5 × 5`-chunk collision carpet around the
+  caravan. Render chunks carry no colliders, so their borders cannot act as separate
+  collision edges or turn the vehicle sideways.
 - Floating-origin shifts do not change the observer's absolute position.
 - Sparse author stamps can change one region without making the world player-randomized.
 - Loaded chunk count remains bounded by the configured streaming radius.
@@ -51,5 +57,8 @@ Future weather systems must query the camera through `FloatingOriginSystem.Local
 
 ## Automated coverage
 
-- EditMode tests verify coordinate flooring, deterministic large-coordinate height sampling, cross-LOD chunk edges, and authored override locality.
-- PlayMode smoke tests verify that the runtime bootstrap creates a collision-free flying camera, starts terrain streaming, and preserves absolute coordinates through a floating-origin shift.
+- EditMode tests verify coordinate flooring, deterministic large-coordinate height
+  sampling, cross-LOD chunk edges, skirt winding/omission, and authored override locality.
+- PlayMode smoke tests verify that the runtime bootstrap creates a collision-free
+  flying camera, starts terrain streaming, uses one continuous collider across former
+  chunk borders, and preserves absolute coordinates through a floating-origin shift.

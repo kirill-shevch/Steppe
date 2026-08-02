@@ -45,12 +45,20 @@ namespace Steppe.Tests
                 item => item.Kind == CaravanMaterialNetworkKind.Mechanical);
             var resourceSystem =
                 Object.FindAnyObjectByType<CaravanResourceSystem>();
+            var progression =
+                Object.FindAnyObjectByType<CaravanProgressionSystem>();
+            var platform =
+                Object.FindAnyObjectByType<CaravanPlatformController>();
+            var grid = Object.FindAnyObjectByType<CaravanMountGrid>();
+            var resourceCrate =
+                Object.FindAnyObjectByType<CaravanResourceCrateModule>();
             var construction =
                 Object.FindAnyObjectByType<CaravanConstructionService>();
             var battery = Object.FindAnyObjectByType<CaravanBatteryModule>();
             var electricMotor = Object.FindAnyObjectByType<CaravanElectricMotorModule>();
             var buildMode = Object.FindAnyObjectByType<CaravanBuildModeController>();
             var interactor = Object.FindAnyObjectByType<CaravanPlayerInteractor>();
+            var playerHud = Object.FindAnyObjectByType<CaravanPlayerHud>();
             var controlStations = Object.FindObjectsByType<CaravanControlStation>(
                 FindObjectsInactive.Include);
             var tracks = Object.FindAnyObjectByType<SteppeTrackSystem>();
@@ -65,31 +73,33 @@ namespace Steppe.Tests
 
             Assert.That(firstPerson, Is.Not.Null);
             Assert.That(caravan, Is.Not.Null);
-            Assert.That(sail, Is.Null);
-            Assert.That(windVane, Is.Null);
-            Assert.That(photovoltaic, Is.Not.Null);
+            Assert.That(sail, Is.Not.Null);
+            Assert.That(windVane, Is.Not.Null);
+            Assert.That(photovoltaic, Is.Null);
             Assert.That(electricalNetwork, Is.Not.Null);
             Assert.That(fluidNetwork, Is.Not.Null);
             Assert.That(biomassNetwork, Is.Not.Null);
             Assert.That(mechanicalNetwork, Is.Not.Null);
             Assert.That(resourceSystem, Is.Not.Null);
+            Assert.That(progression, Is.Not.Null);
+            Assert.That(platform, Is.Not.Null);
+            Assert.That(grid, Is.Not.Null);
+            Assert.That(resourceCrate, Is.Not.Null);
             Assert.That(construction, Is.Not.Null);
-            Assert.That(battery, Is.Not.Null);
-            Assert.That(electricMotor, Is.Not.Null);
+            Assert.That(battery, Is.Null);
+            Assert.That(electricMotor, Is.Null);
             Assert.That(electricalNetwork.IsClosed, Is.False);
-            Assert.That(battery.StateOfCharge, Is.EqualTo(0.35f).Within(0.01f));
-            Assert.That(electricMotor.RequestedThrottle, Is.Zero);
             var electricalPorts = Object.FindObjectsByType<CaravanElectricalPort>(
                 FindObjectsInactive.Include);
             var electricalCables = Object.FindObjectsByType<CaravanElectricalCable>(
                 FindObjectsInactive.Include);
-            Assert.That(electricalPorts, Has.Length.EqualTo(3));
+            Assert.That(electricalPorts, Is.Empty);
             Assert.That(electricalCables, Is.Empty);
             Assert.That(fluidNetwork.Ports, Has.Count.EqualTo(1));
             Assert.That(fluidNetwork.Pipes, Is.Empty);
             Assert.That(biomassNetwork.Ports, Is.Empty);
             Assert.That(biomassNetwork.Links, Is.Empty);
-            Assert.That(mechanicalNetwork.Ports, Has.Count.EqualTo(1));
+            Assert.That(mechanicalNetwork.Ports, Is.Empty);
             Assert.That(mechanicalNetwork.Links, Is.Empty);
             var communicationPreview = GameObject.Find("Communication Cable Preview");
             Assert.That(communicationPreview, Is.Not.Null);
@@ -101,13 +111,10 @@ namespace Steppe.Tests
                     electricalPorts,
                     port => !port.IsBuildMarkerVisible),
                 Is.True);
-            Assert.That(
-                System.Array.Find(electricalPorts, port => port.Kind == CaravanElectricalPortKind.Storage)
-                    .ConnectedCableCount,
-                Is.Zero);
             Assert.That(buildMode, Is.Not.Null);
             Assert.That(interactor, Is.Not.Null);
-            Assert.That(controlStations, Has.Length.EqualTo(4));
+            Assert.That(playerHud, Is.Not.Null);
+            Assert.That(controlStations, Has.Length.EqualTo(3));
             var steeringStation = System.Array.Find(
                 controlStations,
                 station => station.Kind == CaravanControlKind.Steering);
@@ -125,9 +132,9 @@ namespace Steppe.Tests
                 station => station.Kind == CaravanControlKind.SolarOrientation);
             Assert.That(steeringStation, Is.Not.Null);
             Assert.That(brakeStation, Is.Not.Null);
-            Assert.That(trimStation, Is.Null);
-            Assert.That(motorStation, Is.Not.Null);
-            Assert.That(solarStation, Is.Not.Null);
+            Assert.That(trimStation, Is.Not.Null);
+            Assert.That(motorStation, Is.Null);
+            Assert.That(solarStation, Is.Null);
             Assert.That(
                 steeringStation.transform.Find("Control Visual/Wheel Rim 1"),
                 Is.Not.Null);
@@ -201,16 +208,11 @@ namespace Steppe.Tests
                 }
             }
             Assert.That(caravan.GetComponent<Rigidbody>(), Is.Not.Null);
-            Assert.That(caravan.Body.mass, Is.InRange(3300f, 3400f));
+            Assert.That(caravan.Body.mass, Is.InRange(1000f, 1100f));
             Assert.That(caravan.DefaultDriveEnabled, Is.False);
-            var deckSurface = GameObject.Find("Deck Build Surface");
+            var deckSurface = GameObject.Find("Platform Cell 0,0");
             Assert.That(deckSurface, Is.Not.Null);
             Assert.That(deckSurface.GetComponent<Rigidbody>(), Is.Null);
-            Assert.That(
-                photovoltaic.CurrentGenerationKilowatts,
-                Is.InRange(0f, photovoltaic.GetComponent<CaravanPart>().Capacity));
-            Assert.That(photovoltaic.CurrentIncidence, Is.InRange(0f, 1f));
-            Assert.That(photovoltaic.CurrentCloudTransmission, Is.InRange(0.06f, 1f));
             Assert.That(
                 Shader.GetGlobalFloat("_SteppeCloudTransmissionAtFocus"),
                 Is.InRange(0.06f, 1f));
@@ -223,12 +225,11 @@ namespace Steppe.Tests
                 Is.GreaterThan(0.98f),
                 "The caravan nose is not aligned with the initial surface wind.");
             var caravanParts = Object.FindObjectsByType<CaravanPart>();
-            Assert.That(caravanParts.Length, Is.EqualTo(3));
+            Assert.That(caravanParts.Length, Is.EqualTo(2));
             foreach (var kind in new[]
                      {
-                         CaravanPartKind.PhotovoltaicLeaves,
-                         CaravanPartKind.Battery,
-                         CaravanPartKind.ElectricMotor
+                         CaravanPartKind.Sail,
+                         CaravanPartKind.ResourceCrate
                      })
             {
                 Assert.That(
@@ -236,8 +237,105 @@ namespace Steppe.Tests
                     Is.True,
                     $"The initial caravan is missing the {kind} part.");
             }
-            Assert.That(Object.FindAnyObjectByType<CaravanMountGrid>().Width, Is.EqualTo(10));
-            Assert.That(Object.FindAnyObjectByType<CaravanMountGrid>().Length, Is.EqualTo(18));
+            Assert.That(grid.Width, Is.EqualTo(4));
+            Assert.That(grid.Length, Is.EqualTo(5));
+            Assert.That(platform.CellCount, Is.EqualTo(20));
+            Assert.That(
+                grid.TryGetPlacement(
+                    sail.GetComponent<CaravanModule>(),
+                    out var sailPlacement),
+                Is.True);
+            Assert.That(sailPlacement.X, Is.EqualTo(1));
+            Assert.That(sailPlacement.Z, Is.Zero,
+                "The starter sail must occupy the rear edge of the deck.");
+            Assert.That(sailPlacement.RotatedWidth, Is.EqualTo(2));
+            Assert.That(sailPlacement.RotatedLength, Is.EqualTo(2));
+            Assert.That(
+                grid.TryGetPlacement(
+                    resourceCrate.GetComponent<CaravanModule>(),
+                    out var cratePlacement),
+                Is.True);
+            Assert.That(cratePlacement.X, Is.EqualTo(3));
+            Assert.That(cratePlacement.Z, Is.EqualTo(4));
+            Assert.That(
+                caravan.transform.InverseTransformPoint(
+                    steeringStation.transform.position).z,
+                Is.EqualTo(2.38f).Within(0.01f));
+            Assert.That(
+                caravan.transform.InverseTransformPoint(
+                    brakeStation.transform.position).z,
+                Is.EqualTo(2.34f).Within(0.01f));
+            Assert.That(
+                HorizontalDistance(
+                    resourceCrate.transform.position,
+                    brakeStation.transform.position),
+                Is.LessThan(1.1f),
+                "The resource crate must remain next to the brake lever.");
+            Assert.That(
+                progression.IsRecipeKnown(CaravanPartKind.Sail),
+                Is.True);
+            Assert.That(
+                progression.IsRecipeKnown(CaravanPartKind.PhotovoltaicLeaves),
+                Is.False);
+            Assert.That(construction.KnownPartCount, Is.EqualTo(2));
+            Assert.That(
+                buildMode.SelectedConstructionKind,
+                Is.EqualTo(CaravanPartKind.Sail));
+            buildMode.CycleConstructionSelection(1);
+            Assert.That(
+                buildMode.SelectedConstructionKind,
+                Is.EqualTo(CaravanPartKind.ResourceCrate));
+            buildMode.CycleConstructionSelection(1);
+            Assert.That(
+                buildMode.SelectedConstructionKind,
+                Is.EqualTo(CaravanPartKind.Sail));
+            var progressionWrecks =
+                Object.FindObjectsByType<CaravanSalvageWreck>();
+            var progressionSites =
+                Object.FindObjectsByType<CaravanRecipeSite>();
+            Assert.That(
+                progressionWrecks,
+                Has.Length.EqualTo(10));
+            Assert.That(
+                progressionSites,
+                Has.Length.EqualTo(4));
+            Assert.That(
+                progressionWrecks.Length,
+                Is.GreaterThanOrEqualTo(progressionSites.Length * 2),
+                "Salvage encounters must be substantially more common than recipes.");
+            Assert.That(
+                System.Array.TrueForAll(
+                    progressionWrecks,
+                    wreck => wreck.DiscoveryGlowVisible),
+                Is.True,
+                "Every uncollected salvage wreck must advertise itself with a glow.");
+            Assert.That(
+                System.Array.TrueForAll(
+                    progressionSites,
+                    site => site.DiscoveryGlowVisible),
+                Is.True,
+                "Every unsearched recipe site must advertise itself with a glow.");
+            var discoveryDistances = new System.Collections.Generic.List<float>();
+            for (var index = 0; index < progressionWrecks.Length; index++)
+            {
+                discoveryDistances.Add(HorizontalDistance(
+                    caravan.transform.position,
+                    progressionWrecks[index].transform.position));
+            }
+            for (var index = 0; index < progressionSites.Length; index++)
+            {
+                discoveryDistances.Add(HorizontalDistance(
+                    caravan.transform.position,
+                    progressionSites[index].transform.position));
+            }
+            discoveryDistances.Sort();
+            Assert.That(discoveryDistances[0], Is.LessThan(100f));
+            for (var index = 1; index < discoveryDistances.Count; index++)
+            {
+                Assert.That(
+                    discoveryDistances[index] - discoveryDistances[index - 1],
+                    Is.InRange(2100f, 2700f));
+            }
             Assert.That(Object.FindObjectsByType<WheelCollider>().Length, Is.EqualTo(0));
             Assert.That(caravan.GetComponent("VPVehicleController"), Is.Not.Null);
             Assert.That(
@@ -261,7 +359,7 @@ namespace Steppe.Tests
             Assert.That(
                 streamer.HasPhysicsSurfaceAt(initialBallWorld.X, initialBallWorld.Z),
                 Is.True,
-                $"The near terrain chunk never exposed a physics collider. world={initialBallWorld}, "
+                $"The unified near terrain surface never exposed a physics collider. world={initialBallWorld}, "
                 + $"center={streamer.CenterCoordinate}, loaded={streamer.LoadedCount}, "
                 + $"lod={nearPhysicsLod}/{middlePhysicsLod}/{farPhysicsLod}, "
                 + $"meshColliders={Object.FindObjectsByType<MeshCollider>(FindObjectsInactive.Include).Length}");
@@ -270,7 +368,51 @@ namespace Steppe.Tests
                 yield return new WaitForFixedUpdate();
             }
             Assert.That(caravan.Body.isKinematic, Is.False, "Caravan never attached to a streamed terrain collider.");
-            Assert.That(Object.FindObjectsByType<MeshCollider>().Length, Is.GreaterThan(0));
+            var activeTerrainColliders = System.Array.FindAll(
+                Object.FindObjectsByType<MeshCollider>(),
+                collider => collider.name.StartsWith("Terrain Physics Surface"));
+            Assert.That(activeTerrainColliders, Has.Length.EqualTo(1));
+            Assert.That(streamer.ActivePhysicsSurfaceCount, Is.EqualTo(1));
+            Assert.That(
+                streamer.PhysicsSurfaceVertexCount,
+                Is.GreaterThan(10000),
+                "The physics carpet must span multiple near chunks in one mesh.");
+            var chunkColliders = System.Array.FindAll(
+                Object.FindObjectsByType<MeshCollider>(FindObjectsInactive.Include),
+                collider => collider.GetComponent<MeshFilter>() != null
+                            && collider.name.StartsWith("Terrain "));
+            Assert.That(
+                chunkColliders,
+                Is.Empty,
+                "Individual render chunks must not expose collision edges to wheels.");
+
+            var boundaryWorldX = (streamer.CenterCoordinate.X + 1) * 512.0;
+            var boundaryWorldZ = (streamer.CenterCoordinate.Z + 0.5) * 512.0;
+            var leftBoundaryLocal = originSystem.WorldToLocal(
+                boundaryWorldX - 0.05,
+                300.0,
+                boundaryWorldZ);
+            var rightBoundaryLocal = originSystem.WorldToLocal(
+                boundaryWorldX + 0.05,
+                300.0,
+                boundaryWorldZ);
+            Assert.That(
+                Physics.Raycast(leftBoundaryLocal, Vector3.down, out var leftBoundaryHit, 1000f),
+                Is.True);
+            Assert.That(
+                Physics.Raycast(rightBoundaryLocal, Vector3.down, out var rightBoundaryHit, 1000f),
+                Is.True);
+            Assert.That(leftBoundaryHit.collider, Is.SameAs(rightBoundaryHit.collider));
+            Assert.That(
+                Vector3.Dot(leftBoundaryHit.normal, rightBoundaryHit.normal),
+                Is.GreaterThan(0.99f),
+                "The unified physics surface changed normal abruptly at a former chunk border.");
+            Assert.That(playerHud.SteeringTelemetryText, Does.Contain("Скорость"));
+            Assert.That(playerHud.SteeringTelemetryText, Does.Contain("температура"));
+            Assert.That(playerHud.SteeringTelemetryText, Does.Contain("Пройдено"));
+            Assert.That(playerHud.SteeringTelemetryText, Does.Contain("высота"));
+            Assert.That(playerHud.SteeringTelemetryText, Does.Contain("День"));
+            Assert.That(playerHud.SteeringTelemetryText, Does.Contain("год"));
             Assert.That(
                 Vector3.Dot(caravan.transform.up, Vector3.up),
                 Is.GreaterThan(0.88f),
@@ -281,6 +423,7 @@ namespace Steppe.Tests
             {
                 yield return new WaitForFixedUpdate();
             }
+            Assert.That(caravan.TravelledMetres, Is.GreaterThan(0f));
             Assert.That(tracks.StoredTrackCellCount, Is.GreaterThan(0), "The caravan did not leave a canonical track.");
             Assert.That(streamer, Is.Not.Null);
             Assert.That(streamer.LoadedCount, Is.GreaterThan(0));
@@ -406,6 +549,85 @@ namespace Steppe.Tests
             }
         }
 
+        [UnityTest, Order(-95)]
+        public IEnumerator PlatformExpansionBuildsALineAndMovesPhysicalWheels()
+        {
+            if (Object.FindAnyObjectByType<SteppePrototypeBootstrap>() == null)
+            {
+                new GameObject("Platform Line Test Bootstrap")
+                    .AddComponent<SteppePrototypeBootstrap>();
+            }
+
+            yield return null;
+            var caravan = Object.FindAnyObjectByType<CaravanChassisController>();
+            var grid = Object.FindAnyObjectByType<CaravanMountGrid>();
+            var platform =
+                Object.FindAnyObjectByType<CaravanPlatformController>();
+            var progression =
+                Object.FindAnyObjectByType<CaravanProgressionSystem>();
+            Assert.That(caravan, Is.Not.Null);
+            Assert.That(grid, Is.Not.Null);
+            Assert.That(platform, Is.Not.Null);
+            Assert.That(progression, Is.Not.Null);
+            Assert.That(grid.TryGetPlatformBounds(out var beforeBounds), Is.True);
+
+            var wheels = System.Array.FindAll(
+                caravan.GetComponentsInChildren<MonoBehaviour>(true),
+                component => component.GetType().Name == "VPWheelCollider");
+            Assert.That(wheels, Has.Length.EqualTo(4));
+            var previousRight = float.NegativeInfinity;
+            for (var index = 0; index < wheels.Length; index++)
+            {
+                previousRight = Mathf.Max(
+                    previousRight,
+                    caravan.transform.InverseTransformPoint(
+                        wheels[index].transform.position).x);
+            }
+
+            progression.AddResources(new[]
+            {
+                new CaravanResourceAmount(
+                    CaravanConstructionResourceKind.StructuralMaterial,
+                    1000)
+            });
+            var structuralBefore = progression.GetResource(
+                CaravanConstructionResourceKind.StructuralMaterial);
+            var targetX = beforeBounds.MaximumX + 1;
+            var targetZ = beforeBounds.MinimumZ;
+            Assert.That(
+                platform.TryGetExpansionLine(targetX, targetZ, out var line),
+                Is.True);
+            Assert.That(line, Has.Length.EqualTo(beforeBounds.Length));
+            Assert.That(platform.TryExpand(targetX, targetZ), Is.True);
+
+            Assert.That(
+                platform.CellCount,
+                Is.EqualTo(beforeBounds.Width * beforeBounds.Length + line.Length));
+            Assert.That(
+                progression.GetResource(
+                    CaravanConstructionResourceKind.StructuralMaterial),
+                Is.EqualTo(structuralBefore - line.Length * 6));
+            for (var index = 0; index < line.Length; index++)
+            {
+                Assert.That(
+                    grid.HasPlatformCell(line[index].X, line[index].Z),
+                    Is.True);
+            }
+            Assert.That(grid.TryGetPlatformBounds(out var afterBounds), Is.True);
+            Assert.That(afterBounds.Width, Is.EqualTo(beforeBounds.Width + 1));
+            Assert.That(afterBounds.Length, Is.EqualTo(beforeBounds.Length));
+
+            var currentRight = float.NegativeInfinity;
+            for (var index = 0; index < wheels.Length; index++)
+            {
+                currentRight = Mathf.Max(
+                    currentRight,
+                    caravan.transform.InverseTransformPoint(
+                        wheels[index].transform.position).x);
+            }
+            Assert.That(currentRight, Is.GreaterThan(previousRight + 0.9f));
+        }
+
         [UnityTest]
         public IEnumerator WeatherTimeTracksCanonicalClockAfterManualAdvance()
         {
@@ -443,6 +665,8 @@ namespace Steppe.Tests
             Assert.That(caravan, Is.Not.Null);
             Assert.That(network, Is.Not.Null);
             Assert.That(build, Is.Not.Null);
+
+            PrepareElectricalModules(build, false);
 
             caravan.Body.linearVelocity = Vector3.zero;
             network.ClearConnections();
@@ -535,6 +759,8 @@ namespace Steppe.Tests
             var build = Object.FindAnyObjectByType<CaravanBuildModeController>();
             var electrical = Object.FindAnyObjectByType<CaravanElectricalNetwork>();
             var resource = Object.FindAnyObjectByType<CaravanResourceSystem>();
+            var progression =
+                Object.FindAnyObjectByType<CaravanProgressionSystem>();
             var materialNetworks =
                 Object.FindObjectsByType<CaravanMaterialNetwork>(
                     FindObjectsInactive.Include);
@@ -549,15 +775,26 @@ namespace Steppe.Tests
             Assert.That(build, Is.Not.Null);
             Assert.That(electrical, Is.Not.Null);
             Assert.That(resource, Is.Not.Null);
+            Assert.That(progression, Is.Not.Null);
             Assert.That(biomass, Is.Not.Null);
             Assert.That(mechanical, Is.Not.Null);
 
+            PrepareElectricalModules(build, false);
+            PrepareConstructionState(10, 18);
             electrical.ClearConnections();
             var startingMass = caravan.Body.mass;
             var startingElectricalPorts = electrical.Ports.Count;
             var startingBiomassPorts = biomass.Ports.Count;
             var startingMechanicalPorts = mechanical.Ports.Count;
             var startingHarvesterCount = resource.Harvesters.Count;
+            var inventoryBeforeConstruction = new int[4];
+            foreach (CaravanConstructionResourceKind kind in
+                     System.Enum.GetValues(
+                         typeof(CaravanConstructionResourceKind)))
+            {
+                inventoryBeforeConstruction[(int)kind] =
+                    progression.GetResource(kind);
+            }
             caravan.Body.linearVelocity = Vector3.zero;
             Assert.That(build.TryEnterBuildMode(), Is.True);
             Assert.That(
@@ -593,6 +830,15 @@ namespace Steppe.Tests
                 resource.Harvesters,
                 Has.Count.EqualTo(startingHarvesterCount));
             Assert.That(caravan.Body.mass, Is.EqualTo(startingMass).Within(0.1f));
+            foreach (CaravanConstructionResourceKind kind in
+                     System.Enum.GetValues(
+                         typeof(CaravanConstructionResourceKind)))
+            {
+                Assert.That(
+                    progression.GetResource(kind),
+                    Is.EqualTo(inventoryBeforeConstruction[(int)kind]),
+                    $"Dismantling did not return {kind} to the resource crate.");
+            }
             Assert.That(harvester, Is.Not.Null);
             yield return null;
             Assert.That(module == null, Is.True);
@@ -612,10 +858,12 @@ namespace Steppe.Tests
             var caravan = Object.FindAnyObjectByType<CaravanChassisController>();
             var build = Object.FindAnyObjectByType<CaravanBuildModeController>();
             var interactor = Object.FindAnyObjectByType<CaravanPlayerInteractor>();
+            PrepareElectricalModules(build, false);
             var originalMotorModule = System.Array.Find(
                 Object.FindObjectsByType<CaravanModule>(
                     FindObjectsInactive.Exclude),
-                module => module.InstanceId == "starter-electric-motor");
+                module => module.GetComponent<CaravanPart>()?.Kind
+                          == CaravanPartKind.ElectricMotor);
             var originalMotor = originalMotorModule != null
                 ? originalMotorModule.GetComponent<CaravanPart>()
                 : null;
@@ -646,8 +894,13 @@ namespace Steppe.Tests
                 Is.True);
             var rebuiltMotor = build.HeldModule;
             Assert.That(
-                build.TryPlaceHeldModule(
-                    new CaravanGridPlacement(2, 4, 2, 2, 0)),
+                TryFindFreePlacement(
+                    Object.FindAnyObjectByType<CaravanMountGrid>(),
+                    rebuiltMotor,
+                    out var rebuiltMotorPlacement),
+                Is.True);
+            Assert.That(
+                build.TryPlaceHeldModule(rebuiltMotorPlacement),
                 Is.True);
             Assert.That(
                 caravan.ElectricMotors,
@@ -703,24 +956,15 @@ namespace Steppe.Tests
             Assert.That(fluids, Is.Not.Null);
             Assert.That(construction, Is.Not.Null);
             Assert.That(build, Is.Not.Null);
-            Assert.That(fluids.Ports, Has.Count.EqualTo(1));
+            PrepareElectricalModules(build, true);
+            PrepareConstructionState(10, 18);
+            Assert.That(fluids.Ports, Has.Count.EqualTo(2));
             Assert.That(fluids.Pipes, Is.Empty);
             Assert.That(
                 Object.FindAnyObjectByType<CaravanWaterReservoirModule>(),
                 Is.Null);
 
             caravan.Body.linearVelocity = Vector3.zero;
-            electrical.ClearConnections();
-            Assert.That(
-                electrical.TryConnect(
-                    electrical.PhotovoltaicPort,
-                    electrical.BatteryPort),
-                Is.True);
-            Assert.That(
-                electrical.TryConnect(
-                    electrical.BatteryPort,
-                    electrical.MotorPort),
-                Is.True);
             Assert.That(
                 electrical.BatteryPort.ConnectedCableCount,
                 Is.EqualTo(2));
@@ -752,11 +996,16 @@ namespace Steppe.Tests
 
             Assert.That(
                 Object.FindObjectsByType<CaravanPart>().Length,
-                Is.EqualTo(6));
-            Assert.That(fluids.Ports, Has.Count.EqualTo(7));
+                Is.EqualTo(8));
+            Assert.That(fluids.Ports, Has.Count.EqualTo(8));
             Assert.That(electrical.Ports, Has.Count.EqualTo(4));
-            Assert.That(caravan.Body.mass, Is.GreaterThan(startingMass + 1400f));
+            Assert.That(caravan.Body.mass, Is.GreaterThan(startingMass + 1100f));
             Assert.That(fluids.Reservoir, Is.Not.Null);
+            Assert.That(
+                fluids.Reservoir.StoredWaterLitres,
+                Is.Zero,
+                "A newly constructed reservoir must start empty.");
+            fluids.Reservoir.SetStoredWater(fluids.Reservoir.CapacityLitres * 0.35f);
             Assert.That(fluids.Pump, Is.Not.Null);
             Assert.That(fluids.Radiator, Is.Not.Null);
 
@@ -906,6 +1155,7 @@ namespace Steppe.Tests
             var startingControlCount =
                 Object.FindObjectsByType<CaravanControlStation>(
                     FindObjectsInactive.Include).Length;
+            PrepareConstructionState(10, 18);
             caravan.Body.linearVelocity = Vector3.zero;
             Assert.That(build.TryEnterBuildMode(), Is.True);
             foreach (var kind in CaravanConstructionService.AvailablePartKinds)
@@ -1047,6 +1297,12 @@ namespace Steppe.Tests
             Assert.That(
                 electrical.TryConnect(batteryPort, dryerElectrical),
                 Is.True);
+            Assert.That(
+                batteryPort.Part.StoredAmount,
+                Is.Zero,
+                "The newly built catalogue battery must not include free charge.");
+            batteryPort.Part.SetStoredAmount(batteryPort.Part.Capacity * 0.35f);
+            fluids.Reservoir.SetStoredWater(fluids.Reservoir.CapacityLitres * 0.35f);
 
             AssertFluidConnection(
                 fluids,
@@ -1261,7 +1517,7 @@ namespace Steppe.Tests
             yield return null;
         }
 
-        [UnityTest]
+        [UnityTest, Order(-90)]
         public IEnumerator ChassisMaintainsForwardGripDuringSustainedTurn()
         {
             if (Object.FindAnyObjectByType<SteppePrototypeBootstrap>() == null)
@@ -1270,6 +1526,8 @@ namespace Steppe.Tests
             }
 
             var caravan = Object.FindAnyObjectByType<CaravanChassisController>();
+            var build = Object.FindAnyObjectByType<CaravanBuildModeController>();
+            PrepareElectricalModules(build, true);
             var battery = Object.FindAnyObjectByType<CaravanBatteryModule>();
             var electricMotor = Object.FindAnyObjectByType<CaravanElectricMotorModule>();
             var network = Object.FindAnyObjectByType<CaravanElectricalNetwork>();
@@ -1363,7 +1621,7 @@ namespace Steppe.Tests
                 "Powered driving did not discharge the battery.");
         }
 
-        [UnityTest]
+        [UnityTest, Order(-80)]
         public IEnumerator FirstPersonKeeperFollowsASettledMovingDeck()
         {
             if (Object.FindAnyObjectByType<SteppePrototypeBootstrap>() == null)
@@ -1379,9 +1637,10 @@ namespace Steppe.Tests
             caravan.Body.linearVelocity = Vector3.zero;
             var character = keeper.GetComponent<CharacterController>();
             character.enabled = false;
-            keeper.transform.position = caravan.transform.TransformPoint(0f, 0.06f, -2.55f);
+            keeper.transform.position = caravan.transform.TransformPoint(-1f, 0.06f, 0.5f);
             character.enabled = true;
             Physics.SyncTransforms();
+            yield return null;
             for (var frame = 0; frame < 30 && !keeper.IsOnCaravan; frame++)
             {
                 yield return null;
@@ -1389,8 +1648,9 @@ namespace Steppe.Tests
             Assert.That(keeper.IsOnCaravan, Is.True);
 
             var relativeBefore = caravan.transform.InverseTransformPoint(keeper.transform.position);
-            caravan.Body.position += new Vector3(0.8f, 0f, 0.35f);
+            caravan.transform.position += new Vector3(0.8f, 0f, 0.35f);
             Physics.SyncTransforms();
+            keeper.SynchronizeCarrierMotion();
             yield return null;
             var relativeAfter = caravan.transform.InverseTransformPoint(keeper.transform.position);
             Assert.That(Vector3.Distance(relativeAfter, relativeBefore), Is.LessThan(0.08f));
@@ -1539,6 +1799,407 @@ namespace Steppe.Tests
             Object.Destroy(worldRoot);
         }
 
+        private static void PrepareConstructionState(int width, int length)
+        {
+            var progression =
+                Object.FindAnyObjectByType<CaravanProgressionSystem>();
+            var platform =
+                Object.FindAnyObjectByType<CaravanPlatformController>();
+            var grid = Object.FindAnyObjectByType<CaravanMountGrid>();
+            Assert.That(progression, Is.Not.Null);
+            Assert.That(platform, Is.Not.Null);
+            Assert.That(grid, Is.Not.Null);
+
+            progression.UnlockAllRecipes();
+            progression.AddResources(new[]
+            {
+                new CaravanResourceAmount(
+                    CaravanConstructionResourceKind.StructuralMaterial,
+                    100000),
+                new CaravanResourceAmount(
+                    CaravanConstructionResourceKind.MechanicalParts,
+                    100000),
+                new CaravanResourceAmount(
+                    CaravanConstructionResourceKind.ElectricalParts,
+                    100000),
+                new CaravanResourceAmount(
+                    CaravanConstructionResourceKind.Fabric,
+                    100000)
+            });
+
+            ExpandPlatformToBounds(
+                platform,
+                grid,
+                0,
+                width - 1,
+                0,
+                length - 1);
+        }
+
+        [UnityTest, Order(100)]
+        public IEnumerator CaravanSaveRoundTripRestoresCompleteConstructionState()
+        {
+            if (Object.FindAnyObjectByType<SteppePrototypeBootstrap>() == null)
+            {
+                new GameObject("Caravan Save Test Bootstrap")
+                    .AddComponent<SteppePrototypeBootstrap>();
+            }
+
+            yield return null;
+            var service = Object.FindAnyObjectByType<CaravanSaveService>();
+            var progression =
+                Object.FindAnyObjectByType<CaravanProgressionSystem>();
+            var platform =
+                Object.FindAnyObjectByType<CaravanPlatformController>();
+            var grid = Object.FindAnyObjectByType<CaravanMountGrid>();
+            var build = Object.FindAnyObjectByType<CaravanBuildModeController>();
+            var caravan = Object.FindAnyObjectByType<CaravanChassisController>();
+            var electrical =
+                Object.FindAnyObjectByType<CaravanElectricalNetwork>();
+            var fluid = Object.FindAnyObjectByType<CaravanFluidNetwork>();
+            var networks = Object.FindObjectsByType<CaravanMaterialNetwork>();
+            var biomass = System.Array.Find(
+                networks,
+                network => network.Kind == CaravanMaterialNetworkKind.Biomass);
+            var mechanical = System.Array.Find(
+                networks,
+                network => network.Kind == CaravanMaterialNetworkKind.Mechanical);
+            Assert.That(service, Is.Not.Null);
+            Assert.That(progression, Is.Not.Null);
+            Assert.That(platform, Is.Not.Null);
+            Assert.That(grid, Is.Not.Null);
+            Assert.That(build, Is.Not.Null);
+
+            PrepareElectricalModules(build, true);
+            PrepareConstructionState(10, 18);
+            progression.TrySearchSite(
+                "save-test-farm",
+                CaravanRecipeSiteKind.Farm,
+                out _);
+            progression.TryClaimWreck(
+                "save-test-wreck",
+                new[]
+                {
+                    new CaravanResourceAmount(
+                        CaravanConstructionResourceKind.Fabric,
+                        17)
+                });
+            var batteryPart = System.Array.Find(
+                Object.FindObjectsByType<CaravanPart>(),
+                part => part.Kind == CaravanPartKind.Battery);
+            Assert.That(batteryPart, Is.Not.Null);
+            var batteryModule = batteryPart.GetComponent<CaravanModule>();
+            batteryPart.SetStoredAmount(27f);
+            batteryModule.RestoreState(0.22f, 0.81f, 0.13f);
+            caravan.RestoreTravelledMetres(4321f);
+
+            var captured = service.CaptureSnapshot();
+            var json = JsonUtility.ToJson(captured);
+            var serialized = JsonUtility.FromJson<CaravanSaveSnapshot>(json);
+            var capturedBattery = System.Array.Find(
+                captured.modules,
+                module => module.instanceId == batteryModule.InstanceId);
+            Assert.That(capturedBattery, Is.Not.Null);
+            var capturedPlatformCount = captured.platformCells.Length;
+            var capturedPartCount = captured.modules.Length;
+            var capturedElectricalCount = captured.electricalConnections.Length;
+            var capturedFluidCount = captured.fluidConnections.Length;
+            var capturedBiomassCount = captured.biomassConnections.Length;
+            var capturedMechanicalCount = captured.mechanicalConnections.Length;
+            var capturedFabric = progression.GetResource(
+                CaravanConstructionResourceKind.Fabric);
+
+            Assert.That(
+                TryFindExpansionCandidate(grid, out var extraCell),
+                Is.True);
+            Assert.That(platform.TryExpand(extraCell.X, extraCell.Z), Is.True);
+            electrical.ClearConnections();
+            fluid.ClearConnections();
+            biomass.ClearConnections();
+            mechanical.ClearConnections();
+            progression.ResetToNewGame();
+            caravan.Body.linearVelocity = Vector3.zero;
+            Assert.That(build.TryEnterBuildMode(), Is.True);
+            Assert.That(build.TryRemoveModule(batteryModule), Is.True);
+            build.ExitBuildMode();
+
+            Assert.That(
+                service.TryRestoreSnapshot(serialized, out var error),
+                Is.True,
+                error);
+            yield return null;
+
+            Assert.That(platform.CellCount, Is.EqualTo(capturedPlatformCount));
+            Assert.That(grid.HasPlatformCell(extraCell.X, extraCell.Z), Is.False);
+            Assert.That(
+                Object.FindObjectsByType<CaravanPart>().Length,
+                Is.EqualTo(capturedPartCount));
+            var restoredBattery = System.Array.Find(
+                Object.FindObjectsByType<CaravanModule>(),
+                module => module.InstanceId == capturedBattery.instanceId);
+            Assert.That(restoredBattery, Is.Not.Null);
+            Assert.That(
+                restoredBattery.GetComponent<CaravanPart>().StoredAmount,
+                Is.EqualTo(27f).Within(0.2f));
+            Assert.That(restoredBattery.State.Dust, Is.EqualTo(0.22f).Within(0.01f));
+            Assert.That(restoredBattery.State.Integrity, Is.EqualTo(0.81f).Within(0.01f));
+            Assert.That(caravan.TravelledMetres, Is.EqualTo(4321f).Within(0.1f));
+            Assert.That(electrical.CableCount, Is.EqualTo(capturedElectricalCount));
+            Assert.That(fluid.PipeCount, Is.EqualTo(capturedFluidCount));
+            Assert.That(biomass.LinkCount, Is.EqualTo(capturedBiomassCount));
+            Assert.That(mechanical.LinkCount, Is.EqualTo(capturedMechanicalCount));
+            Assert.That(
+                progression.GetResource(
+                    CaravanConstructionResourceKind.Fabric),
+                Is.EqualTo(capturedFabric));
+            Assert.That(progression.IsSiteSearched("save-test-farm"), Is.True);
+            Assert.That(progression.IsWreckDepleted("save-test-wreck"), Is.True);
+        }
+
+        [UnityTest, Order(110)]
+        public IEnumerator CaravanAutosaveUsesNewestValidSlotAndBackup()
+        {
+            if (Object.FindAnyObjectByType<SteppePrototypeBootstrap>() == null)
+            {
+                new GameObject("Caravan Autosave Test Bootstrap")
+                    .AddComponent<SteppePrototypeBootstrap>();
+            }
+
+            yield return null;
+            var service = Object.FindAnyObjectByType<CaravanSaveService>();
+            var progression =
+                Object.FindAnyObjectByType<CaravanProgressionSystem>();
+            var build = Object.FindAnyObjectByType<CaravanBuildModeController>();
+            var caravan = Object.FindAnyObjectByType<CaravanChassisController>();
+            Assert.That(service, Is.Not.Null);
+            Assert.That(progression, Is.Not.Null);
+            Assert.That(build, Is.Not.Null);
+            Assert.That(caravan, Is.Not.Null);
+
+            build.ExitBuildMode();
+            caravan.Body.linearVelocity = Vector3.zero;
+            var originalManualPath = service.SavePath;
+            var originalAutosavePath = service.AutosavePath;
+            var testDirectory = System.IO.Path.Combine(
+                Application.temporaryCachePath,
+                "SteppeAutosaveTests",
+                System.Guid.NewGuid().ToString("N"));
+            var manualPath = System.IO.Path.Combine(testDirectory, "manual.json");
+            var autosavePath = System.IO.Path.Combine(testDirectory, "auto.json");
+
+            try
+            {
+                service.SetSavePaths(manualPath, autosavePath);
+                Assert.That(build.TryEnterBuildMode(), Is.True);
+                service.RequestAutosave();
+                Assert.That(
+                    service.TryAutosave(out var unstableError),
+                    Is.False);
+                Assert.That(unstableError, Does.Contain("режим строительства"));
+                Assert.That(service.AutosavePending, Is.True);
+                build.ExitBuildMode();
+
+                progression.ResetToNewGame();
+                progression.AddResources(new[]
+                {
+                    new CaravanResourceAmount(
+                        CaravanConstructionResourceKind.StructuralMaterial,
+                        11)
+                });
+                Assert.That(service.TrySave(out var manualError), Is.True, manualError);
+
+                progression.AddResources(new[]
+                {
+                    new CaravanResourceAmount(
+                        CaravanConstructionResourceKind.StructuralMaterial,
+                        7)
+                });
+                Assert.That(service.AutosavePending, Is.True);
+                Assert.That(service.TryAutosave(out var firstError), Is.True, firstError);
+
+                progression.AddResources(new[]
+                {
+                    new CaravanResourceAmount(
+                        CaravanConstructionResourceKind.Fabric,
+                        1)
+                });
+                Assert.That(service.TryAutosave(out var secondError), Is.True, secondError);
+                Assert.That(System.IO.File.Exists(autosavePath + ".bak"), Is.True);
+
+                var now = System.DateTime.UtcNow;
+                System.IO.File.SetLastWriteTimeUtc(
+                    manualPath,
+                    now.AddMinutes(-10));
+                System.IO.File.SetLastWriteTimeUtc(
+                    autosavePath + ".bak",
+                    now.AddMinutes(-2));
+                System.IO.File.WriteAllText(autosavePath, "{ damaged autosave");
+                System.IO.File.SetLastWriteTimeUtc(autosavePath, now);
+                progression.ResetToNewGame();
+
+                Assert.That(
+                    service.TryLoad(out var loadError),
+                    Is.True,
+                    loadError);
+                yield return null;
+
+                Assert.That(
+                    progression.GetResource(
+                        CaravanConstructionResourceKind.StructuralMaterial),
+                    Is.EqualTo(18));
+                Assert.That(
+                    progression.GetResource(
+                        CaravanConstructionResourceKind.Fabric),
+                    Is.Zero);
+                Assert.That(service.LastLoadWasAutosave, Is.True);
+                Assert.That(service.LastLoadWasBackup, Is.True);
+                Assert.That(service.AutosavePending, Is.False);
+            }
+            finally
+            {
+                service.SetSavePaths(originalManualPath, originalAutosavePath);
+                if (System.IO.Directory.Exists(testDirectory))
+                {
+                    System.IO.Directory.Delete(testDirectory, true);
+                }
+            }
+        }
+
+        private static bool PrepareElectricalModules(
+            CaravanBuildModeController build,
+            bool connect)
+        {
+            Assert.That(build, Is.Not.Null);
+            PrepareConstructionState(3, 4);
+            var caravan = Object.FindAnyObjectByType<CaravanChassisController>();
+            var network = Object.FindAnyObjectByType<CaravanElectricalNetwork>();
+            var grid = Object.FindAnyObjectByType<CaravanMountGrid>();
+            var platform = Object.FindAnyObjectByType<CaravanPlatformController>();
+            caravan.Body.linearVelocity = Vector3.zero;
+
+            // Keep the technical rig rectangular so each operation exercises
+            // the same whole-line expansion used by players.
+            ExpandPlatformToBounds(platform, grid, -3, 4, 0, 3);
+
+            var enteredHere = !build.IsActive;
+            if (enteredHere)
+            {
+                Assert.That(build.TryEnterBuildMode(), Is.True);
+            }
+            ConstructIfMissing(
+                build,
+                CaravanPartKind.PhotovoltaicLeaves,
+                new CaravanGridPlacement(-3, 0, 3, 3, 0));
+            var constructedBattery = ConstructIfMissing(
+                build,
+                CaravanPartKind.Battery,
+                new CaravanGridPlacement(3, 0, 2, 2, 0));
+            ConstructIfMissing(
+                build,
+                CaravanPartKind.ElectricMotor,
+                new CaravanGridPlacement(-3, 3, 2, 2, 0));
+            if (enteredHere)
+            {
+                build.ExitBuildMode();
+            }
+
+            Assert.That(network.Battery, Is.Not.Null);
+            if (constructedBattery)
+            {
+                Assert.That(
+                    network.Battery.StoredEnergyKilowattHours,
+                    Is.Zero,
+                    "A newly constructed battery must start empty.");
+            }
+
+            if (!connect)
+            {
+                return constructedBattery;
+            }
+            network.Battery.ElectricalPart.SetStoredAmount(
+                network.Battery.CapacityKilowattHours * 0.35f);
+            if (network.PanelToBatteryCable == null)
+            {
+                Assert.That(
+                    network.TryConnect(
+                        network.PhotovoltaicPort,
+                        network.BatteryPort),
+                    Is.True);
+            }
+            if (network.BatteryToMotorCable == null)
+            {
+                Assert.That(
+                    network.TryConnect(
+                        network.BatteryPort,
+                        network.MotorPort),
+                    Is.True);
+            }
+            return constructedBattery;
+        }
+
+        private static bool ConstructIfMissing(
+            CaravanBuildModeController build,
+            CaravanPartKind kind,
+            CaravanGridPlacement placement)
+        {
+            var existing = System.Array.Find(
+                Object.FindObjectsByType<CaravanPart>(),
+                part => part.Kind == kind);
+            if (existing != null)
+            {
+                return false;
+            }
+            Assert.That(build.TryCreateModule(kind), Is.True);
+            Assert.That(build.TryPlaceHeldModule(placement), Is.True);
+            return true;
+        }
+
+        private static void ExpandPlatformToBounds(
+            CaravanPlatformController platform,
+            CaravanMountGrid grid,
+            int minimumX,
+            int maximumX,
+            int minimumZ,
+            int maximumZ)
+        {
+            Assert.That(grid.TryGetPlatformBounds(out var bounds), Is.True);
+            while (bounds.MinimumX > minimumX)
+            {
+                Assert.That(
+                    platform.TryExpand(bounds.MinimumX - 1, bounds.MinimumZ),
+                    Is.True);
+                Assert.That(grid.TryGetPlatformBounds(out bounds), Is.True);
+            }
+            while (bounds.MaximumX < maximumX)
+            {
+                Assert.That(
+                    platform.TryExpand(bounds.MaximumX + 1, bounds.MinimumZ),
+                    Is.True);
+                Assert.That(grid.TryGetPlatformBounds(out bounds), Is.True);
+            }
+            while (bounds.MinimumZ > minimumZ)
+            {
+                Assert.That(
+                    platform.TryExpand(bounds.MinimumX, bounds.MinimumZ - 1),
+                    Is.True);
+                Assert.That(grid.TryGetPlatformBounds(out bounds), Is.True);
+            }
+            while (bounds.MaximumZ < maximumZ)
+            {
+                Assert.That(
+                    platform.TryExpand(bounds.MinimumX, bounds.MaximumZ + 1),
+                    Is.True);
+                Assert.That(grid.TryGetPlatformBounds(out bounds), Is.True);
+            }
+        }
+
+        private static float HorizontalDistance(Vector3 first, Vector3 second)
+        {
+            return Vector2.Distance(
+                new Vector2(first.x, first.z),
+                new Vector2(second.x, second.z));
+        }
+
         private static float PositiveModulo(double value, double modulus)
         {
             return (float)(value - System.Math.Floor(value / modulus) * modulus);
@@ -1551,9 +2212,9 @@ namespace Steppe.Tests
         {
             for (var quarterTurns = 0; quarterTurns < 2; quarterTurns++)
             {
-                for (var z = 0; z < grid.Length; z++)
+                for (var z = -8; z < 26; z++)
                 {
-                    for (var x = 0; x < grid.Width; x++)
+                    for (var x = -8; x < 18; x++)
                     {
                         var candidate = new CaravanGridPlacement(
                             x,
@@ -1573,6 +2234,38 @@ namespace Steppe.Tests
             }
 
             placement = default;
+            return false;
+        }
+
+        private static bool TryFindExpansionCandidate(
+            CaravanMountGrid grid,
+            out CaravanGridCell cell)
+        {
+            var directions = new[]
+            {
+                new CaravanGridCell(-1, 0),
+                new CaravanGridCell(1, 0),
+                new CaravanGridCell(0, -1),
+                new CaravanGridCell(0, 1)
+            };
+            var platformCells = grid.GetPlatformCells();
+            for (var index = 0; index < platformCells.Length; index++)
+            {
+                for (var directionIndex = 0;
+                     directionIndex < directions.Length;
+                     directionIndex++)
+                {
+                    var candidate = new CaravanGridCell(
+                        platformCells[index].X + directions[directionIndex].X,
+                        platformCells[index].Z + directions[directionIndex].Z);
+                    if (grid.CanAddPlatformCell(candidate.X, candidate.Z))
+                    {
+                        cell = candidate;
+                        return true;
+                    }
+                }
+            }
+            cell = default;
             return false;
         }
 

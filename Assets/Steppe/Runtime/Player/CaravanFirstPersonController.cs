@@ -113,6 +113,24 @@ namespace Steppe.Player
             }
         }
 
+        /// <summary>
+        /// Applies the caravan transform delta to a keeper standing on its deck.
+        /// The public entry point also lets scripted caravan moves synchronize
+        /// the character in the same frame instead of waiting for Update.
+        /// </summary>
+        public void SynchronizeCarrierMotion()
+        {
+            if (character == null || caravan == null)
+            {
+                return;
+            }
+
+            caravanCollisionProxy?.Synchronize();
+            ApplyCarrierMotion();
+            previousCarrierPosition = caravan.transform.position;
+            previousCarrierRotation = caravan.transform.rotation;
+        }
+
         private void Update()
         {
             if (settings == null || character == null || caravan == null || viewCamera == null)
@@ -121,14 +139,11 @@ namespace Steppe.Player
             }
 
             HandlePointerLock();
-            caravanCollisionProxy.Synchronize();
-            ApplyCarrierMotion();
+            SynchronizeCarrierMotion();
             UpdateGroundCarrier();
             UpdateLook();
             UpdateMovement();
             UpdateCameraMotion();
-            previousCarrierPosition = caravan.transform.position;
-            previousCarrierRotation = caravan.transform.rotation;
         }
 
         private void HandlePointerLock()
@@ -156,6 +171,16 @@ namespace Steppe.Player
             var previousRelative = transform.position - previousCarrierPosition;
             var carrierPosition = caravan.transform.position + rotationDelta * previousRelative;
             character.Move(carrierPosition - transform.position);
+            if ((carrierPosition - transform.position).sqrMagnitude > 0.0025f)
+            {
+                // CharacterController can reject the whole carrier delta when
+                // its collision recovery meets a synchronously moved proxy.
+                // Both the deck and its proxy moved rigidly, so restoring the
+                // previous local point is the physically consistent fallback.
+                character.enabled = false;
+                transform.position = carrierPosition;
+                character.enabled = true;
+            }
         }
 
         private void UpdateGroundCarrier()

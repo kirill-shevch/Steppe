@@ -1,5 +1,7 @@
 using System;
 using Steppe.Presentation;
+using Steppe.Time;
+using Steppe.World;
 using UnityEngine;
 
 namespace Steppe.Caravan
@@ -11,9 +13,11 @@ namespace Steppe.Caravan
         private CaravanBuildModeController buildMode;
         private CaravanChassisController chassis;
         private CaravanElectricalNetwork electricalNetwork;
+        private CaravanProgressionDirector progressionDirector;
         private SteppeFirstExpeditionDirector expedition;
-        private readonly CaravanOnboardingModel onboarding =
-            new CaravanOnboardingModel();
+        private CaravanSaveService saveService;
+        private FloatingOriginSystem floatingOrigin;
+        private SteppeTimeSystem timeSystem;
         private GUIStyle objectiveTitleStyle;
         private GUIStyle objectiveBodyStyle;
         private GUIStyle panelTitleStyle;
@@ -25,14 +29,22 @@ namespace Steppe.Caravan
         private Texture2D panelTexture;
         private Texture2D objectiveTexture;
 
-        public CaravanOnboardingStage OnboardingStage => onboarding.Stage;
+        public CaravanProgressionStage ProgressionStage =>
+            progressionDirector != null
+                ? progressionDirector.Stage
+                : CaravanProgressionStage.ApproachWreck;
+        public string SteeringTelemetryText => BuildSteeringTelemetry();
 
         public void Configure(
             CaravanPlayerInteractor playerInteractor,
             CaravanBuildModeController builder,
             CaravanChassisController caravan,
             CaravanElectricalNetwork electricity,
-            SteppeFirstExpeditionDirector expeditionDirector)
+            CaravanProgressionDirector progression,
+            SteppeFirstExpeditionDirector expeditionDirector,
+            CaravanSaveService persistence,
+            FloatingOriginSystem origin,
+            SteppeTimeSystem clock)
         {
             interactor = playerInteractor != null
                 ? playerInteractor
@@ -46,27 +58,31 @@ namespace Steppe.Caravan
             electricalNetwork = electricity != null
                 ? electricity
                 : throw new ArgumentNullException(nameof(electricity));
+            progressionDirector = progression != null
+                ? progression
+                : throw new ArgumentNullException(nameof(progression));
             expedition = expeditionDirector != null
                 ? expeditionDirector
                 : throw new ArgumentNullException(nameof(expeditionDirector));
+            saveService = persistence != null
+                ? persistence
+                : throw new ArgumentNullException(nameof(persistence));
+            floatingOrigin = origin != null
+                ? origin
+                : throw new ArgumentNullException(nameof(origin));
+            timeSystem = clock != null
+                ? clock
+                : throw new ArgumentNullException(nameof(clock));
         }
 
         private void Update()
         {
-            if (chassis == null || electricalNetwork == null)
+            if (chassis == null || progressionDirector == null)
             {
                 return;
             }
-
-            var solarCable = electricalNetwork.PanelToBatteryCable;
-            var motorCable = electricalNetwork.BatteryToMotorCable;
-            onboarding.Update(
-                solarCable != null && solarCable.IsConductive,
-                motorCable != null && motorCable.IsConductive,
-                chassis.ElectricDriveThrottle,
-                chassis.Speed * UnityEngine.Time.deltaTime);
             expedition?.SetIntroComplete(
-                onboarding.Stage == CaravanOnboardingStage.Complete);
+                progressionDirector.IsComplete);
         }
 
         private void OnGUI()
@@ -117,14 +133,22 @@ namespace Steppe.Caravan
 
         private void DrawNavigation()
         {
-            if (expedition == null
-                || onboarding.Stage != CaravanOnboardingStage.Complete
-                || !expedition.HasNavigationLead)
+            var useProgression = progressionDirector != null
+                                 && !progressionDirector.IsComplete
+                                 && progressionDirector.HasNavigationLead;
+            var useExpedition = !useProgression
+                                && progressionDirector != null
+                                && progressionDirector.IsComplete
+                                && expedition != null
+                                && expedition.HasNavigationLead;
+            if (!useProgression && !useExpedition)
             {
                 return;
             }
 
-            var direction = expedition.NavigationDirectionLocal;
+            var direction = useProgression
+                ? progressionDirector.NavigationDirection
+                : expedition.NavigationDirectionLocal;
             if (direction.sqrMagnitude < 0.01f)
             {
                 return;
@@ -149,7 +173,9 @@ namespace Steppe.Caravan
             GUI.Box(area, GUIContent.none, PanelBoxStyle());
             GUI.Label(
                 area,
-                $"{arrow}  {expedition.NavigationLabel}  •  {cardinal}  •  {expedition.GetNavigationRange()}",
+                useProgression
+                    ? $"{arrow}  {progressionDirector.NavigationLabel}  •  {cardinal}  •  {progressionDirector.GetNavigationRange()}"
+                    : $"{arrow}  {expedition.NavigationLabel}  •  {cardinal}  •  {expedition.GetNavigationRange()}",
                 promptStyle);
         }
 
@@ -172,6 +198,12 @@ namespace Steppe.Caravan
 
         private void DrawTargetInspector()
         {
+            var interactable = interactor.FocusedInteractable;
+            if (interactable != null && !buildMode.IsActive)
+            {
+                DrawWorldInteractable(interactable);
+                return;
+            }
             var module = interactor.FocusedModule;
             if (module == null || buildMode.IsActive)
             {
@@ -180,8 +212,11 @@ namespace Steppe.Caravan
             }
 
             var feedback = CaravanModuleFeedbackBuilder.Evaluate(module);
+            var showSteeringTelemetry =
+                interactor.FocusedStation != null
+                && interactor.FocusedStation.Kind == CaravanControlKind.Steering;
             var width = Mathf.Min(390f, SteppeGuiScale.Width * 0.36f);
-            var height = 190f;
+            var height = showSteeringTelemetry ? 292f : 190f;
             var area = new Rect(
                 SteppeGuiScale.Width - width - 22f,
                 SteppeGuiScale.Height * 0.5f - height * 0.5f,
@@ -220,6 +255,42 @@ namespace Steppe.Caravan
                 new Rect(area.x + 16f, area.y + 166f, area.width - 32f, 20f),
                 $"Пыль {module.State.Dust:P0}  •  целостность {module.State.Integrity:P0}",
                 panelBodyStyle);
+            if (showSteeringTelemetry)
+            {
+                GUI.Label(
+                    new Rect(area.x + 16f, area.y + 190f, area.width - 32f, 88f),
+                    BuildSteeringTelemetry(),
+                    panelBodyStyle);
+            }
+        }
+
+        private void DrawWorldInteractable(
+            CaravanWorldInteractable interactable)
+        {
+            var width = Mathf.Min(390f, SteppeGuiScale.Width * 0.36f);
+            var area = new Rect(
+                SteppeGuiScale.Width - width - 22f,
+                SteppeGuiScale.Height * 0.5f - 72f,
+                width,
+                144f);
+            GUI.Box(area, GUIContent.none, PanelBoxStyle());
+            GUI.Label(
+                new Rect(area.x + 16f, area.y + 13f, area.width - 32f, 30f),
+                interactable.Title,
+                panelTitleStyle);
+            GUI.Label(
+                new Rect(area.x + 16f, area.y + 51f, area.width - 32f, 54f),
+                interactable is CaravanResourceCrateModule crate
+                    ? crate.InventorySummary
+                    : interactable.ContextPrompt,
+                panelBodyStyle);
+            if (interactable.SupportsDismantle)
+            {
+                GUI.Label(
+                    new Rect(area.x + 16f, area.y + 108f, area.width - 32f, 22f),
+                    $"Разборка: {interactable.ProgressNormalized:P0}",
+                    panelStateStyle);
+            }
         }
 
         private void DrawActiveControl()
@@ -277,7 +348,9 @@ namespace Steppe.Caravan
                 ? buildMode.FeedbackMessage
                 : interactor.FeedbackVisible
                     ? interactor.FeedbackMessage
-                    : string.Empty;
+                    : saveService != null && saveService.FeedbackVisible
+                        ? saveService.FeedbackMessage
+                        : string.Empty;
             if (string.IsNullOrWhiteSpace(message))
             {
                 return;
@@ -285,7 +358,9 @@ namespace Steppe.Caravan
 
             var isError = buildMode.FeedbackVisible
                 ? buildMode.FeedbackIsError
-                : interactor.FeedbackIsError;
+                : interactor.FeedbackVisible
+                    ? interactor.FeedbackIsError
+                    : saveService != null && saveService.FeedbackIsError;
             feedbackStyle.normal.textColor = isError
                 ? new Color(1f, 0.42f, 0.3f)
                 : new Color(0.58f, 1f, 0.72f);
@@ -311,7 +386,13 @@ namespace Steppe.Caravan
                     ? "ЛКМ — установить  •  R — повернуть  •  ПКМ — отменить"
                     : "Нет свободного места под модулем  •  R — повернуть  •  ПКМ — отменить";
             }
-            return "Q / E — выбрать  •  F — создать  •  ЛКМ — переставить  •  ПКМ / X — разобрать  •  Tab — сети  •  B — выйти";
+            if (buildMode.IsPlatformExpansionMode)
+            {
+                return buildMode.CandidateValid
+                    ? "ЛКМ — построить линию  •  цена указана слева  •  ПКМ / G — отменить  •  B — выйти"
+                    : "Выберите свободный внешний край  •  ПКМ / G — отменить";
+            }
+            return "Q / E — выбрать  •  F — создать  •  G — расширить платформу  •  ЛКМ — переставить  •  ПКМ / X — разобрать  •  Tab — сети  •  B — выйти";
         }
 
         private string ControlValue(CaravanControlStation station)
@@ -343,6 +424,35 @@ namespace Steppe.Caravan
             return $"Положение: {(station.NormalizedValue + 1f) * 0.5f:P0}";
         }
 
+        private string BuildSteeringTelemetry()
+        {
+            if (chassis == null || floatingOrigin == null || timeSystem == null)
+            {
+                return string.Empty;
+            }
+
+            var world = floatingOrigin.LocalToWorld(chassis.transform.position);
+            var time = timeSystem.Current;
+            var day = Mathf.FloorToInt((float)time.DayOfYear) + 1;
+            return
+                $"Скорость {chassis.Speed:F1} м/с  •  температура {chassis.CurrentAirTemperatureC:F0} °C\n"
+                + $"Пройдено {chassis.TravelledMetres:F0} м\n"
+                + $"X {world.X:F0}  •  Z {world.Z:F0}  •  высота {world.Y:F0} м\n"
+                + $"День {day}  •  год {time.Year + 1}  •  {SeasonName(time.Season)}";
+        }
+
+        private static string SeasonName(SteppeSeason season)
+        {
+            return season switch
+            {
+                SteppeSeason.Winter => "зима",
+                SteppeSeason.Spring => "весна",
+                SteppeSeason.Summer => "лето",
+                SteppeSeason.Autumn => "осень",
+                _ => string.Empty
+            };
+        }
+
         private static string ControlName(CaravanControlKind kind)
         {
             return kind switch
@@ -365,22 +475,28 @@ namespace Steppe.Caravan
 
         private string CurrentObjectiveTitle()
         {
-            if (onboarding.Stage != CaravanOnboardingStage.Complete
+            if (progressionDirector == null
+                || !progressionDirector.IsComplete
                 || expedition == null
                 || expedition.Stage == SteppeExpeditionStage.Locked)
             {
-                return onboarding.GetTitle();
+                return progressionDirector != null
+                    ? progressionDirector.GetTitle()
+                    : string.Empty;
             }
             return expedition.GetTitle();
         }
 
         private string CurrentObjectiveInstruction()
         {
-            if (onboarding.Stage != CaravanOnboardingStage.Complete
+            if (progressionDirector == null
+                || !progressionDirector.IsComplete
                 || expedition == null
                 || expedition.Stage == SteppeExpeditionStage.Locked)
             {
-                return onboarding.GetInstruction();
+                return progressionDirector != null
+                    ? progressionDirector.GetInstruction()
+                    : string.Empty;
             }
             return expedition.GetInstruction();
         }

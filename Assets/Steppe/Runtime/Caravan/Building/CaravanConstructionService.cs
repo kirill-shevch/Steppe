@@ -21,7 +21,8 @@ namespace Steppe.Caravan
             CaravanPartKind.GrassDryer,
             CaravanPartKind.BiomassStorage,
             CaravanPartKind.Transmission,
-            CaravanPartKind.CouplingRope
+            CaravanPartKind.CouplingRope,
+            CaravanPartKind.ResourceCrate
         };
 
         private CaravanPartPalette palette;
@@ -31,10 +32,26 @@ namespace Steppe.Caravan
         private CaravanMaterialNetwork biomassNetwork;
         private CaravanMaterialNetwork mechanicalNetwork;
         private CaravanResourceSystem resourceSystem;
+        private CaravanProgressionSystem progression;
         private CaravanEnvironmentSampler environment;
 
         public static System.Collections.Generic.IReadOnlyList<CaravanPartKind>
             AvailablePartKinds => AvailableDefinitions;
+        public int KnownPartCount
+        {
+            get
+            {
+                var count = 0;
+                for (var index = 0; index < AvailableDefinitions.Length; index++)
+                {
+                    if (CanConstruct(AvailableDefinitions[index]))
+                    {
+                        count++;
+                    }
+                }
+                return count;
+            }
+        }
 
         internal void Configure(
             CaravanPartPalette partPalette,
@@ -43,7 +60,8 @@ namespace Steppe.Caravan
             CaravanFluidNetwork fluids,
             CaravanMaterialNetwork biomass,
             CaravanMaterialNetwork mechanical,
-            CaravanResourceSystem resources)
+            CaravanResourceSystem resources,
+            CaravanProgressionSystem progressionSystem)
         {
             palette = partPalette;
             chassis = caravan != null
@@ -64,6 +82,9 @@ namespace Steppe.Caravan
             resourceSystem = resources != null
                 ? resources
                 : throw new ArgumentNullException(nameof(resources));
+            progression = progressionSystem != null
+                ? progressionSystem
+                : throw new ArgumentNullException(nameof(progressionSystem));
         }
 
         public void SetEnvironment(CaravanEnvironmentSampler sampler)
@@ -72,6 +93,15 @@ namespace Steppe.Caravan
         }
 
         public bool CanConstruct(CaravanPartKind kind)
+        {
+            if (progression == null || !progression.IsRecipeKnown(kind))
+            {
+                return false;
+            }
+            return IsCatalogPart(kind);
+        }
+
+        public bool IsCatalogPart(CaravanPartKind kind)
         {
             for (var index = 0; index < AvailableDefinitions.Length; index++)
             {
@@ -84,12 +114,94 @@ namespace Steppe.Caravan
             return false;
         }
 
+        public CaravanPartKind GetKnownPartKind(int selectionIndex)
+        {
+            var count = KnownPartCount;
+            if (count == 0)
+            {
+                throw new InvalidOperationException(
+                    "No learned caravan recipes are available.");
+            }
+
+            var target = ((selectionIndex % count) + count) % count;
+            for (var index = 0; index < AvailableDefinitions.Length; index++)
+            {
+                var kind = AvailableDefinitions[index];
+                if (!CanConstruct(kind))
+                {
+                    continue;
+                }
+                if (target-- == 0)
+                {
+                    return kind;
+                }
+            }
+
+            throw new InvalidOperationException(
+                "Learned caravan recipe selection is inconsistent.");
+        }
+
+        public bool CanAfford(CaravanPartKind kind)
+        {
+            return progression != null
+                   && progression.HasResources(
+                       CaravanConstructionCosts.ForPart(kind));
+        }
+
+        public string GetConstructionStatus(CaravanPartKind kind)
+        {
+            if (!IsCatalogPart(kind))
+            {
+                return "элемент отсутствует в каталоге";
+            }
+            if (progression == null || !progression.IsRecipeKnown(kind))
+            {
+                return CaravanProgressionSystem.TryGetRecipeSite(
+                    kind,
+                    out var site)
+                    ? $"рецепт не найден — ищите: {CaravanRecipeSite.SiteName(site)}"
+                    : "рецепт не найден";
+            }
+            if (!CanAfford(kind))
+            {
+                return "не хватает ресурсов";
+            }
+            return "готово к строительству";
+        }
+
+        public string FormatCost(CaravanPartKind kind)
+        {
+            return progression != null
+                ? progression.FormatCost(CaravanConstructionCosts.ForPart(kind))
+                : string.Empty;
+        }
+
+        public bool TryPayFor(CaravanModule module)
+        {
+            var part = module != null ? module.GetComponent<CaravanPart>() : null;
+            return part != null
+                   && progression != null
+                   && progression.TrySpend(
+                       CaravanConstructionCosts.ForPart(part.Kind));
+        }
+
+        public void Refund(CaravanModule module)
+        {
+            var part = module != null ? module.GetComponent<CaravanPart>() : null;
+            if (part != null)
+            {
+                progression?.AddResources(
+                    CaravanConstructionCosts.ForPart(part.Kind));
+            }
+        }
+
         public bool TryCreateBuffered(
             CaravanPartKind kind,
             out CaravanModule module)
         {
             module = null;
             if (!CanConstruct(kind)
+                || !CanAfford(kind)
                 || chassis == null
                 || electricalNetwork == null
                 || fluidNetwork == null
@@ -101,6 +213,28 @@ namespace Steppe.Caravan
             }
 
             module = CaravanGreyboxPartFactory.CreateUnplaced(palette, kind);
+            module.transform.SetParent(chassis.transform, false);
+            module.gameObject.SetActive(false);
+            return true;
+        }
+
+        public bool TryCreateForRestore(
+            CaravanPartKind kind,
+            string instanceId,
+            out CaravanModule module)
+        {
+            module = null;
+            if (!IsCatalogPart(kind)
+                || string.IsNullOrWhiteSpace(instanceId)
+                || chassis == null)
+            {
+                return false;
+            }
+
+            module = CaravanGreyboxPartFactory.CreateUnplaced(
+                palette,
+                kind,
+                instanceId);
             module.transform.SetParent(chassis.transform, false);
             module.gameObject.SetActive(false);
             return true;
@@ -126,6 +260,10 @@ namespace Steppe.Caravan
             }
             ConfigureSail(module);
             ConfigureControl(module);
+            if (module.TryGetComponent<CaravanResourceCrateModule>(out var crate))
+            {
+                crate.Configure(progression);
+            }
 
             chassis.RefreshMassProperties();
             chassis.NotifyStructureCollidersChanged();
@@ -139,7 +277,10 @@ namespace Steppe.Caravan
             }
         }
 
-        public bool TryDestroyPlaced(CaravanModule module, CaravanMountGrid grid)
+        public bool TryDestroyPlaced(
+            CaravanModule module,
+            CaravanMountGrid grid,
+            bool refundResources = true)
         {
             if (module == null
                 || grid == null
@@ -171,6 +312,10 @@ namespace Steppe.Caravan
             }
 
             resourceSystem.UnregisterModule(module);
+            if (refundResources)
+            {
+                Refund(module);
+            }
             module.gameObject.SetActive(false);
             module.transform.SetParent(null, true);
             chassis.NotifyStructureCollidersChanged();

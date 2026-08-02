@@ -24,6 +24,7 @@ namespace Steppe.Caravan
         private CaravanFirstPersonController firstPerson;
         private CaravanChassisController chassis;
         private CaravanMountGrid grid;
+        private CaravanPlatformController platform;
         private CaravanElectricalNetwork electricalNetwork;
         private CaravanFluidNetwork fluidNetwork;
         private CaravanMaterialNetwork biomassNetwork;
@@ -38,11 +39,17 @@ namespace Steppe.Caravan
         private CaravanMaterialPort focusedMaterialPort;
         private CaravanGridPlacement previousPlacement;
         private GameObject ghost;
+        private GameObject platformGhost;
         private LineRenderer communicationPreview;
         private Material validGhostMaterial;
         private Material invalidGhostMaterial;
         private CaravanGridPlacement candidate;
         private bool candidateValid;
+        private CaravanGridCell platformCandidate;
+        private CaravanGridCell[] platformCandidateLine =
+            Array.Empty<CaravanGridCell>();
+        private bool platformCandidateValid;
+        private bool platformExpansionMode;
         private bool heldModuleIsNew;
         private int quarterTurns;
         private int selectedConstructionIndex;
@@ -53,7 +60,10 @@ namespace Steppe.Caravan
 
         public bool IsActive { get; private set; }
         public CaravanModule HeldModule => heldModule;
-        public bool CandidateValid => candidateValid;
+        public bool CandidateValid => platformExpansionMode
+            ? platformCandidateValid
+            : candidateValid;
+        public bool IsPlatformExpansionMode => platformExpansionMode;
         public CaravanBuildInteractionMode InteractionMode { get; private set; } =
             CaravanBuildInteractionMode.Modules;
         public bool IsCommunicationMode =>
@@ -72,7 +82,9 @@ namespace Steppe.Caravan
         public CaravanFluidPort SelectedFluidPort => selectedFluidPort;
         public CaravanMaterialPort SelectedMaterialPort => selectedMaterialPort;
         public CaravanPartKind SelectedConstructionKind =>
-            CaravanConstructionService.AvailablePartKinds[selectedConstructionIndex];
+            construction != null && construction.KnownPartCount > 0
+                ? construction.GetKnownPartKind(selectedConstructionIndex)
+                : CaravanPartKind.Sail;
         public string FeedbackMessage => feedbackMessage;
         public bool FeedbackIsError => feedbackIsError;
         public bool FeedbackVisible =>
@@ -84,6 +96,7 @@ namespace Steppe.Caravan
             CaravanFirstPersonController controller,
             CaravanChassisController caravan,
             CaravanMountGrid mountGrid,
+            CaravanPlatformController platformController,
             CaravanElectricalNetwork network,
             CaravanFluidNetwork fluids,
             CaravanMaterialNetwork biomass,
@@ -94,6 +107,9 @@ namespace Steppe.Caravan
             firstPerson = controller != null ? controller : throw new ArgumentNullException(nameof(controller));
             chassis = caravan != null ? caravan : throw new ArgumentNullException(nameof(caravan));
             grid = mountGrid != null ? mountGrid : throw new ArgumentNullException(nameof(mountGrid));
+            platform = platformController != null
+                ? platformController
+                : throw new ArgumentNullException(nameof(platformController));
             electricalNetwork = network != null
                 ? network
                 : throw new ArgumentNullException(nameof(network));
@@ -147,6 +163,7 @@ namespace Steppe.Caravan
 
             if (keyboard.tabKey.wasPressedThisFrame)
             {
+                CancelPlatformExpansion();
                 ToggleCommunicationMode();
                 return;
             }
@@ -159,6 +176,31 @@ namespace Steppe.Caravan
 
             if (heldModule == null)
             {
+                if (platformExpansionMode)
+                {
+                    UpdatePlatformExpansion();
+                    if (keyboard.gKey.wasPressedThisFrame
+                        || (mouse != null
+                            && mouse.rightButton.wasPressedThisFrame))
+                    {
+                        CancelPlatformExpansion();
+                    }
+                    else if (mouse != null
+                             && mouse.leftButton.wasPressedThisFrame
+                             && platformCandidateValid)
+                    {
+                        TryExpandPlatformCell(
+                            platformCandidate.X,
+                            platformCandidate.Z);
+                    }
+                    return;
+                }
+
+                if (keyboard.gKey.wasPressedThisFrame)
+                {
+                    BeginPlatformExpansion();
+                    return;
+                }
                 if (keyboard.qKey.wasPressedThisFrame)
                 {
                     CycleConstructionSelection(-1);
@@ -267,6 +309,7 @@ namespace Steppe.Caravan
             {
                 CancelHeldModule();
             }
+            CancelPlatformExpansion();
             selectedCommunicationPort = null;
             focusedCommunicationPort = null;
             selectedFluidPort = null;
@@ -512,7 +555,9 @@ namespace Steppe.Caravan
 
         public void CycleConstructionSelection(int delta)
         {
-            var count = CaravanConstructionService.AvailablePartKinds.Count;
+            var count = construction != null
+                ? construction.KnownPartCount
+                : 0;
             if (count <= 0)
             {
                 selectedConstructionIndex = 0;
@@ -536,6 +581,12 @@ namespace Steppe.Caravan
                 || construction == null
                 || !construction.TryCreateBuffered(kind, out var module))
             {
+                if (IsActive && construction != null)
+                {
+                    SetFeedback(
+                        $"{CaravanPartCatalog.Get(kind).DisplayName}: {construction.GetConstructionStatus(kind)}",
+                        true);
+                }
                 return false;
             }
 
@@ -577,13 +628,31 @@ namespace Steppe.Caravan
 
         public bool TryPlaceHeldModule(CaravanGridPlacement placement)
         {
-            if (heldModule == null || !grid.TryPlace(heldModule, placement))
+            if (heldModule == null || !grid.CanPlace(heldModule, placement))
             {
                 return false;
             }
 
             var placedModule = heldModule;
             var wasNew = heldModuleIsNew;
+            var paid = false;
+            if (wasNew)
+            {
+                paid = construction.TryPayFor(placedModule);
+                if (!paid)
+                {
+                    SetFeedback("Не хватает ресурсов для строительства", true);
+                    return false;
+                }
+            }
+            if (!grid.TryPlace(heldModule, placement))
+            {
+                if (paid)
+                {
+                    construction.Refund(placedModule);
+                }
+                return false;
+            }
             placedModule.gameObject.SetActive(true);
             if (wasNew)
             {
@@ -600,6 +669,139 @@ namespace Steppe.Caravan
                     : $"Перемещено: {placedModule.name}",
                 false);
             return true;
+        }
+
+        public bool BeginPlatformExpansion()
+        {
+            if (!IsActive
+                || IsCommunicationMode
+                || heldModule != null
+                || platform == null)
+            {
+                return false;
+            }
+
+            platformExpansionMode = true;
+            if (platformGhost == null)
+            {
+                platformGhost = GameObject.CreatePrimitive(PrimitiveType.Cube);
+                platformGhost.name = "Platform Expansion Ghost";
+                var collider = platformGhost.GetComponent<Collider>();
+                if (collider != null)
+                {
+                    Destroy(collider);
+                }
+            }
+            platformGhost.SetActive(false);
+            SetFeedback(
+                "Расширение платформы: выберите внешний край для целой линии",
+                false);
+            return true;
+        }
+
+        public bool TryExpandPlatformCell(int x, int z)
+        {
+            var lineLength = platform != null
+                             && platform.TryGetExpansionLine(x, z, out var line)
+                ? line.Length
+                : 0;
+            var cost = platform != null
+                ? platform.FormatExpansionCost(x, z)
+                : string.Empty;
+            if (!IsActive
+                || !platformExpansionMode
+                || platform == null
+                || !platform.TryExpand(x, z))
+            {
+                SetFeedback(
+                    lineLength > 0
+                        ? $"Не хватает ресурсов на линию: {cost}"
+                        : "Выберите свободный внешний край платформы",
+                    true);
+                return false;
+            }
+
+            SetFeedback(
+                $"Построена линия: {lineLength} клеток  •  колёса перенесены на край",
+                false);
+            UpdatePlatformExpansion();
+            return true;
+        }
+
+        private void UpdatePlatformExpansion()
+        {
+            if (!platformExpansionMode || platformGhost == null)
+            {
+                return;
+            }
+
+            var plane = new Plane(grid.transform.up, grid.transform.position);
+            var ray = new Ray(
+                viewCamera.transform.position,
+                viewCamera.transform.forward);
+            if (!plane.Raycast(ray, out var distance)
+                || distance < 0f
+                || distance > 12f)
+            {
+                platformCandidateValid = false;
+                platformGhost.SetActive(false);
+                return;
+            }
+
+            platformCandidate = grid.CellFromWorldPoint(ray.GetPoint(distance));
+            var hasLine = platform.TryGetExpansionLine(
+                platformCandidate.X,
+                platformCandidate.Z,
+                out platformCandidateLine);
+            platformCandidateValid = hasLine
+                                     && platform.CanExpand(
+                                         platformCandidate.X,
+                                         platformCandidate.Z);
+            var first = hasLine
+                ? platformCandidateLine[0]
+                : platformCandidate;
+            var last = hasLine
+                ? platformCandidateLine[platformCandidateLine.Length - 1]
+                : platformCandidate;
+            grid.GetWorldCellPose(
+                first.X,
+                first.Z,
+                out var firstPosition,
+                out var rotation);
+            grid.GetWorldCellPose(
+                last.X,
+                last.Z,
+                out var lastPosition,
+                out _);
+            platformGhost.transform.SetPositionAndRotation(
+                (firstPosition + lastPosition) * 0.5f
+                - grid.transform.up * 0.055f,
+                rotation);
+            var cellWidth = Mathf.Abs(last.X - first.X) + 1;
+            var cellLength = Mathf.Abs(last.Z - first.Z) + 1;
+            platformGhost.transform.localScale = new Vector3(
+                cellWidth * grid.CellSize - grid.CellSize * 0.06f,
+                0.11f,
+                cellLength * grid.CellSize - grid.CellSize * 0.06f);
+            platformGhost.SetActive(true);
+            foreach (var renderer in
+                     platformGhost.GetComponentsInChildren<Renderer>(true))
+            {
+                renderer.sharedMaterial = platformCandidateValid
+                    ? validGhostMaterial
+                    : invalidGhostMaterial;
+            }
+        }
+
+        private void CancelPlatformExpansion()
+        {
+            platformExpansionMode = false;
+            platformCandidateValid = false;
+            platformCandidateLine = Array.Empty<CaravanGridCell>();
+            if (platformGhost != null)
+            {
+                platformGhost.SetActive(false);
+            }
         }
 
         public bool TryRemoveModule(CaravanModule module)
@@ -619,13 +821,21 @@ namespace Steppe.Caravan
             }
 
             var moduleName = module.name;
+            var part = module.GetComponent<CaravanPart>();
+            var returned = part != null
+                ? construction.FormatCost(part.Kind)
+                : string.Empty;
             if (!construction.TryDestroyPlaced(module, grid))
             {
                 SetFeedback("Не удалось разобрать выбранный модуль", true);
                 return false;
             }
 
-            SetFeedback($"Разобрано: {moduleName}", false);
+            SetFeedback(
+                string.IsNullOrWhiteSpace(returned)
+                    ? $"Разобрано: {moduleName}"
+                    : $"Разобрано: {moduleName}  •  в ящик: {returned}",
+                false);
             return true;
         }
 
@@ -744,6 +954,7 @@ namespace Steppe.Caravan
 
         public void ExitBuildMode()
         {
+            CancelPlatformExpansion();
             if (heldModule != null)
             {
                 CancelHeldModule();
@@ -1178,14 +1389,35 @@ namespace Steppe.Caravan
                     $"Строительство каравана — {InteractionModeName()}");
                 if (InteractionMode == CaravanBuildInteractionMode.Modules)
                 {
+                    if (platformExpansionMode)
+                    {
+                        GUILayout.Label("Расширение платформы");
+                        if (platformCandidateLine.Length > 0)
+                        {
+                            GUILayout.Label(
+                                $"Линия: {platformCandidateLine.Length} клеток");
+                            GUILayout.Label(
+                                $"Цена: {platform.FormatExpansionCost(platformCandidate.X, platformCandidate.Z)}");
+                        }
+                        else
+                        {
+                            GUILayout.Label("Выберите внешний край платформы");
+                        }
+                        GUILayout.Label("ЛКМ — построить  •  ПКМ / G — отменить");
+                        GUILayout.Label("B — выйти");
+                        GUILayout.EndArea();
+                        return;
+                    }
                     var definition = CaravanPartCatalog.Get(
                         SelectedConstructionKind);
                     GUILayout.Label($"Модуль: {definition.DisplayName}");
                     GUILayout.Label(
+                        $"{construction.GetConstructionStatus(SelectedConstructionKind)}  •  {construction.FormatCost(SelectedConstructionKind)}");
+                    GUILayout.Label(
                         definition.Description,
                         buildDescriptionStyle);
                     GUILayout.Label(heldModule == null
-                        ? "Q/E — выбрать  •  F — создать  •  ЛКМ — переставить"
+                        ? "Q/E — выбрать  •  F — создать  •  G — расширить платформу  •  ЛКМ — переставить"
                         : "R — повернуть  •  ЛКМ — установить  •  ПКМ — отменить");
                     if (heldModule == null)
                     {
@@ -1296,6 +1528,10 @@ namespace Steppe.Caravan
 
         private void OnDestroy()
         {
+            if (platformGhost != null)
+            {
+                Destroy(platformGhost);
+            }
             if (validGhostMaterial != null)
             {
                 Destroy(validGhostMaterial);

@@ -260,6 +260,50 @@ namespace Steppe.Tests
         }
 
         [Test]
+        public void TerrainSkirtsFaceOutwardToCoverLodSeams()
+        {
+            var generator = new TerrainHeightGenerator(settings);
+            var mesh = TerrainMeshBuilder.Build(
+                generator,
+                new ChunkCoordinate(0, 0),
+                512f,
+                17,
+                20f);
+
+            for (var triangle = mesh.TopTriangleCount;
+                 triangle < mesh.Triangles.Length;
+                 triangle += 3)
+            {
+                var first = mesh.Triangles[triangle];
+                var second = mesh.Triangles[triangle + 1];
+                var third = mesh.Triangles[triangle + 2];
+                var geometricNormal = Vector3.Cross(
+                    mesh.Vertices[second] - mesh.Vertices[first],
+                    mesh.Vertices[third] - mesh.Vertices[first]).normalized;
+                Assert.That(
+                    Vector3.Dot(geometricNormal, mesh.Normals[first]),
+                    Is.GreaterThan(0.99f),
+                    $"Skirt triangle {triangle / 3} faces into the chunk.");
+            }
+        }
+
+        [Test]
+        public void NearTerrainMeshCanOmitDecorativeSkirts()
+        {
+            var generator = new TerrainHeightGenerator(settings);
+            var mesh = TerrainMeshBuilder.Build(
+                generator,
+                new ChunkCoordinate(0, 0),
+                512f,
+                33,
+                20f,
+                includeSkirts: false);
+
+            Assert.That(mesh.Vertices, Has.Length.EqualTo(mesh.TopVertexCount));
+            Assert.That(mesh.Triangles, Has.Length.EqualTo(mesh.TopTriangleCount));
+        }
+
+        [Test]
         public void OverrideStampChangesOnlyItsAuthoredArea()
         {
             var baseGenerator = new TerrainHeightGenerator(settings);

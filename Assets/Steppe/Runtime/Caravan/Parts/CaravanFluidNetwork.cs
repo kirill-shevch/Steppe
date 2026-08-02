@@ -523,6 +523,7 @@ namespace Steppe.Caravan
             IsConnected(reservoirSupply, pumpInlet)
             && IsConnected(pumpOutlet, radiatorInlet)
             && IsConnected(radiatorOutlet, reservoirReturn);
+        public event Action ConnectionsChanged;
 
         public void Configure(Material material)
         {
@@ -618,6 +619,7 @@ namespace Steppe.Caravan
             var pipe = pipeObject.AddComponent<CaravanFluidPipe>();
             pipe.Configure(first, second, transform, pipeMaterial);
             pipes.Add(pipe);
+            ConnectionsChanged?.Invoke();
             return true;
         }
 
@@ -653,6 +655,7 @@ namespace Steppe.Caravan
             pipe.End?.Unregister(pipe);
             pipe.SetFlow(0f);
             Destroy(pipe.gameObject);
+            ConnectionsChanged?.Invoke();
             return true;
         }
 

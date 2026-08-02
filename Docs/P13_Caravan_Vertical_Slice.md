@@ -1,5 +1,8 @@
 # P13 — Caravan keeper vertical slice
 
+> **Historical implementation note:** P18 supersedes this milestone's starting
+> loadout, platform size and initial catalogue availability for the target game.
+
 P13 replaces the development rolling sphere with the first playable modular caravan.
 The current configuration is deliberately minimal: an enlarged wheeled deck, a
 physical steering wheel and the three components of a player-wired electrical

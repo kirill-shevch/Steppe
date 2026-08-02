@@ -68,7 +68,8 @@ namespace Steppe.Prototype
 
             const float initialX = 32f;
             const float initialZ = -64f;
-            var initialGroundHeight = (float)new TerrainHeightGenerator(runtimeSettings).SampleHeight(initialX, initialZ);
+            var terrainHeight = new TerrainHeightGenerator(runtimeSettings);
+            var initialGroundHeight = (float)terrainHeight.SampleHeight(initialX, initialZ);
             var initialWeather = new SteppeWeatherModel(runtimeSettings).Sample(
                 initialX,
                 initialZ,
@@ -139,9 +140,17 @@ namespace Steppe.Prototype
                     worldSpaceObject.transform,
                     floatingOrigin,
                     weatherSystem,
-                    new TerrainHeightGenerator(runtimeSettings),
+                    terrainHeight,
                     initialX + 900.0,
                     initialZ + 650.0);
+            var progressionWorld = CaravanProgressionWorldFactory.Create(
+                worldSpaceObject.transform,
+                floatingOrigin,
+                terrainHeight,
+                caravanRig.Progression,
+                initialX,
+                initialZ,
+                initialRotation);
 
             var existingBallCamera = camera.GetComponent<SteppeBallCameraController>();
             if (existingBallCamera != null)
@@ -163,6 +172,7 @@ namespace Steppe.Prototype
                 firstPerson,
                 caravanRig.Chassis,
                 caravanRig.MountGrid,
+                caravanRig.Platform,
                 caravanRig.ElectricalNetwork,
                 caravanRig.FluidNetwork,
                 caravanRig.BiomassNetwork,
@@ -170,6 +180,14 @@ namespace Steppe.Prototype
                 caravanRig.Construction);
             var interactor = playerObject.AddComponent<CaravanPlayerInteractor>();
             interactor.Configure(camera, firstPerson, buildMode);
+            var progressionDirector =
+                playerObject.AddComponent<CaravanProgressionDirector>();
+            progressionDirector.Configure(
+                caravanRig.Chassis,
+                caravanRig.Progression,
+                caravanRig.Platform,
+                caravanRig.ElectricalNetwork,
+                progressionWorld);
             var expedition =
                 playerObject.AddComponent<SteppeFirstExpeditionDirector>();
             expedition.Configure(
@@ -182,13 +200,32 @@ namespace Steppe.Prototype
                 caravanRig.BiomassNetwork,
                 caravanRig.ResourceSystem,
                 firstRidgeTower);
+            var saveService = playerObject.AddComponent<CaravanSaveService>();
+            saveService.Configure(
+                floatingOrigin,
+                caravanRig.Chassis,
+                caravanRig.MountGrid,
+                caravanRig.Platform,
+                caravanRig.Construction,
+                caravanRig.Progression,
+                caravanRig.ElectricalNetwork,
+                caravanRig.FluidNetwork,
+                caravanRig.BiomassNetwork,
+                caravanRig.MechanicalNetwork,
+                progressionWorld,
+                progressionDirector,
+                buildMode);
             var playerHud = playerObject.AddComponent<CaravanPlayerHud>();
             playerHud.Configure(
                 interactor,
                 buildMode,
                 caravanRig.Chassis,
                 caravanRig.ElectricalNetwork,
-                expedition);
+                progressionDirector,
+                expedition,
+                saveService,
+                floatingOrigin,
+                timeSystem);
 
             var trackSystem = gameObject.AddComponent<SteppeTrackSystem>();
             trackSystem.Configure(
