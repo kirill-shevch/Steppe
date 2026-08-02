@@ -128,6 +128,7 @@ namespace Steppe.Caravan
             ConfigureControl(module);
 
             chassis.RefreshMassProperties();
+            chassis.NotifyStructureCollidersChanged();
         }
 
         public void DestroyBuffered(CaravanModule module)
@@ -136,6 +137,46 @@ namespace Steppe.Caravan
             {
                 Destroy(module.gameObject);
             }
+        }
+
+        public bool TryDestroyPlaced(CaravanModule module, CaravanMountGrid grid)
+        {
+            if (module == null
+                || grid == null
+                || !module.IsMovable
+                || !grid.Remove(module, out _))
+            {
+                return false;
+            }
+
+            var electricalPorts = module.GetComponentsInChildren<
+                CaravanElectricalPort>(true);
+            for (var index = 0; index < electricalPorts.Length; index++)
+            {
+                electricalNetwork.UnregisterPort(electricalPorts[index]);
+            }
+
+            var fluidPorts = module.GetComponentsInChildren<CaravanFluidPort>(true);
+            for (var index = 0; index < fluidPorts.Length; index++)
+            {
+                fluidNetwork.UnregisterPort(fluidPorts[index]);
+            }
+
+            var materialPorts = module.GetComponentsInChildren<
+                CaravanMaterialPort>(true);
+            for (var index = 0; index < materialPorts.Length; index++)
+            {
+                biomassNetwork.UnregisterPort(materialPorts[index]);
+                mechanicalNetwork.UnregisterPort(materialPorts[index]);
+            }
+
+            resourceSystem.UnregisterModule(module);
+            module.gameObject.SetActive(false);
+            module.transform.SetParent(null, true);
+            chassis.NotifyStructureCollidersChanged();
+            Destroy(module.gameObject);
+            chassis.RefreshMassProperties();
+            return true;
         }
 
         private void ConfigureSail(CaravanModule module)

@@ -38,8 +38,10 @@ namespace Steppe.Caravan
     [DisallowMultipleComponent]
     public sealed class CaravanElectricalPort : MonoBehaviour
     {
+        public const int DefaultStorageConnectionCapacity = 8;
+
         private readonly List<CaravanElectricalCable> cables =
-            new List<CaravanElectricalCable>(2);
+            new List<CaravanElectricalCable>(DefaultStorageConnectionCapacity);
         private GameObject buildMarker;
         private Renderer buildMarkerRenderer;
         private Light buildMarkerLight;
@@ -70,7 +72,7 @@ namespace Steppe.Caravan
             maximumConnections = connectionCapacity > 0
                 ? connectionCapacity
                 : Kind == CaravanElectricalPortKind.Storage
-                    ? 2
+                    ? DefaultStorageConnectionCapacity
                     : 1;
             var module = Part.GetComponent<CaravanModule>();
             PortId = string.IsNullOrWhiteSpace(portId)

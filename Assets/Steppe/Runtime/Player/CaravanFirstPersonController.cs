@@ -8,6 +8,13 @@ using UnityEngine.InputSystem;
 
 namespace Steppe.Player
 {
+    public enum CaravanPlayerControlMode
+    {
+        Free,
+        Station,
+        Build
+    }
+
     [DisallowMultipleComponent]
     [RequireComponent(typeof(CharacterController))]
     public sealed class CaravanFirstPersonController : MonoBehaviour
@@ -28,11 +35,20 @@ namespace Steppe.Player
         private Vector3 previousCarrierPosition;
         private Quaternion previousCarrierRotation;
         private bool pointerLocked;
-        private bool interactionControl;
+        private CaravanPlayerControlMode controlMode;
+        private Vector3 planarVelocity;
+        private float jumpBufferRemaining;
+        private float coyoteRemaining;
+        private bool wasGrounded;
+        private Vector3 cameraBaseLocalPosition;
+        private float bobPhase;
+        private float landingOffset;
         private readonly RaycastHit[] groundHits = new RaycastHit[12];
 
         public Camera ViewCamera => viewCamera;
-        public bool InteractionControl => interactionControl;
+        public bool InteractionControl =>
+            controlMode == CaravanPlayerControlMode.Station;
+        public CaravanPlayerControlMode ControlMode => controlMode;
         public bool IsOnCaravan { get; private set; }
         public bool CaravanContactIsolationEnabled =>
             caravanCollisionProxy != null && caravanCollisionProxy.IsActive;
@@ -63,6 +79,7 @@ namespace Steppe.Player
             viewCamera.transform.SetParent(transform, false);
             viewCamera.transform.localPosition = new Vector3(0f, 1.63f, 0f);
             viewCamera.transform.localRotation = Quaternion.identity;
+            cameraBaseLocalPosition = viewCamera.transform.localPosition;
             previousCarrierPosition = caravan.transform.position;
             previousCarrierRotation = caravan.transform.rotation;
             yaw = transform.eulerAngles.y;
@@ -73,7 +90,27 @@ namespace Steppe.Player
 
         public void SetInteractionControl(bool active)
         {
-            interactionControl = active;
+            if (active)
+            {
+                controlMode = CaravanPlayerControlMode.Station;
+            }
+            else if (controlMode == CaravanPlayerControlMode.Station)
+            {
+                controlMode = CaravanPlayerControlMode.Free;
+            }
+        }
+
+        public void SetBuildControl(bool active)
+        {
+            if (active)
+            {
+                controlMode = CaravanPlayerControlMode.Build;
+                planarVelocity = Vector3.zero;
+            }
+            else if (controlMode == CaravanPlayerControlMode.Build)
+            {
+                controlMode = CaravanPlayerControlMode.Free;
+            }
         }
 
         private void Update()
@@ -89,6 +126,7 @@ namespace Steppe.Player
             UpdateGroundCarrier();
             UpdateLook();
             UpdateMovement();
+            UpdateCameraMotion();
             previousCarrierPosition = caravan.transform.position;
             previousCarrierRotation = caravan.transform.rotation;
         }
@@ -145,7 +183,9 @@ namespace Steppe.Player
 
         private void UpdateLook()
         {
-            if (!pointerLocked || interactionControl || Mouse.current == null)
+            if (!pointerLocked
+                || controlMode == CaravanPlayerControlMode.Station
+                || Mouse.current == null)
             {
                 return;
             }
@@ -160,32 +200,57 @@ namespace Steppe.Player
         private void UpdateMovement()
         {
             var keyboard = Keyboard.current;
-            if (keyboard == null || interactionControl)
+            if (keyboard == null)
             {
                 return;
             }
 
             var input = Vector2.zero;
-            if (keyboard.wKey.isPressed) input.y += 1f;
-            if (keyboard.sKey.isPressed) input.y -= 1f;
-            if (keyboard.dKey.isPressed) input.x += 1f;
-            if (keyboard.aKey.isPressed) input.x -= 1f;
+            if (controlMode == CaravanPlayerControlMode.Free)
+            {
+                if (keyboard.wKey.isPressed) input.y += 1f;
+                if (keyboard.sKey.isPressed) input.y -= 1f;
+                if (keyboard.dKey.isPressed) input.x += 1f;
+                if (keyboard.aKey.isPressed) input.x -= 1f;
+                if (keyboard.spaceKey.wasPressedThisFrame)
+                {
+                    jumpBufferRemaining = 0.13f;
+                }
+            }
             input = Vector2.ClampMagnitude(input, 1f);
 
             var grounded = character.isGrounded;
+            if (grounded && !wasGrounded)
+            {
+                landingOffset = -Mathf.Clamp(
+                    Mathf.Abs(verticalVelocity) * 0.018f,
+                    0.035f,
+                    0.14f);
+            }
+            coyoteRemaining = grounded
+                ? 0.12f
+                : Mathf.Max(0f, coyoteRemaining - UnityEngine.Time.deltaTime);
+            jumpBufferRemaining = Mathf.Max(
+                0f,
+                jumpBufferRemaining - UnityEngine.Time.deltaTime);
             if (grounded && verticalVelocity < 0f)
             {
                 verticalVelocity = -2f;
                 inheritedVelocity = Vector3.zero;
             }
 
-            if (grounded && keyboard.spaceKey.wasPressedThisFrame)
+            if (controlMode == CaravanPlayerControlMode.Free
+                && jumpBufferRemaining > 0f
+                && coyoteRemaining > 0f)
             {
                 verticalVelocity = 5.2f;
                 inheritedVelocity = caravan.Body != null
                     ? Vector3.ProjectOnPlane(caravan.Body.GetPointVelocity(transform.position), Vector3.up)
                     : Vector3.zero;
                 IsOnCaravan = false;
+                jumpBufferRemaining = 0f;
+                coyoteRemaining = 0f;
+                grounded = false;
             }
 
             verticalVelocity += Physics.gravity.y * UnityEngine.Time.deltaTime;
@@ -200,8 +265,54 @@ namespace Steppe.Player
             var run = keyboard.leftShiftKey.isPressed || keyboard.rightShiftKey.isPressed;
             var speed = run ? 6.7f : 4.1f;
             var desired = transform.forward * input.y + transform.right * input.x;
-            var motion = desired * speed + inheritedVelocity + Vector3.up * verticalVelocity;
+            var desiredVelocity = desired * speed;
+            var acceleration = input.sqrMagnitude > 0.001f ? 22f : 30f;
+            planarVelocity = Vector3.MoveTowards(
+                planarVelocity,
+                desiredVelocity,
+                acceleration * UnityEngine.Time.deltaTime);
+            var motion = planarVelocity
+                         + inheritedVelocity
+                         + Vector3.up * verticalVelocity;
             character.Move(motion * UnityEngine.Time.deltaTime);
+            wasGrounded = character.isGrounded;
+        }
+
+        private void UpdateCameraMotion()
+        {
+            if (viewCamera == null)
+            {
+                return;
+            }
+
+            var grounded = character != null && character.isGrounded;
+            var moving = planarVelocity.magnitude;
+            var bob = Vector3.zero;
+            if (controlMode == CaravanPlayerControlMode.Free
+                && grounded
+                && moving > 0.2f)
+            {
+                bobPhase += UnityEngine.Time.deltaTime
+                            * Mathf.Lerp(7f, 11f, Mathf.InverseLerp(0f, 6.7f, moving));
+                bob.x = Mathf.Sin(bobPhase * 0.5f) * 0.012f;
+                bob.y = Mathf.Abs(Mathf.Sin(bobPhase)) * 0.022f;
+            }
+            else
+            {
+                bobPhase = 0f;
+            }
+
+            landingOffset = Mathf.MoveTowards(
+                landingOffset,
+                0f,
+                UnityEngine.Time.deltaTime * 0.72f);
+            var target = cameraBaseLocalPosition
+                         + bob
+                         + Vector3.up * landingOffset;
+            viewCamera.transform.localPosition = Vector3.Lerp(
+                viewCamera.transform.localPosition,
+                target,
+                1f - Mathf.Exp(-UnityEngine.Time.deltaTime * 16f));
         }
 
         private void OnFloatingOriginShifted(Vector3 shift)

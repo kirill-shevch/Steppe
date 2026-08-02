@@ -14,10 +14,46 @@ namespace Steppe.Caravan
         private CaravanResourceSystem resourceSystem;
         private CaravanControlStation activeStation;
         private CaravanControlStation focusedStation;
+        private CaravanModule focusedModule;
+        private float feedbackUntil;
+        private string feedbackMessage;
+        private bool feedbackIsError;
         private const float InteractionDistance = 4.8f;
         private const float StationAimRadius = 0.18f;
 
         public CaravanControlStation ActiveStation => activeStation;
+        public CaravanControlStation FocusedStation => focusedStation;
+        public CaravanModule FocusedModule => focusedModule;
+        public string FeedbackMessage => feedbackMessage;
+        public bool FeedbackIsError => feedbackIsError;
+        public bool FeedbackVisible =>
+            !string.IsNullOrWhiteSpace(feedbackMessage)
+            && UnityEngine.Time.unscaledTime < feedbackUntil;
+        public string ContextPrompt
+        {
+            get
+            {
+                if (activeStation != null)
+                {
+                    return "A / D — изменить  •  E — отпустить";
+                }
+                if (focusedStation != null)
+                {
+                    return $"E — использовать: {GetControlName(focusedStation.Kind)}";
+                }
+                if (focusedModule != null)
+                {
+                    var clean = focusedModule.State.Dust > 0.001f
+                        ? "C — очистить"
+                        : "чисто";
+                    var repair = focusedModule.State.Integrity < 0.999f
+                        ? "R — ремонтировать"
+                        : "исправно";
+                    return $"{clean}  •  {repair}";
+                }
+                return string.Empty;
+            }
+        }
 
         public void Configure(
             Camera camera,
@@ -41,6 +77,7 @@ namespace Steppe.Caravan
             if (buildMode != null && buildMode.IsActive)
             {
                 SetFocusedStation(null);
+                focusedModule = null;
                 if (activeStation != null)
                 {
                     EndControl();
@@ -51,6 +88,7 @@ namespace Steppe.Caravan
             if (activeStation != null)
             {
                 SetFocusedStation(activeStation);
+                focusedModule = activeStation.GetComponentInParent<CaravanModule>();
                 if (keyboard.eKey.wasPressedThisFrame)
                 {
                     EndControl();
@@ -60,23 +98,25 @@ namespace Steppe.Caravan
                 var keyboardDelta = 0f;
                 if (keyboard.aKey.isPressed) keyboardDelta -= UnityEngine.Time.deltaTime * 0.65f;
                 if (keyboard.dKey.isPressed) keyboardDelta += UnityEngine.Time.deltaTime * 0.65f;
-                activeStation.Adjust(keyboardDelta);
+                AdjustActiveControl(keyboardDelta);
                 return;
             }
 
             var target = RaycastTarget();
             var targetStation = FindTargetedStation();
             SetFocusedStation(targetStation);
+            focusedModule = target.collider != null
+                ? target.collider.GetComponentInParent<CaravanModule>()
+                : null;
             if (keyboard.eKey.wasPressedThisFrame && targetStation != null)
             {
-                activeStation = targetStation;
-                activeStation.SetEngaged(true);
-                firstPerson.SetInteractionControl(true);
+                TryBeginControl(targetStation);
                 return;
             }
 
             if (target.collider == null)
             {
+                focusedModule = null;
                 return;
             }
 
@@ -88,7 +128,12 @@ namespace Steppe.Caravan
 
             if (keyboard.cKey.isPressed)
             {
+                var previousDust = module.State.Dust;
                 module.Clean(UnityEngine.Time.deltaTime * 0.34f);
+                if (previousDust > 0.001f && module.State.Dust <= 0.001f)
+                {
+                    SetFeedback("Модуль очищен", false, 1.4f);
+                }
             }
             if (keyboard.rKey.isPressed)
             {
@@ -106,6 +151,17 @@ namespace Steppe.Caravan
                     {
                         rope.RepairRope();
                     }
+                    if (module.State.Integrity >= 0.999f)
+                    {
+                        SetFeedback("Ремонт завершён", false, 1.4f);
+                    }
+                }
+                else if (repairAmount > 0f)
+                {
+                    SetFeedback(
+                        "Для ремонта нужна сухая биомасса в подключённом хранилище",
+                        true,
+                        0.35f);
                 }
             }
         }
@@ -115,6 +171,38 @@ namespace Steppe.Caravan
             activeStation?.SetEngaged(false);
             activeStation = null;
             firstPerson?.SetInteractionControl(false);
+        }
+
+        public bool TryBeginControl(CaravanControlStation station)
+        {
+            if (station == null
+                || !station.isActiveAndEnabled
+                || firstPerson == null
+                || (buildMode != null && buildMode.IsActive))
+            {
+                return false;
+            }
+
+            if (activeStation != null && activeStation != station)
+            {
+                activeStation.SetEngaged(false);
+            }
+            activeStation = station;
+            SetFocusedStation(station);
+            activeStation.SetEngaged(true);
+            firstPerson.SetInteractionControl(true);
+            return true;
+        }
+
+        public bool AdjustActiveControl(float delta)
+        {
+            if (activeStation == null)
+            {
+                return false;
+            }
+
+            activeStation.Adjust(delta);
+            return true;
         }
 
         private void SetFocusedStation(CaravanControlStation station)
@@ -143,30 +231,117 @@ namespace Steppe.Caravan
 
         private CaravanControlStation FindTargetedStation()
         {
-            var hits = Physics.SphereCastAll(
+            return ResolveControlTarget(new Ray(
                 viewCamera.transform.position,
-                StationAimRadius,
-                viewCamera.transform.forward,
-                InteractionDistance,
-                CaravanFirstPersonController.WorldQueryMask,
-                QueryTriggerInteraction.Collide);
-            Array.Sort(hits, (left, right) => left.distance.CompareTo(right.distance));
-            for (var index = 0; index < hits.Length; index++)
+                viewCamera.transform.forward));
+        }
+
+        public CaravanControlStation ResolveControlTarget(Ray ray)
+        {
+            var direction = ray.direction.normalized;
+            if (direction.sqrMagnitude < 0.99f)
             {
-                var station = hits[index].collider.GetComponentInParent<CaravanControlStation>();
-                if (station != null)
+                return null;
+            }
+
+            var directHitDistance = InteractionDistance;
+            if (Physics.Raycast(
+                    ray,
+                    out var directHit,
+                    InteractionDistance,
+                    CaravanFirstPersonController.WorldQueryMask,
+                    QueryTriggerInteraction.Collide))
+            {
+                directHitDistance = directHit.distance;
+                var directlyHitStation = directHit.collider
+                    .GetComponentInParent<CaravanControlStation>();
+                if (directlyHitStation != null)
                 {
-                    return station;
+                    return directlyHitStation;
                 }
             }
 
-            return null;
+            var hits = Physics.SphereCastAll(
+                ray.origin,
+                StationAimRadius,
+                direction,
+                InteractionDistance,
+                CaravanFirstPersonController.WorldQueryMask,
+                QueryTriggerInteraction.Collide);
+            CaravanControlStation bestStation = null;
+            var bestAimScore = float.PositiveInfinity;
+            var bestDistance = float.PositiveInfinity;
+            for (var index = 0; index < hits.Length; index++)
+            {
+                if (hits[index].distance
+                    > directHitDistance + StationAimRadius)
+                {
+                    continue;
+                }
+
+                var station = hits[index].collider.GetComponentInParent<CaravanControlStation>();
+                if (station == null || !station.isActiveAndEnabled)
+                {
+                    continue;
+                }
+
+                var center = hits[index].collider.bounds.center;
+                var alongRay = Mathf.Clamp(
+                    Vector3.Dot(center - ray.origin, direction),
+                    0f,
+                    InteractionDistance);
+                var closestOnRay = ray.origin + direction * alongRay;
+                var aimScore = hits[index].collider.bounds
+                    .SqrDistance(closestOnRay);
+                if (aimScore < bestAimScore - 0.0001f
+                    || (Mathf.Abs(aimScore - bestAimScore) <= 0.0001f
+                        && hits[index].distance < bestDistance))
+                {
+                    bestStation = station;
+                    bestAimScore = aimScore;
+                    bestDistance = hits[index].distance;
+                }
+            }
+
+            return bestStation;
         }
 
         private void OnDisable()
         {
             SetFocusedStation(null);
+            focusedModule = null;
             EndControl();
+        }
+
+        private void SetFeedback(
+            string message,
+            bool isError,
+            float duration)
+        {
+            feedbackMessage = message;
+            feedbackIsError = isError;
+            feedbackUntil = UnityEngine.Time.unscaledTime
+                            + Mathf.Max(0.1f, duration);
+        }
+
+        private static string GetControlName(CaravanControlKind kind)
+        {
+            return kind switch
+            {
+                CaravanControlKind.Steering => "руль",
+                CaravanControlKind.Brake => "рычаг тормоза",
+                CaravanControlKind.SailTrim => "угол паруса",
+                CaravanControlKind.ElectricThrottle => "тяга электромотора",
+                CaravanControlKind.SolarOrientation => "солнечные листья",
+                CaravanControlKind.PumpMode => "режим насоса",
+                CaravanControlKind.RadiatorOpening => "заслонка радиатора",
+                CaravanControlKind.FurnaceIntensity => "мощность печи",
+                CaravanControlKind.BiofuelThrottle => "тяга биодвигателя",
+                CaravanControlKind.HarvesterPower => "мощность жатки",
+                CaravanControlKind.DryerPower => "мощность сушилки",
+                CaravanControlKind.TransmissionRatio => "передача",
+                _ => "управление"
+            };
         }
     }
 }

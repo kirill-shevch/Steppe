@@ -15,7 +15,8 @@ namespace Steppe.Caravan
         BiofuelThrottle,
         HarvesterPower,
         DryerPower,
-        TransmissionRatio
+        TransmissionRatio,
+        Brake
     }
 
     [DisallowMultipleComponent]
@@ -77,13 +78,34 @@ namespace Steppe.Caravan
             SetNormalized(-1f);
         }
 
+        public void ConfigureBrake(
+            CaravanChassisController controller,
+            Transform visual,
+            GameObject indicator = null)
+        {
+            chassis = controller != null
+                ? controller
+                : throw new ArgumentNullException(nameof(controller));
+            controlVisual = visual;
+            focusIndicator = indicator;
+            indicatorBaseScale = indicator != null
+                ? indicator.transform.localScale
+                : Vector3.one;
+            kind = CaravanControlKind.Brake;
+            SetFocused(false);
+            SetNormalized(-1f);
+        }
+
         public void ConfigureModule(
             CaravanControlKind controlKind,
             ICaravanControlTarget target,
             Transform visual,
             GameObject indicator = null)
         {
-            if (controlKind <= CaravanControlKind.ElectricThrottle)
+            if (controlKind == CaravanControlKind.Steering
+                || controlKind == CaravanControlKind.SailTrim
+                || controlKind == CaravanControlKind.ElectricThrottle
+                || controlKind == CaravanControlKind.Brake)
             {
                 throw new ArgumentOutOfRangeException(
                     nameof(controlKind),
@@ -154,6 +176,14 @@ namespace Steppe.Caravan
                     break;
                 case CaravanControlKind.ElectricThrottle:
                     chassis?.SetElectricDriveThrottle((normalizedValue + 1f) * 0.5f);
+                    if (controlVisual != null)
+                    {
+                        controlVisual.localRotation =
+                            Quaternion.Euler(normalizedValue * 42f, 0f, 0f);
+                    }
+                    break;
+                case CaravanControlKind.Brake:
+                    chassis?.SetBrakeNormalized((normalizedValue + 1f) * 0.5f);
                     if (controlVisual != null)
                     {
                         controlVisual.localRotation =

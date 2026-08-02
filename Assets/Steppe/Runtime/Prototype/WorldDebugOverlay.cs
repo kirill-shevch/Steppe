@@ -1,5 +1,6 @@
 using Steppe.Ecology;
 using Steppe.Player;
+using Steppe.Presentation;
 using Steppe.Rendering;
 using Steppe.Settings;
 using Steppe.Surface;
@@ -74,6 +75,30 @@ namespace Steppe.Prototype
         }
 
         private void OnGUI()
+        {
+            if (!visible
+                || settings == null
+                || floatingOrigin == null
+                || chunkStreamer == null
+                || focus == null
+                || timeSystem == null
+                || weatherSystem == null)
+            {
+                return;
+            }
+
+            var previousMatrix = SteppeGuiScale.Begin();
+            try
+            {
+                DrawOverlay();
+            }
+            finally
+            {
+                SteppeGuiScale.End(previousMatrix);
+            }
+        }
+
+        private void DrawOverlay()
         {
             if (!visible || settings == null || floatingOrigin == null || chunkStreamer == null || focus == null || timeSystem == null || weatherSystem == null)
             {

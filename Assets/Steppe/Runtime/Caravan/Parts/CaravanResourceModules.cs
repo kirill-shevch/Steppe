@@ -830,6 +830,32 @@ namespace Steppe.Caravan
             }
         }
 
+        public void UnregisterModule(CaravanModule module)
+        {
+            if (module == null)
+            {
+                return;
+            }
+
+            harvesters.Remove(module.GetComponent<CaravanHarvesterModule>());
+            dryers.Remove(module.GetComponent<CaravanGrassDryerModule>());
+            storages.Remove(module.GetComponent<CaravanBiomassStorageModule>());
+            furnaces.Remove(module.GetComponent<CaravanBiofurnaceModule>());
+            pumps.Remove(module.GetComponent<CaravanElectricPumpModule>());
+
+            var engine = module.GetComponent<CaravanBiofuelEngineModule>();
+            if (engines.Remove(engine))
+            {
+                chassis.DetachDriveSource(engine);
+            }
+            var transmission = module.GetComponent<CaravanTransmissionModule>();
+            if (transmissions.Remove(transmission))
+            {
+                chassis.DetachTransmission(transmission);
+            }
+            lastResourcePayloadKilograms = -1f;
+        }
+
         public void Simulate(float deltaTimeSeconds)
         {
             var seconds = Mathf.Max(0f, deltaTimeSeconds);

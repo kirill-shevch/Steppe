@@ -23,7 +23,8 @@ namespace Steppe.Caravan
             CaravanConstructionService construction,
             CaravanMountGrid grid,
             Transform playerSpawn,
-            CaravanControlStation steeringStation)
+            CaravanControlStation steeringStation,
+            CaravanControlStation brakeStation)
         {
             Root = root;
             Chassis = chassis;
@@ -38,6 +39,7 @@ namespace Steppe.Caravan
             MountGrid = grid;
             PlayerSpawn = playerSpawn;
             SteeringStation = steeringStation;
+            BrakeStation = brakeStation;
         }
 
         public GameObject Root { get; }
@@ -53,6 +55,7 @@ namespace Steppe.Caravan
         public CaravanMountGrid MountGrid { get; }
         public Transform PlayerSpawn { get; }
         public CaravanControlStation SteeringStation { get; }
+        public CaravanControlStation BrakeStation { get; }
 
         public void Configure(
             SteppeWorldSettings settings,
@@ -67,6 +70,10 @@ namespace Steppe.Caravan
                 Chassis,
                 SteeringStation.transform.Find("Control Visual"),
                 SteeringStation.transform.Find("Focus Indicator")?.gameObject);
+            BrakeStation.ConfigureBrake(
+                Chassis,
+                BrakeStation.transform.Find("Control Visual"),
+                BrakeStation.transform.Find("Focus Indicator")?.gameObject);
             for (var index = 0; index < EquipmentModules.Count; index++)
             {
                 Construction.ActivatePlaced(EquipmentModules[index]);
@@ -230,6 +237,15 @@ namespace Steppe.Caravan
                 darkMetal,
                 metal,
                 green);
+            var brakeStation = CreateControlStation(
+                root.transform,
+                "Brake Lever",
+                new Vector3(-2.25f, 0.58f, 7.3f),
+                Quaternion.identity,
+                CaravanControlKind.Brake,
+                darkMetal,
+                ochre,
+                green);
 
             var playerSpawn = new GameObject("Player Spawn").transform;
             playerSpawn.SetParent(root.transform, false);
@@ -251,7 +267,8 @@ namespace Steppe.Caravan
                 construction,
                 grid,
                 playerSpawn,
-                steeringStation);
+                steeringStation,
+                brakeStation);
         }
 
         private static T FindEquipmentComponent<T>(
@@ -651,6 +668,10 @@ namespace Steppe.Caravan
             {
                 CreateSteeringWheelVisual(root.transform, baseMaterial, controlMaterial);
             }
+            else if (kind == CaravanControlKind.Brake)
+            {
+                CreateBrakeLeverVisual(root.transform, baseMaterial, controlMaterial);
+            }
             else
             {
                 CreateSailTrimVisual(root.transform, baseMaterial, controlMaterial);
@@ -674,7 +695,9 @@ namespace Steppe.Caravan
                 : indicatorMaterial.color;
             focusIndicator.SetActive(false);
             var collider = root.AddComponent<SphereCollider>();
-            collider.radius = 0.62f;
+            collider.radius = kind == CaravanControlKind.Brake
+                ? 0.44f
+                : 0.62f;
             return root.AddComponent<CaravanControlStation>();
         }
 
@@ -759,6 +782,39 @@ namespace Steppe.Caravan
                 new Vector3(0.07f, 0.16f, 0.07f),
                 controlMaterial,
                 false);
+        }
+
+        private static void CreateBrakeLeverVisual(
+            Transform parent,
+            Material baseMaterial,
+            Material controlMaterial)
+        {
+            var visual = new GameObject("Control Visual");
+            visual.transform.SetParent(parent, false);
+            CreatePrimitive(
+                "Lever Hinge",
+                PrimitiveType.Cylinder,
+                visual.transform,
+                Vector3.zero,
+                new Vector3(0.16f, 0.12f, 0.16f),
+                baseMaterial,
+                false).transform.localRotation = Quaternion.Euler(0f, 0f, 90f);
+            CreatePrimitive(
+                "Lever Shaft",
+                PrimitiveType.Cube,
+                visual.transform,
+                new Vector3(0f, 0.34f, 0f),
+                new Vector3(0.075f, 0.68f, 0.075f),
+                baseMaterial,
+                false);
+            CreatePrimitive(
+                "Lever Grip",
+                PrimitiveType.Cylinder,
+                visual.transform,
+                new Vector3(0f, 0.7f, 0f),
+                new Vector3(0.11f, 0.24f, 0.11f),
+                controlMaterial,
+                false).transform.localRotation = Quaternion.Euler(0f, 0f, 90f);
         }
 
         private static CaravanStatusDisplay CreateStatusDisplay(

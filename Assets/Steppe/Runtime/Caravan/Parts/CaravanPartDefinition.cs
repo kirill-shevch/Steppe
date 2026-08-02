@@ -17,7 +17,8 @@ namespace Steppe.Caravan
             int footprintWidth,
             int footprintLength,
             float massKilograms,
-            float capacity)
+            float capacity,
+            string description = "")
         {
             if (string.IsNullOrWhiteSpace(id))
             {
@@ -27,6 +28,7 @@ namespace Steppe.Caravan
             Kind = kind;
             Id = id;
             DisplayName = string.IsNullOrWhiteSpace(displayName) ? id : displayName;
+            Description = description ?? string.Empty;
             FootprintWidth = Math.Max(1, footprintWidth);
             FootprintLength = Math.Max(1, footprintLength);
             MassKilograms = Math.Max(0.1f, massKilograms);
@@ -36,6 +38,7 @@ namespace Steppe.Caravan
         public CaravanPartKind Kind { get; }
         public string Id { get; }
         public string DisplayName { get; }
+        public string Description { get; }
         public int FootprintWidth { get; }
         public int FootprintLength { get; }
         public float MassKilograms { get; }
@@ -54,115 +57,129 @@ namespace Steppe.Caravan
             new CaravanPartDefinition(
                 CaravanPartKind.Sail,
                 "sail",
-                "Sail Module",
+                "Парусный модуль",
                 2,
                 2,
                 185f,
-                65f),
+                65f,
+                "Использует боковой ветер для движения каравана без расхода топлива."),
             new CaravanPartDefinition(
                 CaravanPartKind.PhotovoltaicLeaves,
                 "photovoltaic-leaves",
-                "Photovoltaic Leaves",
+                "Солнечные листья",
                 3,
                 3,
                 180f,
-                18f),
+                18f,
+                "Вырабатывают электричество на свету; эффективность зависит от ориентации и облачности."),
             new CaravanPartDefinition(
                 CaravanPartKind.Battery,
                 "battery",
-                "Electric Battery",
+                "Аккумулятор",
                 2,
                 2,
                 310f,
-                120f),
+                120f,
+                "Накапливает энергию и питает подключённые электрические модули."),
             new CaravanPartDefinition(
                 CaravanPartKind.WaterReservoir,
                 "water-reservoir",
-                "Water Reservoir",
+                "Водяной резервуар",
                 2,
                 3,
                 820f,
-                900f),
+                900f,
+                "Хранит добытую воду и служит основой замкнутого жидкостного контура."),
             new CaravanPartDefinition(
                 CaravanPartKind.DualModePump,
                 "dual-mode-pump",
-                "Dual-mode Pump",
+                "Двухрежимный насос",
                 1,
                 2,
                 125f,
-                24f),
+                24f,
+                "Добывает воду из влажной почвы или прокачивает её по контуру; требует энергии."),
             new CaravanPartDefinition(
                 CaravanPartKind.Radiator,
                 "radiator",
-                "Wind Radiator",
+                "Ветровой радиатор",
                 2,
                 2,
                 175f,
-                32f),
+                32f,
+                "Отводит тепло потоком воздуха и замыкает рабочий водяной контур."),
             new CaravanPartDefinition(
                 CaravanPartKind.Biofurnace,
                 "biofurnace",
-                "Biofurnace",
+                "Биопечь",
                 2,
                 2,
                 285f,
-                80f),
+                80f,
+                "Сжигает сухую биомассу и превращает её в полезную тепловую энергию."),
             new CaravanPartDefinition(
                 CaravanPartKind.BiofuelEngine,
                 "biofuel-engine",
-                "Biofuel Engine",
+                "Биотопливный двигатель",
                 2,
                 2,
                 430f,
-                55f),
+                55f,
+                "Превращает тепло биопечи в тягу для движения каравана."),
             new CaravanPartDefinition(
                 CaravanPartKind.ElectricMotor,
                 "electric-motor",
-                "Electric Motor",
+                "Электродвигатель",
                 2,
                 2,
                 255f,
-                55f),
+                55f,
+                "Создаёт тягу из электричества; подключается к аккумулятору."),
             new CaravanPartDefinition(
                 CaravanPartKind.Harvester,
                 "harvester",
-                "Biomass Harvester",
+                "Жатка биомассы",
                 4,
                 2,
                 380f,
-                90f),
+                90f,
+                "Собирает влажную траву во время медленного движения по густой растительности."),
             new CaravanPartDefinition(
                 CaravanPartKind.GrassDryer,
                 "grass-dryer",
-                "Grass Dryer",
+                "Сушилка травы",
                 2,
                 3,
                 315f,
-                240f),
+                240f,
+                "Удаляет влагу из собранной травы; особенно эффективна в тёплый сухой ветер."),
             new CaravanPartDefinition(
                 CaravanPartKind.BiomassStorage,
                 "biomass-storage",
-                "Dry Biomass Storage",
+                "Хранилище сухой биомассы",
                 2,
                 3,
                 270f,
-                600f),
+                600f,
+                "Принимает готовую сухую биомассу от сушилки и хранит запас топлива."),
             new CaravanPartDefinition(
                 CaravanPartKind.Transmission,
                 "transmission",
-                "Transmission",
+                "Трансмиссия",
                 1,
                 2,
                 190f,
-                8f),
+                8f,
+                "Передаёт механическую мощность и меняет соотношение тяги и скорости."),
             new CaravanPartDefinition(
                 CaravanPartKind.CouplingRope,
                 "coupling-rope",
-                "Coupling Rope",
+                "Сцепной канат",
                 2,
                 1,
                 95f,
-                24f)
+                24f,
+                "Связывает механические узлы и передаёт усилие между ними.")
         };
 
         private static readonly Dictionary<CaravanPartKind, CaravanPartDefinition> ByKind =

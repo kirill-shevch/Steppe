@@ -50,6 +50,7 @@ namespace Steppe.Tests
             var battery = Object.FindAnyObjectByType<CaravanBatteryModule>();
             var electricMotor = Object.FindAnyObjectByType<CaravanElectricMotorModule>();
             var buildMode = Object.FindAnyObjectByType<CaravanBuildModeController>();
+            var interactor = Object.FindAnyObjectByType<CaravanPlayerInteractor>();
             var controlStations = Object.FindObjectsByType<CaravanControlStation>(
                 FindObjectsInactive.Include);
             var tracks = Object.FindAnyObjectByType<SteppeTrackSystem>();
@@ -105,10 +106,14 @@ namespace Steppe.Tests
                     .ConnectedCableCount,
                 Is.Zero);
             Assert.That(buildMode, Is.Not.Null);
-            Assert.That(controlStations, Has.Length.EqualTo(3));
+            Assert.That(interactor, Is.Not.Null);
+            Assert.That(controlStations, Has.Length.EqualTo(4));
             var steeringStation = System.Array.Find(
                 controlStations,
                 station => station.Kind == CaravanControlKind.Steering);
+            var brakeStation = System.Array.Find(
+                controlStations,
+                station => station.Kind == CaravanControlKind.Brake);
             var trimStation = System.Array.Find(
                 controlStations,
                 station => station.Kind == CaravanControlKind.SailTrim);
@@ -119,13 +124,57 @@ namespace Steppe.Tests
                 controlStations,
                 station => station.Kind == CaravanControlKind.SolarOrientation);
             Assert.That(steeringStation, Is.Not.Null);
+            Assert.That(brakeStation, Is.Not.Null);
             Assert.That(trimStation, Is.Null);
             Assert.That(motorStation, Is.Not.Null);
             Assert.That(solarStation, Is.Not.Null);
             Assert.That(
                 steeringStation.transform.Find("Control Visual/Wheel Rim 1"),
                 Is.Not.Null);
+            Assert.That(
+                brakeStation.transform.Find("Control Visual/Lever Grip"),
+                Is.Not.Null);
             Assert.That(steeringStation.transform.Find("Focus Indicator"), Is.Not.Null);
+            var steeringCollider = steeringStation.GetComponent<SphereCollider>();
+            var brakeCollider = brakeStation.GetComponent<SphereCollider>();
+            Assert.That(steeringCollider, Is.Not.Null);
+            Assert.That(brakeCollider, Is.Not.Null);
+            Assert.That(
+                steeringCollider.bounds.Intersects(brakeCollider.bounds),
+                Is.False,
+                "The brake interaction volume must not obscure the steering wheel.");
+            steeringStation.SetNormalized(0.65f);
+            Assert.That(caravan.SteeringNormalized, Is.EqualTo(0.65f));
+            Assert.That(
+                caravan.AppliedSteeringNormalized,
+                Is.EqualTo(0.65f),
+                "Steering must reach the vehicle immediately, without waiting for drive physics.");
+            steeringStation.SetNormalized(0f);
+            Assert.That(caravan.SteeringNormalized, Is.Zero);
+            Assert.That(caravan.AppliedSteeringNormalized, Is.Zero);
+            brakeStation.SetNormalized(1f);
+            Assert.That(caravan.BrakeNormalized, Is.EqualTo(1f));
+            brakeStation.SetNormalized(-1f);
+            Assert.That(caravan.BrakeNormalized, Is.Zero);
+            var steeringTarget = steeringCollider.bounds.center;
+            var aimingOrigin = steeringTarget
+                               - caravan.transform.forward * 2.2f
+                               + caravan.transform.up * 0.15f;
+            var steeringRay = new Ray(
+                aimingOrigin,
+                (steeringTarget - aimingOrigin).normalized);
+            Assert.That(
+                interactor.ResolveControlTarget(steeringRay),
+                Is.SameAs(steeringStation),
+                "Aiming at the steering wheel must not select the nearby brake lever.");
+            Assert.That(interactor.TryBeginControl(steeringStation), Is.True);
+            Assert.That(firstPerson.InteractionControl, Is.True);
+            Assert.That(interactor.AdjustActiveControl(0.4f), Is.True);
+            Assert.That(caravan.SteeringNormalized, Is.EqualTo(0.4f));
+            Assert.That(caravan.AppliedSteeringNormalized, Is.EqualTo(0.4f));
+            interactor.EndControl();
+            Assert.That(firstPerson.InteractionControl, Is.False);
+            steeringStation.SetNormalized(0f);
             Assert.That(firstPerson.GetComponent<CharacterController>(), Is.Not.Null);
             Assert.That(firstPerson.GetComponent<Rigidbody>(), Is.Null);
             Assert.That(firstPerson.CaravanContactIsolationEnabled, Is.True);
@@ -472,6 +521,168 @@ namespace Steppe.Tests
         }
 
         [UnityTest]
+        public IEnumerator BuildModeDismantlesModuleAndCleansItsNetworks()
+        {
+            if (Object.FindAnyObjectByType<SteppePrototypeBootstrap>() == null)
+            {
+                new GameObject("Caravan Dismantling Test Bootstrap")
+                    .AddComponent<SteppePrototypeBootstrap>();
+            }
+
+            yield return null;
+            var caravan = Object.FindAnyObjectByType<CaravanChassisController>();
+            var grid = Object.FindAnyObjectByType<CaravanMountGrid>();
+            var build = Object.FindAnyObjectByType<CaravanBuildModeController>();
+            var electrical = Object.FindAnyObjectByType<CaravanElectricalNetwork>();
+            var resource = Object.FindAnyObjectByType<CaravanResourceSystem>();
+            var materialNetworks =
+                Object.FindObjectsByType<CaravanMaterialNetwork>(
+                    FindObjectsInactive.Include);
+            var biomass = System.Array.Find(
+                materialNetworks,
+                item => item.Kind == CaravanMaterialNetworkKind.Biomass);
+            var mechanical = System.Array.Find(
+                materialNetworks,
+                item => item.Kind == CaravanMaterialNetworkKind.Mechanical);
+            Assert.That(caravan, Is.Not.Null);
+            Assert.That(grid, Is.Not.Null);
+            Assert.That(build, Is.Not.Null);
+            Assert.That(electrical, Is.Not.Null);
+            Assert.That(resource, Is.Not.Null);
+            Assert.That(biomass, Is.Not.Null);
+            Assert.That(mechanical, Is.Not.Null);
+
+            electrical.ClearConnections();
+            var startingMass = caravan.Body.mass;
+            var startingElectricalPorts = electrical.Ports.Count;
+            var startingBiomassPorts = biomass.Ports.Count;
+            var startingMechanicalPorts = mechanical.Ports.Count;
+            var startingHarvesterCount = resource.Harvesters.Count;
+            caravan.Body.linearVelocity = Vector3.zero;
+            Assert.That(build.TryEnterBuildMode(), Is.True);
+            Assert.That(
+                build.TryCreateModule(CaravanPartKind.Harvester),
+                Is.True);
+            var module = build.HeldModule;
+            Assert.That(
+                TryFindFreePlacement(grid, module, out var placement),
+                Is.True);
+            Assert.That(build.TryPlaceHeldModule(placement), Is.True);
+            var harvester = module.GetComponent<CaravanHarvesterModule>();
+            var harvesterPort = module.GetComponentInChildren<
+                CaravanElectricalPort>(true);
+            Assert.That(
+                resource.Harvesters,
+                Has.Count.EqualTo(startingHarvesterCount + 1));
+            Assert.That(electrical.Ports.Count, Is.EqualTo(startingElectricalPorts + 1));
+            Assert.That(biomass.Ports.Count, Is.EqualTo(startingBiomassPorts + 1));
+            Assert.That(mechanical.Ports.Count, Is.EqualTo(startingMechanicalPorts + 1));
+            Assert.That(
+                electrical.TryConnect(electrical.BatteryPort, harvesterPort),
+                Is.True);
+            Assert.That(electrical.CableCount, Is.EqualTo(1));
+            Assert.That(caravan.Body.mass, Is.GreaterThan(startingMass));
+
+            Assert.That(build.TryRemoveModule(module), Is.True);
+            Assert.That(grid.CanPlace(module, placement), Is.True);
+            Assert.That(electrical.CableCount, Is.Zero);
+            Assert.That(electrical.Ports.Count, Is.EqualTo(startingElectricalPorts));
+            Assert.That(biomass.Ports.Count, Is.EqualTo(startingBiomassPorts));
+            Assert.That(mechanical.Ports.Count, Is.EqualTo(startingMechanicalPorts));
+            Assert.That(
+                resource.Harvesters,
+                Has.Count.EqualTo(startingHarvesterCount));
+            Assert.That(caravan.Body.mass, Is.EqualTo(startingMass).Within(0.1f));
+            Assert.That(harvester, Is.Not.Null);
+            yield return null;
+            Assert.That(module == null, Is.True);
+            build.ExitBuildMode();
+        }
+
+        [UnityTest]
+        public IEnumerator SteeringSurvivesRemovingAndRebuildingElectricMotor()
+        {
+            if (Object.FindAnyObjectByType<SteppePrototypeBootstrap>() == null)
+            {
+                new GameObject("Motor Rebuild Steering Test Bootstrap")
+                    .AddComponent<SteppePrototypeBootstrap>();
+            }
+
+            yield return null;
+            var caravan = Object.FindAnyObjectByType<CaravanChassisController>();
+            var build = Object.FindAnyObjectByType<CaravanBuildModeController>();
+            var interactor = Object.FindAnyObjectByType<CaravanPlayerInteractor>();
+            var originalMotorModule = System.Array.Find(
+                Object.FindObjectsByType<CaravanModule>(
+                    FindObjectsInactive.Exclude),
+                module => module.InstanceId == "starter-electric-motor");
+            var originalMotor = originalMotorModule != null
+                ? originalMotorModule.GetComponent<CaravanPart>()
+                : null;
+            var steering = System.Array.Find(
+                Object.FindObjectsByType<CaravanControlStation>(
+                    FindObjectsInactive.Include),
+                station => station.Kind == CaravanControlKind.Steering);
+            Assert.That(caravan, Is.Not.Null);
+            Assert.That(build, Is.Not.Null);
+            Assert.That(interactor, Is.Not.Null);
+            Assert.That(originalMotor, Is.Not.Null);
+            Assert.That(steering, Is.Not.Null);
+            var steeringVisual = steering.transform.Find("Control Visual");
+            Assert.That(steeringVisual, Is.Not.Null);
+            var startingMotorCount = caravan.ElectricMotors.Count;
+
+            caravan.Body.linearVelocity = Vector3.zero;
+            Assert.That(build.TryEnterBuildMode(), Is.True);
+            Assert.That(
+                build.TryRemoveModule(
+                    originalMotor.GetComponent<CaravanModule>()),
+                Is.True);
+            Assert.That(
+                caravan.ElectricMotors,
+                Has.Count.EqualTo(startingMotorCount - 1));
+            Assert.That(
+                build.TryCreateModule(CaravanPartKind.ElectricMotor),
+                Is.True);
+            var rebuiltMotor = build.HeldModule;
+            Assert.That(
+                build.TryPlaceHeldModule(
+                    new CaravanGridPlacement(2, 4, 2, 2, 0)),
+                Is.True);
+            Assert.That(
+                caravan.ElectricMotors,
+                Has.Count.EqualTo(startingMotorCount));
+            var rebuiltThrottle = rebuiltMotor.GetComponent<
+                CaravanControlStation>();
+            Assert.That(rebuiltThrottle, Is.Not.Null);
+            Assert.That(
+                rebuiltThrottle.Kind,
+                Is.EqualTo(CaravanControlKind.ElectricThrottle));
+
+            build.ExitBuildMode();
+            Assert.That(build.IsActive, Is.False);
+            Assert.That(
+                interactor.TryBeginControl(steering),
+                Is.True);
+            Assert.That(
+                interactor.AdjustActiveControl(0.55f),
+                Is.True);
+            Assert.That(caravan.SteeringNormalized, Is.EqualTo(0.55f));
+            Assert.That(
+                caravan.AppliedSteeringNormalized,
+                Is.EqualTo(0.55f));
+            Assert.That(
+                Quaternion.Angle(
+                    Quaternion.identity,
+                    steeringVisual.localRotation),
+                Is.GreaterThan(1f),
+                "The physical steering wheel stopped animating after the motor was rebuilt.");
+            interactor.EndControl();
+            steering.SetNormalized(0f);
+            yield return null;
+        }
+
+        [UnityTest]
         public IEnumerator BuildModeConstructsAndPipesPoweredWaterCoolingLoop()
         {
             if (Object.FindAnyObjectByType<SteppePrototypeBootstrap>() == null)
@@ -500,6 +711,20 @@ namespace Steppe.Tests
 
             caravan.Body.linearVelocity = Vector3.zero;
             electrical.ClearConnections();
+            Assert.That(
+                electrical.TryConnect(
+                    electrical.PhotovoltaicPort,
+                    electrical.BatteryPort),
+                Is.True);
+            Assert.That(
+                electrical.TryConnect(
+                    electrical.BatteryPort,
+                    electrical.MotorPort),
+                Is.True);
+            Assert.That(
+                electrical.BatteryPort.ConnectedCableCount,
+                Is.EqualTo(2));
+            Assert.That(electrical.BatteryPort.IsAtCapacity, Is.False);
             var startingMass = caravan.Body.mass;
             Assert.That(build.TryEnterBuildMode(), Is.True);
 
@@ -585,6 +810,12 @@ namespace Steppe.Tests
             Assert.That(
                 build.TrySelectCommunicationPort(pumpElectricalPort),
                 Is.True);
+            Assert.That(electrical.CableCount, Is.EqualTo(3));
+            Assert.That(
+                electrical.BatteryPort.ConnectedCableCount,
+                Is.EqualTo(3));
+            Assert.That(electrical.BatteryPort.IsAtCapacity, Is.False);
+            Assert.That(electrical.IsClosed, Is.True);
 
             fluids.Reservoir.SetTemperature(70f);
             fluids.Simulate(1f);
@@ -1042,10 +1273,15 @@ namespace Steppe.Tests
             var battery = Object.FindAnyObjectByType<CaravanBatteryModule>();
             var electricMotor = Object.FindAnyObjectByType<CaravanElectricMotorModule>();
             var network = Object.FindAnyObjectByType<CaravanElectricalNetwork>();
+            var steeringStation = System.Array.Find(
+                Object.FindObjectsByType<CaravanControlStation>(
+                    FindObjectsInactive.Include),
+                station => station.Kind == CaravanControlKind.Steering);
             Assert.That(caravan, Is.Not.Null);
             Assert.That(battery, Is.Not.Null);
             Assert.That(electricMotor, Is.Not.Null);
             Assert.That(network, Is.Not.Null);
+            Assert.That(steeringStation, Is.Not.Null);
             if (network.PanelToBatteryCable == null)
             {
                 Assert.That(
@@ -1066,7 +1302,7 @@ namespace Steppe.Tests
             Assert.That(caravan.PhysicsStarted, Is.True);
 
             caravan.SetDefaultDriveEnabled(true);
-            caravan.SetSteeringNormalized(0.82f);
+            steeringStation.SetNormalized(0.82f);
             caravan.Body.linearVelocity = Vector3.zero;
             caravan.Body.angularVelocity = Vector3.zero;
 
@@ -1098,7 +1334,7 @@ namespace Steppe.Tests
                 measuredSteps++;
             }
 
-            caravan.SetSteeringNormalized(0f);
+            steeringStation.SetNormalized(0f);
             Assert.That(
                 measuredSteps,
                 Is.GreaterThan(30),

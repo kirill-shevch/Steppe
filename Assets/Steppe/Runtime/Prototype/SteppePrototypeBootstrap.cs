@@ -134,6 +134,14 @@ namespace Steppe.Prototype
                 ecologySystem,
                 timeSystem);
             caravanRig.Configure(runtimeSettings, floatingOrigin, environment);
+            var firstRidgeTower =
+                SteppeExpeditionLandmarkFactory.CreateFirstRidgeTower(
+                    worldSpaceObject.transform,
+                    floatingOrigin,
+                    weatherSystem,
+                    new TerrainHeightGenerator(runtimeSettings),
+                    initialX + 900.0,
+                    initialZ + 650.0);
 
             var existingBallCamera = camera.GetComponent<SteppeBallCameraController>();
             if (existingBallCamera != null)
@@ -162,6 +170,25 @@ namespace Steppe.Prototype
                 caravanRig.Construction);
             var interactor = playerObject.AddComponent<CaravanPlayerInteractor>();
             interactor.Configure(camera, firstPerson, buildMode);
+            var expedition =
+                playerObject.AddComponent<SteppeFirstExpeditionDirector>();
+            expedition.Configure(
+                runtimeSettings,
+                floatingOrigin,
+                weatherSystem,
+                environment,
+                caravanRig.Chassis,
+                caravanRig.FluidNetwork,
+                caravanRig.BiomassNetwork,
+                caravanRig.ResourceSystem,
+                firstRidgeTower);
+            var playerHud = playerObject.AddComponent<CaravanPlayerHud>();
+            playerHud.Configure(
+                interactor,
+                buildMode,
+                caravanRig.Chassis,
+                caravanRig.ElectricalNetwork,
+                expedition);
 
             var trackSystem = gameObject.AddComponent<SteppeTrackSystem>();
             trackSystem.Configure(

@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using NUnit.Framework;
 using Steppe.Caravan;
+using Steppe.Presentation;
 using UnityEngine;
 
 namespace Steppe.Tests
@@ -95,6 +96,42 @@ namespace Steppe.Tests
             Assert.That(definition.FootprintLength, Is.EqualTo(1));
             Assert.That(definition.MassKilograms, Is.EqualTo(0.1f));
             Assert.That(definition.Capacity, Is.Zero);
+        }
+
+        [Test]
+        public void ConstructionCatalogueProvidesRussianNamesAndDescriptions()
+        {
+            foreach (var definition in CaravanPartCatalog.All)
+            {
+                Assert.That(definition.DisplayName, Is.Not.Empty);
+                Assert.That(definition.Description, Is.Not.Empty);
+                Assert.That(
+                    System.Text.RegularExpressions.Regex.IsMatch(
+                        definition.DisplayName,
+                        "[А-Яа-яЁё]"),
+                    Is.True,
+                    definition.Id);
+                Assert.That(
+                    System.Text.RegularExpressions.Regex.IsMatch(
+                        definition.Description,
+                        "[А-Яа-яЁё]"),
+                    Is.True,
+                    definition.Id);
+            }
+        }
+
+        [Test]
+        public void ImmediateModeUiScalesFromReferenceResolution()
+        {
+            Assert.That(SteppeGuiScale.CalculateScale(1920, 1080), Is.EqualTo(1f));
+            Assert.That(SteppeGuiScale.CalculateScale(2560, 1440), Is.EqualTo(4f / 3f));
+            Assert.That(SteppeGuiScale.CalculateScale(3840, 2160), Is.EqualTo(2f));
+            Assert.That(
+                SteppeGuiScale.CalculateScale(3440, 1440),
+                Is.EqualTo(4f / 3f));
+            Assert.That(
+                SteppeGuiScale.CalculateScale(1280, 720),
+                Is.EqualTo(SteppeGuiScale.MinimumScale));
         }
 
         [Test]
@@ -444,6 +481,271 @@ namespace Steppe.Tests
                 () => radiatorPart.gameObject
                     .AddComponent<CaravanRadiatorModule>()
                     .Configure());
+        }
+
+        [Test]
+        public void OnboardingAdvancesThroughConnectionsThrottleAndTravel()
+        {
+            var onboarding = new CaravanOnboardingModel();
+
+            onboarding.Update(false, true, 1f, 500f);
+            Assert.That(
+                onboarding.Stage,
+                Is.EqualTo(CaravanOnboardingStage.ConnectSolarToBattery));
+
+            onboarding.Update(true, false, 0f, 0f);
+            Assert.That(
+                onboarding.Stage,
+                Is.EqualTo(CaravanOnboardingStage.ConnectBatteryToMotor));
+
+            onboarding.Update(true, true, 0f, -10f);
+            Assert.That(
+                onboarding.Stage,
+                Is.EqualTo(CaravanOnboardingStage.SetThrottle));
+            Assert.That(onboarding.TravelledMetres, Is.Zero);
+
+            onboarding.Update(true, true, 0.2f, 0f);
+            Assert.That(
+                onboarding.Stage,
+                Is.EqualTo(CaravanOnboardingStage.StartMoving));
+
+            onboarding.Update(true, true, 0.2f, 119f);
+            Assert.That(
+                onboarding.Stage,
+                Is.EqualTo(CaravanOnboardingStage.StartMoving));
+
+            onboarding.Update(true, true, 0.2f, 1f);
+            Assert.That(
+                onboarding.Stage,
+                Is.EqualTo(CaravanOnboardingStage.Complete));
+            Assert.That(onboarding.GetTitle(), Is.Not.Empty);
+            Assert.That(onboarding.GetInstruction(), Is.Not.Empty);
+        }
+
+        [Test]
+        public void BatteryPortDefaultsToDistributionCapacity()
+        {
+            var batteryPart = CreatePart(CaravanPartKind.Battery, 120f);
+            var batteryPortObject = new GameObject("Battery Electrical Port");
+            cleanup.Add(batteryPortObject);
+            batteryPortObject.transform.SetParent(batteryPart.transform, false);
+            var batteryPort =
+                batteryPortObject.AddComponent<CaravanElectricalPort>();
+            batteryPort.Configure(
+                batteryPart,
+                CaravanElectricalPortKind.Storage);
+
+            Assert.That(
+                batteryPort.MaximumConnections,
+                Is.EqualTo(
+                    CaravanElectricalPort.DefaultStorageConnectionCapacity));
+            Assert.That(batteryPort.MaximumConnections, Is.GreaterThan(2));
+
+            var motorPart = CreatePart(CaravanPartKind.ElectricMotor, 55f);
+            var motorPortObject = new GameObject("Motor Electrical Port");
+            cleanup.Add(motorPortObject);
+            motorPortObject.transform.SetParent(motorPart.transform, false);
+            var motorPort =
+                motorPortObject.AddComponent<CaravanElectricalPort>();
+            motorPort.Configure(
+                motorPart,
+                CaravanElectricalPortKind.Consumer);
+
+            Assert.That(motorPort.MaximumConnections, Is.EqualTo(1));
+        }
+
+        [Test]
+        public void MotorFeedbackExplainsDisconnectedPowerAndMaintenance()
+        {
+            var part = CreatePart(CaravanPartKind.ElectricMotor, 55f);
+            var module = part.GetComponent<CaravanModule>();
+            var motor = part.gameObject.AddComponent<CaravanElectricMotorModule>();
+            motor.Configure(null);
+            var portObject = new GameObject("Electrical Port");
+            cleanup.Add(portObject);
+            portObject.transform.SetParent(part.transform, false);
+            portObject.AddComponent<CaravanElectricalPort>().Configure(
+                part,
+                CaravanElectricalPortKind.Consumer);
+
+            motor.SetRequestedThrottle(0.8f);
+            var disconnected = CaravanModuleFeedbackBuilder.Evaluate(module);
+            Assert.That(
+                disconnected.State,
+                Is.EqualTo(CaravanOperationalState.Starved));
+            Assert.That(disconnected.Reason, Does.Contain("не подключён"));
+
+            module.Damage(0.8f);
+            var damaged = CaravanModuleFeedbackBuilder.Evaluate(module);
+            Assert.That(
+                damaged.State,
+                Is.EqualTo(CaravanOperationalState.Damaged));
+            Assert.That(damaged.Reason, Does.Contain("R"));
+        }
+
+        [Test]
+        public void FirstExpeditionRequiresRealResourcesAndEnvironmentalWindows()
+        {
+            var expedition = new SteppeFirstExpeditionModel();
+
+            expedition.Update(ExpeditionSignals(introComplete: true));
+            Assert.That(
+                expedition.Stage,
+                Is.EqualTo(SteppeExpeditionStage.AssembleWaterKit));
+
+            expedition.Update(ExpeditionSignals(
+                introComplete: true,
+                hasReservoir: true,
+                hasPump: true,
+                hasRadiator: true));
+            Assert.That(
+                expedition.Stage,
+                Is.EqualTo(SteppeExpeditionStage.ConnectWaterLoop));
+
+            expedition.Update(ExpeditionSignals(
+                introComplete: true,
+                hasReservoir: true,
+                hasPump: true,
+                hasRadiator: true,
+                waterLoopClosed: true));
+            expedition.Update(ExpeditionSignals(
+                introComplete: true,
+                hasReservoir: true,
+                hasPump: true,
+                hasRadiator: true,
+                waterLoopClosed: true,
+                pumpPowered: true));
+            expedition.Update(ExpeditionSignals(
+                introComplete: true,
+                hasReservoir: true,
+                hasPump: true,
+                hasRadiator: true,
+                waterLoopClosed: true,
+                pumpPowered: true,
+                pumpExtracting: true));
+            Assert.That(
+                expedition.Stage,
+                Is.EqualTo(SteppeExpeditionStage.FindWetGround));
+
+            expedition.Update(ExpeditionSignals(
+                introComplete: true,
+                hasReservoir: true,
+                hasPump: true,
+                hasRadiator: true,
+                waterLoopClosed: true,
+                pumpPowered: true,
+                pumpExtracting: true,
+                wetGround: true,
+                storedWaterLitres: 315f));
+            Assert.That(
+                expedition.Stage,
+                Is.EqualTo(SteppeExpeditionStage.CollectWater));
+
+            expedition.Update(ExpeditionSignals(
+                storedWaterLitres: 344.9f));
+            Assert.That(
+                expedition.Stage,
+                Is.EqualTo(SteppeExpeditionStage.CollectWater));
+            expedition.Update(ExpeditionSignals(
+                storedWaterLitres: 345f));
+            Assert.That(
+                expedition.Stage,
+                Is.EqualTo(SteppeExpeditionStage.AssembleBiomassKit));
+
+            expedition.Update(ExpeditionSignals(
+                hasHarvester: true,
+                hasDryer: true,
+                hasBiomassStorage: true));
+            expedition.Update(ExpeditionSignals(
+                hasHarvester: true,
+                hasDryer: true,
+                hasBiomassStorage: true,
+                biomassChainConnected: true));
+            expedition.Update(ExpeditionSignals(
+                harvesterPowered: true));
+            expedition.Update(ExpeditionSignals(
+                harvesterEnabled: true));
+            Assert.That(
+                expedition.Stage,
+                Is.EqualTo(SteppeExpeditionStage.FindGrass));
+
+            expedition.Update(ExpeditionSignals(
+                grassAvailable: true,
+                harvestedKilograms: 10f));
+            expedition.Update(ExpeditionSignals(
+                harvestedKilograms: 13.9f));
+            Assert.That(
+                expedition.Stage,
+                Is.EqualTo(SteppeExpeditionStage.HarvestGrass));
+            expedition.Update(ExpeditionSignals(
+                harvestedKilograms: 14f));
+            Assert.That(
+                expedition.Stage,
+                Is.EqualTo(SteppeExpeditionStage.FindDryingWind));
+
+            expedition.Update(ExpeditionSignals(
+                dryingWeather: true,
+                storedDryBiomassKilograms: 5f));
+            expedition.Update(ExpeditionSignals(
+                storedDryBiomassKilograms: 6.9f));
+            Assert.That(
+                expedition.Stage,
+                Is.EqualTo(SteppeExpeditionStage.DryBiomass));
+            expedition.Update(ExpeditionSignals(
+                storedDryBiomassKilograms: 7f));
+            Assert.That(
+                expedition.Stage,
+                Is.EqualTo(SteppeExpeditionStage.ReturnToLandmark));
+
+            expedition.Update(ExpeditionSignals(atLandmark: true));
+            Assert.That(
+                expedition.Stage,
+                Is.EqualTo(SteppeExpeditionStage.Complete));
+        }
+
+        private static SteppeExpeditionSignals ExpeditionSignals(
+            bool introComplete = false,
+            bool hasReservoir = false,
+            bool hasPump = false,
+            bool hasRadiator = false,
+            bool waterLoopClosed = false,
+            bool pumpPowered = false,
+            bool pumpExtracting = false,
+            bool wetGround = false,
+            float storedWaterLitres = 0f,
+            bool hasHarvester = false,
+            bool hasDryer = false,
+            bool hasBiomassStorage = false,
+            bool biomassChainConnected = false,
+            bool harvesterPowered = false,
+            bool harvesterEnabled = false,
+            bool grassAvailable = false,
+            float harvestedKilograms = 0f,
+            bool dryingWeather = false,
+            float storedDryBiomassKilograms = 0f,
+            bool atLandmark = false)
+        {
+            return new SteppeExpeditionSignals(
+                introComplete,
+                hasReservoir,
+                hasPump,
+                hasRadiator,
+                waterLoopClosed,
+                pumpPowered,
+                pumpExtracting,
+                wetGround,
+                storedWaterLitres,
+                hasHarvester,
+                hasDryer,
+                hasBiomassStorage,
+                biomassChainConnected,
+                harvesterPowered,
+                harvesterEnabled,
+                grassAvailable,
+                harvestedKilograms,
+                dryingWeather,
+                storedDryBiomassKilograms,
+                atLandmark);
         }
 
         private CaravanPart CreatePart(

@@ -1,5 +1,6 @@
 using System;
 using Steppe.Player;
+using Steppe.Presentation;
 using UnityEngine;
 using UnityEngine.InputSystem;
 using UnityEngine.Rendering;
@@ -45,6 +46,10 @@ namespace Steppe.Caravan
         private bool heldModuleIsNew;
         private int quarterTurns;
         private int selectedConstructionIndex;
+        private float feedbackUntil;
+        private string feedbackMessage;
+        private bool feedbackIsError;
+        private GUIStyle buildDescriptionStyle;
 
         public bool IsActive { get; private set; }
         public CaravanModule HeldModule => heldModule;
@@ -68,6 +73,11 @@ namespace Steppe.Caravan
         public CaravanMaterialPort SelectedMaterialPort => selectedMaterialPort;
         public CaravanPartKind SelectedConstructionKind =>
             CaravanConstructionService.AvailablePartKinds[selectedConstructionIndex];
+        public string FeedbackMessage => feedbackMessage;
+        public bool FeedbackIsError => feedbackIsError;
+        public bool FeedbackVisible =>
+            !string.IsNullOrWhiteSpace(feedbackMessage)
+            && UnityEngine.Time.unscaledTime < feedbackUntil;
 
         public void Configure(
             Camera camera,
@@ -166,6 +176,13 @@ namespace Steppe.Caravan
                 {
                     TryPickTargetedModule();
                 }
+                else if ((mouse != null
+                          && mouse.rightButton.wasPressedThisFrame)
+                         || keyboard.xKey.wasPressedThisFrame
+                         || keyboard.deleteKey.wasPressedThisFrame)
+                {
+                    TryRemoveTargetedModule();
+                }
                 return;
             }
 
@@ -187,12 +204,21 @@ namespace Steppe.Caravan
 
         public bool TryEnterBuildMode()
         {
-            if (chassis == null || chassis.Speed > 0.45f)
+            if (chassis == null)
             {
+                SetFeedback("Строительство пока недоступно", true);
+                return false;
+            }
+            if (chassis.Speed > 0.45f)
+            {
+                SetFeedback(
+                    $"Сначала остановите караван — сейчас {chassis.Speed:F1} м/с",
+                    true);
                 return false;
             }
 
             IsActive = true;
+            firstPerson.SetBuildControl(true);
             InteractionMode = CaravanBuildInteractionMode.Modules;
             selectedCommunicationPort = null;
             focusedCommunicationPort = null;
@@ -201,6 +227,7 @@ namespace Steppe.Caravan
             selectedMaterialPort = null;
             focusedMaterialPort = null;
             RefreshCommunicationPresentation(null, null);
+            SetFeedback("Караван зафиксирован. Выберите модуль или слой сети.", false);
             return true;
         }
 
@@ -249,6 +276,16 @@ namespace Steppe.Caravan
             InteractionMode = mode;
             RefreshCommunicationPresentation(null, null);
             UpdateCommunicationPreview(null, null);
+            SetFeedback(
+                mode switch
+                {
+                    CaravanBuildInteractionMode.Modules => "Монтаж модулей",
+                    CaravanBuildInteractionMode.Electrical => "Электрическая сеть",
+                    CaravanBuildInteractionMode.Fluids => "Жидкостный контур",
+                    CaravanBuildInteractionMode.Biomass => "Поток биомассы",
+                    _ => "Механический привод"
+                },
+                false);
             return true;
         }
 
@@ -264,12 +301,21 @@ namespace Steppe.Caravan
 
             if (selectedCommunicationPort == null)
             {
-                if (port.IsAtCapacity || !ContainsElectricalPort(port))
+                if (!ContainsElectricalPort(port))
                 {
+                    SetFeedback("Этот электрический порт недоступен", true);
+                    return false;
+                }
+                if (port.IsAtCapacity)
+                {
+                    SetFeedback(
+                        $"Нет свободных контактов: {port.ConnectedCableCount}/{port.MaximumConnections}",
+                        true);
                     return false;
                 }
 
                 selectedCommunicationPort = port;
+                SetFeedback("Выберите совместимый второй порт", false);
                 RefreshCommunicationPresentation(port, null);
                 UpdateCommunicationPreview(port, null);
                 return true;
@@ -281,14 +327,26 @@ namespace Steppe.Caravan
                 return true;
             }
 
+            if (port.IsAtCapacity)
+            {
+                SetFeedback(
+                    $"Нет свободных контактов: {port.ConnectedCableCount}/{port.MaximumConnections}",
+                    true);
+                RefreshCommunicationPresentation(port, null);
+                UpdateCommunicationPreview(port, null);
+                return false;
+            }
+
             if (!electricalNetwork.TryConnect(selectedCommunicationPort, port))
             {
+                SetFeedback("Эти электрические порты несовместимы", true);
                 RefreshCommunicationPresentation(port, null);
                 UpdateCommunicationPreview(port, null);
                 return false;
             }
 
             selectedCommunicationPort = null;
+            SetFeedback("Электрическое соединение создано", false);
             RefreshCommunicationPresentation(port, null);
             UpdateCommunicationPreview(port, null);
             return true;
@@ -304,6 +362,11 @@ namespace Steppe.Caravan
             }
 
             var removed = electricalNetwork.DisconnectPort(port);
+            SetFeedback(
+                removed > 0
+                    ? "Электрическое соединение удалено"
+                    : "У этого порта нет соединений",
+                removed == 0);
             selectedCommunicationPort = null;
             RefreshCommunicationPresentation(port, null);
             UpdateCommunicationPreview(port, null);
@@ -324,10 +387,12 @@ namespace Steppe.Caravan
             {
                 if (port.IsAtCapacity || !ContainsFluidPort(port))
                 {
+                    SetFeedback("Этот жидкостный порт уже занят", true);
                     return false;
                 }
 
                 selectedFluidPort = port;
+                SetFeedback("Выберите совместимый второй порт", false);
                 RefreshCommunicationPresentation(null, port);
                 UpdateCommunicationPreview(null, port);
                 return true;
@@ -341,12 +406,14 @@ namespace Steppe.Caravan
 
             if (!fluidNetwork.TryConnect(selectedFluidPort, port))
             {
+                SetFeedback("Эти жидкостные порты несовместимы", true);
                 RefreshCommunicationPresentation(null, port);
                 UpdateCommunicationPreview(null, port);
                 return false;
             }
 
             selectedFluidPort = null;
+            SetFeedback("Труба проложена", false);
             RefreshCommunicationPresentation(null, port);
             UpdateCommunicationPreview(null, port);
             return true;
@@ -360,6 +427,9 @@ namespace Steppe.Caravan
             }
 
             var removed = fluidNetwork.DisconnectPort(port);
+            SetFeedback(
+                removed > 0 ? "Труба удалена" : "У этого порта нет труб",
+                removed == 0);
             selectedFluidPort = null;
             RefreshCommunicationPresentation(null, port);
             UpdateCommunicationPreview(null, port);
@@ -382,10 +452,12 @@ namespace Steppe.Caravan
             {
                 if (port.IsAtCapacity || !ContainsMaterialPort(network, port))
                 {
+                    SetFeedback("Этот порт уже занят", true);
                     return false;
                 }
 
                 selectedMaterialPort = port;
+                SetFeedback("Выберите совместимый второй порт", false);
                 RefreshCommunicationPresentation(null, null);
                 UpdateCommunicationPreview(null, null);
                 return true;
@@ -399,12 +471,14 @@ namespace Steppe.Caravan
 
             if (!network.TryConnect(selectedMaterialPort, port))
             {
+                SetFeedback("Эти порты несовместимы в текущем слое", true);
                 RefreshCommunicationPresentation(null, null);
                 UpdateCommunicationPreview(null, null);
                 return false;
             }
 
             selectedMaterialPort = null;
+            SetFeedback("Соединение создано", false);
             RefreshCommunicationPresentation(null, null);
             UpdateCommunicationPreview(null, null);
             return true;
@@ -419,6 +493,9 @@ namespace Steppe.Caravan
             }
 
             var removed = network.DisconnectPort(port);
+            SetFeedback(
+                removed > 0 ? "Соединение удалено" : "У этого порта нет связей",
+                removed == 0);
             selectedMaterialPort = null;
             focusedMaterialPort = port;
             RefreshCommunicationPresentation(null, null);
@@ -470,6 +547,7 @@ namespace Steppe.Caravan
             ghost.name = module.name + " Placement Ghost";
             SetGhostMaterial(validGhostMaterial);
             UpdateGhost();
+            SetFeedback($"Создано в буфере: {module.name}", false);
             return true;
         }
 
@@ -493,6 +571,7 @@ namespace Steppe.Caravan
             SetGhostMaterial(validGhostMaterial);
             module.gameObject.SetActive(false);
             chassis.RefreshMassProperties();
+            SetFeedback($"Перемещение: {module.name}", false);
             return true;
         }
 
@@ -515,10 +594,69 @@ namespace Steppe.Caravan
                 chassis.RefreshMassProperties();
             }
             ClearGhostAndBuffer();
+            SetFeedback(
+                wasNew
+                    ? $"Установлено: {placedModule.name}"
+                    : $"Перемещено: {placedModule.name}",
+                false);
+            return true;
+        }
+
+        public bool TryRemoveModule(CaravanModule module)
+        {
+            if (!IsActive
+                || IsCommunicationMode
+                || heldModule != null
+                || construction == null
+                || module == null)
+            {
+                return false;
+            }
+            if (!module.IsMovable)
+            {
+                SetFeedback("Этот элемент нельзя разобрать", true);
+                return false;
+            }
+
+            var moduleName = module.name;
+            if (!construction.TryDestroyPlaced(module, grid))
+            {
+                SetFeedback("Не удалось разобрать выбранный модуль", true);
+                return false;
+            }
+
+            SetFeedback($"Разобрано: {moduleName}", false);
             return true;
         }
 
         private void TryPickTargetedModule()
+        {
+            var module = FindTargetedModule();
+            if (module == null)
+            {
+                return;
+            }
+
+            if (!TryHoldModule(module))
+            {
+                return;
+            }
+            UpdateGhost();
+        }
+
+        private void TryRemoveTargetedModule()
+        {
+            var module = FindTargetedModule();
+            if (module == null)
+            {
+                SetFeedback("Наведитесь на модуль, который нужно разобрать", true);
+                return;
+            }
+
+            TryRemoveModule(module);
+        }
+
+        private CaravanModule FindTargetedModule()
         {
             if (!Physics.Raycast(
                     viewCamera.transform.position,
@@ -528,15 +666,10 @@ namespace Steppe.Caravan
                     CaravanFirstPersonController.WorldQueryMask,
                     QueryTriggerInteraction.Collide))
             {
-                return;
+                return null;
             }
 
-            var module = hit.collider.GetComponentInParent<CaravanModule>();
-            if (!TryHoldModule(module))
-            {
-                return;
-            }
-            UpdateGhost();
+            return hit.collider.GetComponentInParent<CaravanModule>();
         }
 
         private void UpdateGhost()
@@ -606,6 +739,7 @@ namespace Steppe.Caravan
                 chassis.RefreshMassProperties();
             }
             ClearGhostAndBuffer();
+            SetFeedback("Действие отменено", false);
         }
 
         public void ExitBuildMode()
@@ -625,6 +759,8 @@ namespace Steppe.Caravan
             RefreshCommunicationPresentation(null, null);
             UpdateCommunicationPreview(null, null);
             IsActive = false;
+            firstPerson?.SetBuildControl(false);
+            SetFeedback("Строительство завершено", false);
         }
 
         private void UpdateCommunicationMode(Mouse mouse)
@@ -1028,34 +1164,71 @@ namespace Steppe.Caravan
                 return;
             }
 
-            GUILayout.BeginArea(new Rect(18f, 18f, 390f, 126f), GUI.skin.box);
-            GUILayout.Label($"Caravan construction — {InteractionMode}");
-            if (InteractionMode == CaravanBuildInteractionMode.Modules)
+            var previousMatrix = SteppeGuiScale.Begin();
+            try
             {
-                var definition = CaravanPartCatalog.Get(SelectedConstructionKind);
-                GUILayout.Label($"Blueprint: {definition.DisplayName}");
-                GUILayout.Label(heldModule == null
-                    ? "Q/E select  •  F construct  •  LMB move"
-                    : "R rotate  •  LMB place  •  RMB cancel");
+                buildDescriptionStyle ??= new GUIStyle(GUI.skin.label)
+                {
+                    wordWrap = true
+                };
+                GUILayout.BeginArea(
+                    new Rect(18f, 18f, 430f, 190f),
+                    GUI.skin.box);
+                GUILayout.Label(
+                    $"Строительство каравана — {InteractionModeName()}");
+                if (InteractionMode == CaravanBuildInteractionMode.Modules)
+                {
+                    var definition = CaravanPartCatalog.Get(
+                        SelectedConstructionKind);
+                    GUILayout.Label($"Модуль: {definition.DisplayName}");
+                    GUILayout.Label(
+                        definition.Description,
+                        buildDescriptionStyle);
+                    GUILayout.Label(heldModule == null
+                        ? "Q/E — выбрать  •  F — создать  •  ЛКМ — переставить"
+                        : "R — повернуть  •  ЛКМ — установить  •  ПКМ — отменить");
+                    if (heldModule == null)
+                    {
+                        GUILayout.Label(
+                            "ПКМ / X / Delete — разобрать модуль под прицелом");
+                    }
+                }
+                else if (IsElectricalMode)
+                {
+                    GUILayout.Label("ЛКМ — соединить электрические порты  •  ПКМ — отменить или удалить");
+                }
+                else if (IsFluidMode)
+                {
+                    GUILayout.Label("ЛКМ — соединить жидкостные порты  •  ПКМ — отменить или удалить");
+                }
+                else if (IsBiomassMode)
+                {
+                    GUILayout.Label("ЛКМ — соединить порты биомассы  •  ПКМ — отменить или удалить");
+                }
+                else
+                {
+                    GUILayout.Label("ЛКМ — соединить механические порты  •  ПКМ — отменить или удалить");
+                }
+                GUILayout.Label("Tab — сменить слой  •  B — выйти");
+                GUILayout.EndArea();
             }
-            else if (IsElectricalMode)
+            finally
             {
-                GUILayout.Label("LMB connect power ports  •  RMB cancel/remove");
+                SteppeGuiScale.End(previousMatrix);
             }
-            else if (IsFluidMode)
+        }
+
+        private string InteractionModeName()
+        {
+            return InteractionMode switch
             {
-                GUILayout.Label("LMB connect fluid ports  •  RMB cancel/remove");
-            }
-            else if (IsBiomassMode)
-            {
-                GUILayout.Label("LMB connect biomass ports  •  RMB cancel/remove");
-            }
-            else
-            {
-                GUILayout.Label("LMB connect drive ports  •  RMB cancel/remove");
-            }
-            GUILayout.Label("Tab changes layer  •  B exits");
-            GUILayout.EndArea();
+                CaravanBuildInteractionMode.Modules => "модули",
+                CaravanBuildInteractionMode.Communications => "электричество",
+                CaravanBuildInteractionMode.Fluids => "жидкости",
+                CaravanBuildInteractionMode.Biomass => "биомасса",
+                CaravanBuildInteractionMode.Mechanical => "механика",
+                _ => "неизвестный слой"
+            };
         }
 
         private void SetGhostMaterial(Material material)
@@ -1131,6 +1304,25 @@ namespace Steppe.Caravan
             {
                 Destroy(invalidGhostMaterial);
             }
+        }
+
+        private void OnDisable()
+        {
+            if (IsActive)
+            {
+                ExitBuildMode();
+            }
+        }
+
+        private void SetFeedback(
+            string message,
+            bool isError,
+            float duration = 2.2f)
+        {
+            feedbackMessage = message;
+            feedbackIsError = isError;
+            feedbackUntil = UnityEngine.Time.unscaledTime
+                            + Mathf.Max(0.1f, duration);
         }
     }
 }

@@ -34,6 +34,7 @@ namespace Steppe.Caravan
         private bool defaultDriveEnabled;
         private float electricDriveThrottle;
         private float steeringNormalized;
+        private float brakeNormalized;
 
         public Rigidbody Body => body;
         public Transform FocusTransform => transform;
@@ -64,6 +65,10 @@ namespace Steppe.Caravan
         public float TrackRadius => 2.6f;
         public SteppeTraversalState CurrentSurface { get; private set; }
         public float SteeringNormalized => steeringNormalized;
+        public float AppliedSteeringNormalized => vehicleInput != null
+            ? vehicleInput.externalSteer
+            : 0f;
+        public float BrakeNormalized => brakeNormalized;
         public bool PhysicsStarted => physicsStarted;
         public bool DefaultDriveEnabled => defaultDriveEnabled;
         public float ElectricDriveThrottle => electricDriveThrottle;
@@ -137,6 +142,13 @@ namespace Steppe.Caravan
         public void SetSteeringNormalized(float value)
         {
             steeringNormalized = Mathf.Clamp(value, -1f, 1f);
+            ApplySteeringCommand();
+        }
+
+        public void SetBrakeNormalized(float value)
+        {
+            brakeNormalized = Mathf.Clamp01(value);
+            ApplyBrakeCommand();
         }
 
         public void SetDefaultDriveEnabled(bool enabled)
@@ -197,6 +209,27 @@ namespace Steppe.Caravan
             motor.ApplyDeliveredPower(0f);
             driveSources.Remove(motor);
             return true;
+        }
+
+        public bool DetachDriveSource(ICaravanDriveSource source)
+        {
+            if (source == null || !driveSources.Remove(source))
+            {
+                return false;
+            }
+
+            source.SetRequestedThrottle(0f);
+            if (source is CaravanElectricMotorModule motor)
+            {
+                electricMotors.Remove(motor);
+                motor.ApplyDeliveredPower(0f);
+            }
+            return true;
+        }
+
+        public bool DetachTransmission(CaravanTransmissionModule transmission)
+        {
+            return transmission != null && transmissions.Remove(transmission);
         }
 
         public void SetElectricDriveThrottle(float normalizedThrottle)
@@ -400,7 +433,8 @@ namespace Steppe.Caravan
             var throttle = Mathf.Clamp01(
                 maximumRequestedThrottle
                 * availablePower
-                * torqueMultiplier);
+                * torqueMultiplier
+                * (1f - brakeNormalized));
             if (maximumRequestedThrottle > 0.001f
                 && vehicleToolkit.isEngineStarted
                 && vehicleToolkit.engagedGear == 0)
@@ -414,16 +448,43 @@ namespace Steppe.Caravan
                 vehicleToolkit.StartEngine();
                 vehicleToolkit.SetAutomaticModeD();
             }
-            vehicleInput.externalSteer = steeringNormalized;
             vehicleInput.externalThrottle = throttle;
-            vehicleInput.externalBrake = 0f;
             vehicleInput.externalHandbrake = 0f;
-            VPVehicleToolkit.SetSteering(vehicle, steeringNormalized);
+            ApplySteeringCommand();
             VPVehicleToolkit.SetThrottle(vehicle, throttle);
-            VPVehicleToolkit.SetBrake(vehicle, vehicleInput.externalBrake);
+            ApplyBrakeCommand();
             VPVehicleToolkit.SetHandbrake(vehicle, 0f);
             vehicle.tireFriction.frictionMultiplier = Mathf.Lerp(0.95f, 0.64f, resistance);
             CurrentDriveForce = throttle * 1000f;
+        }
+
+        private void ApplySteeringCommand()
+        {
+            if (vehicleInput != null)
+            {
+                vehicleInput.externalSteer = steeringNormalized;
+            }
+            if (vehicle != null)
+            {
+                VPVehicleToolkit.SetSteering(vehicle, steeringNormalized);
+            }
+        }
+
+        public void NotifyStructureCollidersChanged()
+        {
+            vehicle?.NotifyCollidersChanged();
+        }
+
+        private void ApplyBrakeCommand()
+        {
+            if (vehicleInput != null)
+            {
+                vehicleInput.externalBrake = brakeNormalized;
+            }
+            if (vehicle != null)
+            {
+                VPVehicleToolkit.SetBrake(vehicle, brakeNormalized);
+            }
         }
 
         private static bool IsAlive(ICaravanDriveSource source)
