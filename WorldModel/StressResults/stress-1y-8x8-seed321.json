@@ -1,0 +1,2093 @@
+{
+  "generatedAtUtc": "2026-08-11T16:39:27.9402145+00:00",
+  "configuration": {
+    "years": 1,
+    "size": 8,
+    "seed": 321,
+    "stepMinutes": 180,
+    "sampleDays": 30,
+    "erosionPasses": 4,
+    "cellSizeMeters": 250,
+    "simulatedHours": 8760,
+    "internalSteps": 2920
+  },
+  "runtime": {
+    "seconds": 0.3235833,
+    "simulatedYearsPerSecond": 3.0903943435894248,
+    "chunks": 13
+  },
+  "passed": true,
+  "failures": [],
+  "derived": {
+    "finalWaterRelativeError": 2.145574150089079E-06,
+    "finalNitrogenRelativeError": -2.315344071073532E-07,
+    "finalStoredNitrogenGm2PerCell": 19.564919143915176,
+    "finalStoredWaterMmPerCell": 291.78443253040314,
+    "storageTrendLast20YearsMmPerCellPerYear": 0,
+    "liveBiomassTrendLast20YearsGm2PerYear": 0,
+    "finalLiveBiomassFractionOfYearOne": 1,
+    "availableNitrogenTrendLast20YearsGm2PerYear": 0,
+    "finalAvailableNitrogenFractionOfYearOne": 1,
+    "surfaceCrustTrendLast20YearsPerYear": 0,
+    "soilOrganicMatterTrendLast20YearsGm2PerYear": 0,
+    "soilDepthTrendLast20YearsMPerYear": 0,
+    "globalNonFiniteObservations": 0
+  },
+  "drainage": {
+    "outletCells": 28,
+    "interiorSinks": 0,
+    "loopCells": 0,
+    "downhillLinks": 32,
+    "uphillLinks": 4,
+    "maximumUphillStepM": 0.22000122,
+    "meanRouteLengthCells": 3.1666666666666665,
+    "maximumRouteLengthCells": 6
+  },
+  "layers": [
+    {
+      "layer": "Elevation",
+      "observations": 13,
+      "observedMinimum": 173.10979,
+      "observedMaximum": 582.13,
+      "minimumMean": 346.61035,
+      "maximumMean": 346.61035,
+      "meanAcrossObservations": 346.6103515625,
+      "maximumPercentile98": 484.99924,
+      "maximumBelowScale": 0,
+      "maximumAboveScale": 0,
+      "maximumNonFinite": 0
+    },
+    {
+      "layer": "Slope",
+      "observations": 13,
+      "observedMinimum": 0.00044000245,
+      "observedMaximum": 0.742614,
+      "minimumMean": 0.29563943,
+      "maximumMean": 0.29563943,
+      "meanAcrossObservations": 0.29563942551612854,
+      "maximumPercentile98": 0.6069035,
+      "maximumBelowScale": 0,
+      "maximumAboveScale": 9,
+      "maximumNonFinite": 0
+    },
+    {
+      "layer": "Aspect",
+      "observations": 13,
+      "observedMinimum": -3.1415927,
+      "observedMaximum": 3.1156328,
+      "minimumMean": -0.16743271,
+      "maximumMean": -0.16743271,
+      "meanAcrossObservations": -0.16743271052837372,
+      "maximumPercentile98": 3.0895221,
+      "maximumBelowScale": 0,
+      "maximumAboveScale": 0,
+      "maximumNonFinite": 0
+    },
+    {
+      "layer": "SoilDepth",
+      "observations": 13,
+      "observedMinimum": 0.61117375,
+      "observedMaximum": 1.6791697,
+      "minimumMean": 1.5105919,
+      "maximumMean": 1.5106038,
+      "meanAcrossObservations": 1.5105946430793176,
+      "maximumPercentile98": 1.6749156,
+      "maximumBelowScale": 0,
+      "maximumAboveScale": 0,
+      "maximumNonFinite": 0
+    },
+    {
+      "layer": "SandFraction",
+      "observations": 13,
+      "observedMinimum": 0.28022957,
+      "observedMaximum": 0.5282547,
+      "minimumMean": 0.4020513,
+      "maximumMean": 0.4020513,
+      "meanAcrossObservations": 0.40205129981040955,
+      "maximumPercentile98": 0.50223494,
+      "maximumBelowScale": 0,
+      "maximumAboveScale": 0,
+      "maximumNonFinite": 0
+    },
+    {
+      "layer": "SiltFraction",
+      "observations": 13,
+      "observedMinimum": 0.16816112,
+      "observedMaximum": 0.50097376,
+      "minimumMean": 0.3165248,
+      "maximumMean": 0.3165248,
+      "meanAcrossObservations": 0.31652480363845825,
+      "maximumPercentile98": 0.44723588,
+      "maximumBelowScale": 0,
+      "maximumAboveScale": 0,
+      "maximumNonFinite": 0
+    },
+    {
+      "layer": "ClayFraction",
+      "observations": 13,
+      "observedMinimum": 0.20115256,
+      "observedMaximum": 0.3724646,
+      "minimumMean": 0.2814239,
+      "maximumMean": 0.2814239,
+      "meanAcrossObservations": 0.2814238965511322,
+      "maximumPercentile98": 0.36077216,
+      "maximumBelowScale": 0,
+      "maximumAboveScale": 0,
+      "maximumNonFinite": 0
+    },
+    {
+      "layer": "Porosity",
+      "observations": 13,
+      "observedMinimum": 0.3582766,
+      "observedMaximum": 0.3993915,
+      "minimumMean": 0.37754175,
+      "maximumMean": 0.37754175,
+      "meanAcrossObservations": 0.37754175066947937,
+      "maximumPercentile98": 0.39658532,
+      "maximumBelowScale": 0,
+      "maximumAboveScale": 0,
+      "maximumNonFinite": 0
+    },
+    {
+      "layer": "Permeability",
+      "observations": 13,
+      "observedMinimum": 8.521154,
+      "observedMaximum": 14.405594,
+      "minimumMean": 11.284875,
+      "maximumMean": 11.284875,
+      "meanAcrossObservations": 11.28487491607666,
+      "maximumPercentile98": 13.7323475,
+      "maximumBelowScale": 0,
+      "maximumAboveScale": 0,
+      "maximumNonFinite": 0
+    },
+    {
+      "layer": "MineralContent",
+      "observations": 13,
+      "observedMinimum": 0.37127903,
+      "observedMaximum": 0.58338124,
+      "minimumMean": 0.40382254,
+      "maximumMean": 0.40382254,
+      "meanAcrossObservations": 0.40382254123687744,
+      "maximumPercentile98": 0.5604491,
+      "maximumBelowScale": 0,
+      "maximumAboveScale": 0,
+      "maximumNonFinite": 0
+    },
+    {
+      "layer": "FaultInfluence",
+      "observations": 13,
+      "observedMinimum": 0,
+      "observedMaximum": 0.6958832,
+      "minimumMean": 0.062276047,
+      "maximumMean": 0.062276047,
+      "meanAcrossObservations": 0.062276046723127365,
+      "maximumPercentile98": 0.6473634,
+      "maximumBelowScale": 0,
+      "maximumAboveScale": 0,
+      "maximumNonFinite": 0
+    },
+    {
+      "layer": "RockHardness",
+      "observations": 13,
+      "observedMinimum": 0.36120868,
+      "observedMaximum": 0.69139886,
+      "minimumMean": 0.44215724,
+      "maximumMean": 0.44215724,
+      "meanAcrossObservations": 0.44215723872184753,
+      "maximumPercentile98": 0.65005416,
+      "maximumBelowScale": 0,
+      "maximumAboveScale": 0,
+      "maximumNonFinite": 0
+    },
+    {
+      "layer": "DepressionStorage",
+      "observations": 13,
+      "observedMinimum": 0,
+      "observedMaximum": 220.00122,
+      "minimumMean": 27.500153,
+      "maximumMean": 27.500153,
+      "meanAcrossObservations": 27.500152587890625,
+      "maximumPercentile98": 220.00122,
+      "maximumBelowScale": 0,
+      "maximumAboveScale": 0,
+      "maximumNonFinite": 0
+    },
+    {
+      "layer": "Drainage",
+      "observations": 13,
+      "observedMinimum": 0,
+      "observedMaximum": 0,
+      "minimumMean": 0,
+      "maximumMean": 0,
+      "meanAcrossObservations": 0,
+      "maximumPercentile98": 0,
+      "maximumBelowScale": 0,
+      "maximumAboveScale": 0,
+      "maximumNonFinite": 0
+    },
+    {
+      "layer": "Catchments",
+      "observations": 13,
+      "observedMinimum": 0,
+      "observedMaximum": 27,
+      "minimumMean": 12.75,
+      "maximumMean": 12.75,
+      "meanAcrossObservations": 12.75,
+      "maximumPercentile98": 25.740002,
+      "maximumBelowScale": 0,
+      "maximumAboveScale": 0,
+      "maximumNonFinite": 0
+    },
+    {
+      "layer": "SolarRadiation",
+      "observations": 13,
+      "observedMinimum": 0,
+      "observedMaximum": 0,
+      "minimumMean": 0,
+      "maximumMean": 0,
+      "meanAcrossObservations": 0,
+      "maximumPercentile98": 0,
+      "maximumBelowScale": 0,
+      "maximumAboveScale": 0,
+      "maximumNonFinite": 0
+    },
+    {
+      "layer": "SurfaceTemperature",
+      "observations": 13,
+      "observedMinimum": -11.484259,
+      "observedMaximum": 26.81807,
+      "minimumMean": -9.446559,
+      "maximumMean": 23.838516,
+      "meanAcrossObservations": 5.540588452265813,
+      "maximumPercentile98": 26.610699,
+      "maximumBelowScale": 0,
+      "maximumAboveScale": 0,
+      "maximumNonFinite": 0
+    },
+    {
+      "layer": "SoilTemperature",
+      "observations": 13,
+      "observedMinimum": -10.745505,
+      "observedMaximum": 30.018673,
+      "minimumMean": -8.944274,
+      "maximumMean": 28.199831,
+      "meanAcrossObservations": 7.683944463729858,
+      "maximumPercentile98": 29.924385,
+      "maximumBelowScale": 0,
+      "maximumAboveScale": 0,
+      "maximumNonFinite": 0
+    },
+    {
+      "layer": "AirTemperature",
+      "observations": 13,
+      "observedMinimum": -9.15678,
+      "observedMaximum": 21.783054,
+      "minimumMean": -7.6711087,
+      "maximumMean": 18.545626,
+      "meanAcrossObservations": 4.554865646820802,
+      "maximumPercentile98": 21.676504,
+      "maximumBelowScale": 0,
+      "maximumAboveScale": 0,
+      "maximumNonFinite": 0
+    },
+    {
+      "layer": "Pressure",
+      "observations": 13,
+      "observedMinimum": 939.95215,
+      "observedMaximum": 1003.86694,
+      "minimumMean": 972.3069,
+      "maximumMean": 976.2024,
+      "meanAcrossObservations": 973.9635479266827,
+      "maximumPercentile98": 1001.5257,
+      "maximumBelowScale": 0,
+      "maximumAboveScale": 0,
+      "maximumNonFinite": 0
+    },
+    {
+      "layer": "Wind",
+      "observations": 13,
+      "observedMinimum": 0.31264248,
+      "observedMaximum": 11.806709,
+      "minimumMean": 2.3668988,
+      "maximumMean": 3.0260243,
+      "meanAcrossObservations": 2.5894742012023926,
+      "maximumPercentile98": 9.910245,
+      "maximumBelowScale": 0,
+      "maximumAboveScale": 0,
+      "maximumNonFinite": 0
+    },
+    {
+      "layer": "Humidity",
+      "observations": 13,
+      "observedMinimum": 3.1463892,
+      "observedMaximum": 10.575889,
+      "minimumMean": 3.5478985,
+      "maximumMean": 8.606394,
+      "meanAcrossObservations": 5.840391269096961,
+      "maximumPercentile98": 10.504762,
+      "maximumBelowScale": 0,
+      "maximumAboveScale": 0,
+      "maximumNonFinite": 0
+    },
+    {
+      "layer": "CloudWater",
+      "observations": 13,
+      "observedMinimum": 0,
+      "observedMaximum": 2.4471838,
+      "minimumMean": 0,
+      "maximumMean": 1.2119161,
+      "meanAcrossObservations": 0.5865784513477522,
+      "maximumPercentile98": 2.3937378,
+      "maximumBelowScale": 0,
+      "maximumAboveScale": 0,
+      "maximumNonFinite": 0
+    },
+    {
+      "layer": "Precipitation",
+      "observations": 13,
+      "observedMinimum": 0,
+      "observedMaximum": 0.9948433,
+      "minimumMean": 0,
+      "maximumMean": 0.18032692,
+      "meanAcrossObservations": 0.05350563159355751,
+      "maximumPercentile98": 0.95537573,
+      "maximumBelowScale": 0,
+      "maximumAboveScale": 0,
+      "maximumNonFinite": 0
+    },
+    {
+      "layer": "SurfaceWater",
+      "observations": 13,
+      "observedMinimum": 0,
+      "observedMaximum": 5.474757,
+      "minimumMean": 0.00046707716,
+      "maximumMean": 0.57935894,
+      "meanAcrossObservations": 0.15603962585625525,
+      "maximumPercentile98": 4.22818,
+      "maximumBelowScale": 0,
+      "maximumAboveScale": 0,
+      "maximumNonFinite": 0
+    },
+    {
+      "layer": "RootWater",
+      "observations": 13,
+      "observedMinimum": 34.70184,
+      "observedMaximum": 156.97107,
+      "minimumMean": 55.238644,
+      "maximumMean": 116.127846,
+      "meanAcrossObservations": 93.33158551729642,
+      "maximumPercentile98": 156.50706,
+      "maximumBelowScale": 0,
+      "maximumAboveScale": 0,
+      "maximumNonFinite": 0
+    },
+    {
+      "layer": "Groundwater",
+      "observations": 13,
+      "observedMinimum": 7.093956E-39,
+      "observedMaximum": 204.16808,
+      "minimumMean": 60.105957,
+      "maximumMean": 156.28236,
+      "meanAcrossObservations": 113.54382676344652,
+      "maximumPercentile98": 204.06909,
+      "maximumBelowScale": 0,
+      "maximumAboveScale": 0,
+      "maximumNonFinite": 0
+    },
+    {
+      "layer": "Snow",
+      "observations": 13,
+      "observedMinimum": 0,
+      "observedMaximum": 496.01105,
+      "minimumMean": 0,
+      "maximumMean": 197.1053,
+      "meanAcrossObservations": 40.99626586987422,
+      "maximumPercentile98": 479.4972,
+      "maximumBelowScale": 0,
+      "maximumAboveScale": 0,
+      "maximumNonFinite": 0
+    },
+    {
+      "layer": "FrozenSoil",
+      "observations": 13,
+      "observedMinimum": 1E-45,
+      "observedMaximum": 0.9999999,
+      "minimumMean": 1E-45,
+      "maximumMean": 0.9999999,
+      "meanAcrossObservations": 0.3511257561353537,
+      "maximumPercentile98": 0.9999999,
+      "maximumBelowScale": 0,
+      "maximumAboveScale": 0,
+      "maximumNonFinite": 0
+    },
+    {
+      "layer": "LiveBiomass",
+      "observations": 13,
+      "observedMinimum": 53.299587,
+      "observedMaximum": 233.97096,
+      "minimumMean": 67.68102,
+      "maximumMean": 207.08011,
+      "meanAcrossObservations": 138.3846916785607,
+      "maximumPercentile98": 231.10175,
+      "maximumBelowScale": 0,
+      "maximumAboveScale": 0,
+      "maximumNonFinite": 0
+    },
+    {
+      "layer": "DryBiomass",
+      "observations": 13,
+      "observedMinimum": 44.564003,
+      "observedMaximum": 199.13005,
+      "minimumMean": 52.35433,
+      "maximumMean": 184.93394,
+      "meanAcrossObservations": 101.93947865412785,
+      "maximumPercentile98": 195.81853,
+      "maximumBelowScale": 0,
+      "maximumAboveScale": 0,
+      "maximumNonFinite": 0
+    },
+    {
+      "layer": "LitterBiomass",
+      "observations": 13,
+      "observedMinimum": 85.04731,
+      "observedMaximum": 238.49506,
+      "minimumMean": 105.29959,
+      "maximumMean": 223.74112,
+      "meanAcrossObservations": 151.02164870042068,
+      "maximumPercentile98": 237.0142,
+      "maximumBelowScale": 0,
+      "maximumAboveScale": 0,
+      "maximumNonFinite": 0
+    },
+    {
+      "layer": "SeedBank",
+      "observations": 13,
+      "observedMinimum": 0.4841785,
+      "observedMaximum": 0.55246603,
+      "minimumMean": 0.5251489,
+      "maximumMean": 0.5379818,
+      "meanAcrossObservations": 0.5328618700687702,
+      "maximumPercentile98": 0.5505846,
+      "maximumBelowScale": 0,
+      "maximumAboveScale": 0,
+      "maximumNonFinite": 0
+    },
+    {
+      "layer": "SoilOrganicMatter",
+      "observations": 13,
+      "observedMinimum": 1003.0652,
+      "observedMaximum": 1332.1913,
+      "minimumMean": 1210.0991,
+      "maximumMean": 1267.6411,
+      "meanAcrossObservations": 1246.8021615835337,
+      "maximumPercentile98": 1328.0265,
+      "maximumBelowScale": 0,
+      "maximumAboveScale": 0,
+      "maximumNonFinite": 0
+    },
+    {
+      "layer": "AvailableNitrogen",
+      "observations": 13,
+      "observedMinimum": 3.1935186,
+      "observedMaximum": 6.8546224,
+      "minimumMean": 4.3444557,
+      "maximumMean": 6.5005884,
+      "meanAcrossObservations": 5.202155039860652,
+      "maximumPercentile98": 6.827204,
+      "maximumBelowScale": 0,
+      "maximumAboveScale": 0,
+      "maximumNonFinite": 0
+    },
+    {
+      "layer": "PlantNitrogen",
+      "observations": 13,
+      "observedMinimum": 0.95939285,
+      "observedMaximum": 4.2114778,
+      "minimumMean": 1.2182583,
+      "maximumMean": 3.727441,
+      "meanAcrossObservations": 2.4909241107793956,
+      "maximumPercentile98": 4.1598253,
+      "maximumBelowScale": 0,
+      "maximumAboveScale": 0,
+      "maximumNonFinite": 0
+    },
+    {
+      "layer": "OrganicNitrogen",
+      "observations": 13,
+      "observedMinimum": 9.771004,
+      "observedMaximum": 13.439359,
+      "minimumMean": 11.466593,
+      "maximumMean": 12.907818,
+      "meanAcrossObservations": 11.871842604417067,
+      "maximumPercentile98": 13.411635,
+      "maximumBelowScale": 0,
+      "maximumAboveScale": 0,
+      "maximumNonFinite": 0
+    },
+    {
+      "layer": "LooseSediment",
+      "observations": 13,
+      "observedMinimum": 0.96029603,
+      "observedMaximum": 8.93619,
+      "minimumMean": 4.6744075,
+      "maximumMean": 4.9888186,
+      "meanAcrossObservations": 4.7527863795940695,
+      "maximumPercentile98": 6.5289893,
+      "maximumBelowScale": 0,
+      "maximumAboveScale": 0,
+      "maximumNonFinite": 0
+    },
+    {
+      "layer": "SurfaceCrust",
+      "observations": 13,
+      "observedMinimum": 0.0050830757,
+      "observedMaximum": 0.21435876,
+      "minimumMean": 0.07493477,
+      "maximumMean": 0.09260006,
+      "meanAcrossObservations": 0.08493967354297638,
+      "maximumPercentile98": 0.17546499,
+      "maximumBelowScale": 0,
+      "maximumAboveScale": 0,
+      "maximumNonFinite": 0
+    },
+    {
+      "layer": "Dust",
+      "observations": 13,
+      "observedMinimum": 0,
+      "observedMaximum": 0.13893735,
+      "minimumMean": 0.00027309498,
+      "maximumMean": 0.014020993,
+      "meanAcrossObservations": 0.004760641833015073,
+      "maximumPercentile98": 0.12840524,
+      "maximumBelowScale": 0,
+      "maximumAboveScale": 0,
+      "maximumNonFinite": 0
+    }
+  ],
+  "fluxes": [
+    {
+      "flux": "HumidityTransport",
+      "descriptor": {
+        "id": "HumidityTransport",
+        "group": "Atmosphere",
+        "groupTitle": "\u0410\u0422\u041C\u041E\u0421\u0424\u0415\u0420\u0410",
+        "order": 10,
+        "title": "\u041F\u0435\u0440\u0435\u043D\u043E\u0441 \u0430\u0442\u043C\u043E\u0441\u0444\u0435\u0440\u043D\u043E\u0439 \u0432\u043B\u0430\u0433\u0438",
+        "shortTitle": "\u041F\u0435\u0440\u0435\u043D\u043E\u0441 \u0432\u043B\u0430\u0433\u0438",
+        "description": "\u0427\u0438\u0441\u0442\u043E\u0435 \u0438\u0437\u043C\u0435\u043D\u0435\u043D\u0438\u0435 \u0432\u043E\u0434\u044F\u043D\u043E\u0433\u043E \u043F\u0430\u0440\u0430 \u0438\u0437-\u0437\u0430 \u0430\u0434\u0432\u0435\u043A\u0446\u0438\u0438 \u0438 \u043E\u0442\u043A\u0440\u044B\u0442\u043E\u0439 \u0433\u0440\u0430\u043D\u0438\u0446\u044B.",
+        "unit": "\u043C\u043C",
+        "precision": 3,
+        "signed": true,
+        "effects": [
+          {
+            "state": "Humidity",
+            "factor": 1
+          }
+        ]
+      },
+      "observations": 13,
+      "signedTotal": 52936.62586259842,
+      "absoluteTotal": 65155.94948911667,
+      "positiveTotal": 59046.287675857544,
+      "negativeTotal": 6109.661813259125,
+      "annualAbsolutePerCell": 1018.061710767448,
+      "activeCellFraction": 1,
+      "maximumAbsolutePerObservation": 15465.125789642334,
+      "nonFinite": 0
+    },
+    {
+      "flux": "CloudTransport",
+      "descriptor": {
+        "id": "CloudTransport",
+        "group": "Atmosphere",
+        "groupTitle": "\u0410\u0422\u041C\u041E\u0421\u0424\u0415\u0420\u0410",
+        "order": 20,
+        "title": "\u041F\u0435\u0440\u0435\u043D\u043E\u0441 \u043E\u0431\u043B\u0430\u0447\u043D\u043E\u0439 \u0432\u043E\u0434\u044B",
+        "shortTitle": "\u041F\u0435\u0440\u0435\u043D\u043E\u0441 \u043E\u0431\u043B\u0430\u043A\u043E\u0432",
+        "description": "\u0427\u0438\u0441\u0442\u043E\u0435 \u0438\u0437\u043C\u0435\u043D\u0435\u043D\u0438\u0435 \u043E\u0431\u043B\u0430\u0447\u043D\u043E\u0433\u043E \u0440\u0435\u0437\u0435\u0440\u0432\u0443\u0430\u0440\u0430 \u0438\u0437-\u0437\u0430 \u0430\u0442\u043C\u043E\u0441\u0444\u0435\u0440\u043D\u043E\u0433\u043E \u043F\u0435\u0440\u0435\u043D\u043E\u0441\u0430.",
+        "unit": "\u043C\u043C",
+        "precision": 3,
+        "signed": true,
+        "effects": [
+          {
+            "state": "CloudWater",
+            "factor": 1
+          }
+        ]
+      },
+      "observations": 13,
+      "signedTotal": -29291.957909048535,
+      "absoluteTotal": 36837.98859880399,
+      "positiveTotal": 3773.0153448777273,
+      "negativeTotal": 33064.97325392626,
+      "annualAbsolutePerCell": 575.5935718563123,
+      "activeCellFraction": 0.9987980769230769,
+      "maximumAbsolutePerObservation": 8011.774757146835,
+      "nonFinite": 0
+    },
+    {
+      "flux": "AirTemperatureTransport",
+      "descriptor": {
+        "id": "AirTemperatureTransport",
+        "group": "Atmosphere",
+        "groupTitle": "\u0410\u0422\u041C\u041E\u0421\u0424\u0415\u0420\u0410",
+        "order": 30,
+        "title": "\u041F\u0435\u0440\u0435\u043D\u043E\u0441 \u0442\u0435\u043C\u043F\u0435\u0440\u0430\u0442\u0443\u0440\u044B \u0432\u043E\u0437\u0434\u0443\u0445\u0430",
+        "shortTitle": "\u041F\u0435\u0440\u0435\u043D\u043E\u0441 \u0442\u0435\u043F\u043B\u0430",
+        "description": "\u0418\u0437\u043C\u0435\u043D\u0435\u043D\u0438\u0435 \u0442\u0435\u043C\u043F\u0435\u0440\u0430\u0442\u0443\u0440\u044B \u0432\u043E\u0437\u0434\u0443\u0445\u0430 \u043D\u0430 \u0441\u0442\u0430\u0434\u0438\u0438 \u0430\u0442\u043C\u043E\u0441\u0444\u0435\u0440\u043D\u043E\u0439 \u0430\u0434\u0432\u0435\u043A\u0446\u0438\u0438.",
+        "unit": "\u00B0C",
+        "precision": 3,
+        "signed": true,
+        "effects": [
+          {
+            "state": "AirTemperature",
+            "factor": 1
+          }
+        ]
+      },
+      "observations": 13,
+      "signedTotal": -35843.47348976135,
+      "absoluteTotal": 77675.0496134758,
+      "positiveTotal": 20915.788061857224,
+      "negativeTotal": 56759.261551618576,
+      "annualAbsolutePerCell": 1213.6726502105594,
+      "activeCellFraction": 1,
+      "maximumAbsolutePerObservation": 12071.748114585876,
+      "nonFinite": 0
+    },
+    {
+      "flux": "Condensation",
+      "descriptor": {
+        "id": "Condensation",
+        "group": "Atmosphere",
+        "groupTitle": "\u0410\u0422\u041C\u041E\u0421\u0424\u0415\u0420\u0410",
+        "order": 40,
+        "title": "\u041A\u043E\u043D\u0434\u0435\u043D\u0441\u0430\u0446\u0438\u044F",
+        "shortTitle": "\u041A\u043E\u043D\u0434\u0435\u043D\u0441\u0430\u0446\u0438\u044F",
+        "description": "\u041F\u0435\u0440\u0435\u0445\u043E\u0434 \u0432\u043E\u0434\u044F\u043D\u043E\u0433\u043E \u043F\u0430\u0440\u0430 \u0432 \u043E\u0431\u043B\u0430\u0447\u043D\u0443\u044E \u0432\u043E\u0434\u0443.",
+        "unit": "\u043C\u043C",
+        "precision": 3,
+        "signed": false,
+        "effects": [
+          {
+            "state": "Humidity",
+            "factor": -1
+          },
+          {
+            "state": "CloudWater",
+            "factor": 1
+          }
+        ]
+      },
+      "observations": 13,
+      "signedTotal": 63699.95477724075,
+      "absoluteTotal": 63699.95477724075,
+      "positiveTotal": 63699.95477724075,
+      "negativeTotal": 0,
+      "annualAbsolutePerCell": 995.3117933943868,
+      "activeCellFraction": 0.7331730769230769,
+      "maximumAbsolutePerObservation": 16304.783440828323,
+      "nonFinite": 0
+    },
+    {
+      "flux": "CloudEvaporation",
+      "descriptor": {
+        "id": "CloudEvaporation",
+        "group": "Atmosphere",
+        "groupTitle": "\u0410\u0422\u041C\u041E\u0421\u0424\u0415\u0420\u0410",
+        "order": 50,
+        "title": "\u0418\u0441\u043F\u0430\u0440\u0435\u043D\u0438\u0435 \u043E\u0431\u043B\u0430\u043A\u0430",
+        "shortTitle": "\u0418\u0441\u043F\u0430\u0440\u0435\u043D\u0438\u0435 \u043E\u0431\u043B\u0430\u043A\u0430",
+        "description": "\u0412\u043E\u0437\u0432\u0440\u0430\u0442 \u043E\u0431\u043B\u0430\u0447\u043D\u043E\u0439 \u0432\u043E\u0434\u044B \u0432 \u0430\u0442\u043C\u043E\u0441\u0444\u0435\u0440\u043D\u044B\u0439 \u043F\u0430\u0440.",
+        "unit": "\u043C\u043C",
+        "precision": 3,
+        "signed": false,
+        "effects": [
+          {
+            "state": "CloudWater",
+            "factor": -1
+          },
+          {
+            "state": "Humidity",
+            "factor": 1
+          }
+        ]
+      },
+      "observations": 13,
+      "signedTotal": 2903.8805336854416,
+      "absoluteTotal": 2903.8805336854416,
+      "positiveTotal": 2903.8805336854416,
+      "negativeTotal": 0,
+      "annualAbsolutePerCell": 45.373133338835025,
+      "activeCellFraction": 0.5084134615384616,
+      "maximumAbsolutePerObservation": 952.5469212662429,
+      "nonFinite": 0
+    },
+    {
+      "flux": "Rainfall",
+      "descriptor": {
+        "id": "Rainfall",
+        "group": "Atmosphere",
+        "groupTitle": "\u0410\u0422\u041C\u041E\u0421\u0424\u0415\u0420\u0410",
+        "order": 60,
+        "title": "\u0414\u043E\u0436\u0434\u044C",
+        "shortTitle": "\u0414\u043E\u0436\u0434\u044C",
+        "description": "\u0416\u0438\u0434\u043A\u0438\u0435 \u043E\u0441\u0430\u0434\u043A\u0438 \u0438\u0437 \u043E\u0431\u043B\u0430\u0447\u043D\u043E\u0433\u043E \u0440\u0435\u0437\u0435\u0440\u0432\u0443\u0430\u0440\u0430 \u043D\u0430 \u043F\u043E\u0432\u0435\u0440\u0445\u043D\u043E\u0441\u0442\u044C.",
+        "unit": "\u043C\u043C",
+        "precision": 3,
+        "signed": false,
+        "effects": [
+          {
+            "state": "CloudWater",
+            "factor": -1
+          },
+          {
+            "state": "SurfaceWater",
+            "factor": 1
+          }
+        ]
+      },
+      "observations": 13,
+      "signedTotal": 8363.684107106179,
+      "absoluteTotal": 8363.684107106179,
+      "positiveTotal": 8363.684107106179,
+      "negativeTotal": 0,
+      "annualAbsolutePerCell": 130.68256417353405,
+      "activeCellFraction": 0.421875,
+      "maximumAbsolutePerObservation": 4944.825505495071,
+      "nonFinite": 0
+    },
+    {
+      "flux": "Snowfall",
+      "descriptor": {
+        "id": "Snowfall",
+        "group": "Snow",
+        "groupTitle": "\u0421\u041D\u0415\u0413",
+        "order": 110,
+        "title": "\u0421\u043D\u0435\u0433\u043E\u043F\u0430\u0434",
+        "shortTitle": "\u0421\u043D\u0435\u0433\u043E\u043F\u0430\u0434",
+        "description": "\u0422\u0432\u0451\u0440\u0434\u044B\u0435 \u043E\u0441\u0430\u0434\u043A\u0438 \u0438\u0437 \u043E\u0431\u043B\u0430\u0447\u043D\u043E\u0433\u043E \u0440\u0435\u0437\u0435\u0440\u0432\u0443\u0430\u0440\u0430 \u0432 \u0441\u043D\u0435\u0436\u043D\u044B\u0439 \u0437\u0430\u043F\u0430\u0441.",
+        "unit": "\u043C\u043C",
+        "precision": 3,
+        "signed": false,
+        "effects": [
+          {
+            "state": "CloudWater",
+            "factor": -1
+          },
+          {
+            "state": "Snow",
+            "factor": 1
+          }
+        ]
+      },
+      "observations": 13,
+      "signedTotal": 23088.626393944025,
+      "absoluteTotal": 23088.626393944025,
+      "positiveTotal": 23088.626393944025,
+      "negativeTotal": 0,
+      "annualAbsolutePerCell": 360.7597874053754,
+      "activeCellFraction": 0.5384615384615384,
+      "maximumAbsolutePerObservation": 8425.916826248169,
+      "nonFinite": 0
+    },
+    {
+      "flux": "SnowMelt",
+      "descriptor": {
+        "id": "SnowMelt",
+        "group": "Snow",
+        "groupTitle": "\u0421\u041D\u0415\u0413",
+        "order": 120,
+        "title": "\u0422\u0430\u044F\u043D\u0438\u0435 \u0441\u043D\u0435\u0433\u0430",
+        "shortTitle": "\u0422\u0430\u044F\u043D\u0438\u0435",
+        "description": "\u041F\u0435\u0440\u0435\u0445\u043E\u0434 \u0441\u043D\u0435\u0436\u043D\u043E\u0433\u043E \u0437\u0430\u043F\u0430\u0441\u0430 \u0432 \u043F\u043E\u0432\u0435\u0440\u0445\u043D\u043E\u0441\u0442\u043D\u0443\u044E \u0432\u043E\u0434\u0443.",
+        "unit": "\u043C\u043C",
+        "precision": 3,
+        "signed": false,
+        "effects": [
+          {
+            "state": "Snow",
+            "factor": -1
+          },
+          {
+            "state": "SurfaceWater",
+            "factor": 1
+          }
+        ]
+      },
+      "observations": 13,
+      "signedTotal": 14247.577778432518,
+      "absoluteTotal": 14247.577778432518,
+      "positiveTotal": 14247.577778432518,
+      "negativeTotal": 0,
+      "annualAbsolutePerCell": 222.6184027880081,
+      "activeCellFraction": 0.5360576923076923,
+      "maximumAbsolutePerObservation": 12291.239275753498,
+      "nonFinite": 0
+    },
+    {
+      "flux": "SnowSublimation",
+      "descriptor": {
+        "id": "SnowSublimation",
+        "group": "Snow",
+        "groupTitle": "\u0421\u041D\u0415\u0413",
+        "order": 130,
+        "title": "\u0421\u0443\u0431\u043B\u0438\u043C\u0430\u0446\u0438\u044F \u0441\u043D\u0435\u0433\u0430",
+        "shortTitle": "\u0421\u0443\u0431\u043B\u0438\u043C\u0430\u0446\u0438\u044F",
+        "description": "\u041F\u0435\u0440\u0435\u0445\u043E\u0434 \u0441\u043D\u0435\u0433\u0430 \u043D\u0435\u043F\u043E\u0441\u0440\u0435\u0434\u0441\u0442\u0432\u0435\u043D\u043D\u043E \u0432 \u0430\u0442\u043C\u043E\u0441\u0444\u0435\u0440\u043D\u0443\u044E \u0432\u043B\u0430\u0433\u0443.",
+        "unit": "\u043C\u043C",
+        "precision": 3,
+        "signed": false,
+        "effects": [
+          {
+            "state": "Snow",
+            "factor": -1
+          },
+          {
+            "state": "Humidity",
+            "factor": 1
+          }
+        ]
+      },
+      "observations": 13,
+      "signedTotal": 2818.5023178471133,
+      "absoluteTotal": 2818.5023178471133,
+      "positiveTotal": 2818.5023178471133,
+      "negativeTotal": 0,
+      "annualAbsolutePerCell": 44.039098716361146,
+      "activeCellFraction": 0.4206730769230769,
+      "maximumAbsolutePerObservation": 1970.1958997805195,
+      "nonFinite": 0
+    },
+    {
+      "flux": "SnowTransport",
+      "descriptor": {
+        "id": "SnowTransport",
+        "group": "Snow",
+        "groupTitle": "\u0421\u041D\u0415\u0413",
+        "order": 140,
+        "title": "\u0412\u0435\u0442\u0440\u043E\u0432\u043E\u0439 \u043F\u0435\u0440\u0435\u043D\u043E\u0441 \u0441\u043D\u0435\u0433\u0430",
+        "shortTitle": "\u041F\u0435\u0440\u0435\u043D\u043E\u0441 \u0441\u043D\u0435\u0433\u0430",
+        "description": "\u0427\u0438\u0441\u0442\u044B\u0439 \u043F\u0440\u0438\u0445\u043E\u0434 \u0438\u043B\u0438 \u0443\u0445\u043E\u0434 \u0441\u043D\u0435\u0433\u0430 \u0438\u0437-\u0437\u0430 \u0432\u0435\u0442\u0440\u043E\u0432\u043E\u0433\u043E \u043F\u0435\u0440\u0435\u0440\u0430\u0441\u043F\u0440\u0435\u0434\u0435\u043B\u0435\u043D\u0438\u044F.",
+        "unit": "\u043C\u043C",
+        "precision": 3,
+        "signed": true,
+        "effects": [
+          {
+            "state": "Snow",
+            "factor": 1
+          }
+        ]
+      },
+      "observations": 13,
+      "signedTotal": 4.922645166516304E-05,
+      "absoluteTotal": 5556.226195985917,
+      "positiveTotal": 2778.1131226061843,
+      "negativeTotal": 2778.1130733797327,
+      "annualAbsolutePerCell": 86.81603431227995,
+      "activeCellFraction": 0.3605769230769231,
+      "maximumAbsolutePerObservation": 2504.7527297884226,
+      "nonFinite": 0
+    },
+    {
+      "flux": "SnowExport",
+      "descriptor": {
+        "id": "SnowExport",
+        "group": "Snow",
+        "groupTitle": "\u0421\u041D\u0415\u0413",
+        "order": 150,
+        "title": "\u0412\u044B\u043D\u043E\u0441 \u0441\u043D\u0435\u0433\u0430 \u0437\u0430 \u0433\u0440\u0430\u043D\u0438\u0446\u0443",
+        "shortTitle": "\u042D\u043A\u0441\u043F\u043E\u0440\u0442 \u0441\u043D\u0435\u0433\u0430",
+        "description": "\u0421\u043D\u0435\u0433, \u0432\u044B\u043D\u0435\u0441\u0435\u043D\u043D\u044B\u0439 \u0432\u0435\u0442\u0440\u043E\u043C \u0447\u0435\u0440\u0435\u0437 \u043E\u0442\u043A\u0440\u044B\u0442\u0443\u044E \u0433\u0440\u0430\u043D\u0438\u0446\u0443 \u043A\u043E\u043D\u0435\u0447\u043D\u043E\u0433\u043E \u043C\u0438\u0440\u0430.",
+        "unit": "\u043C\u043C",
+        "precision": 3,
+        "signed": false,
+        "effects": [
+          {
+            "state": "Snow",
+            "factor": -1
+          }
+        ]
+      },
+      "observations": 13,
+      "signedTotal": 388.20480577321723,
+      "absoluteTotal": 388.20480577321723,
+      "positiveTotal": 388.20480577321723,
+      "negativeTotal": 0,
+      "annualAbsolutePerCell": 6.065700090206519,
+      "activeCellFraction": 0.020432692307692308,
+      "maximumAbsolutePerObservation": 178.17569971084595,
+      "nonFinite": 0
+    },
+    {
+      "flux": "Infiltration",
+      "descriptor": {
+        "id": "Infiltration",
+        "group": "Hydrology",
+        "groupTitle": "\u0413\u0418\u0414\u0420\u041E\u041B\u041E\u0413\u0418\u042F",
+        "order": 210,
+        "title": "\u0418\u043D\u0444\u0438\u043B\u044C\u0442\u0440\u0430\u0446\u0438\u044F",
+        "shortTitle": "\u0418\u043D\u0444\u0438\u043B\u044C\u0442\u0440\u0430\u0446\u0438\u044F",
+        "description": "\u041F\u0435\u0440\u0435\u0445\u043E\u0434 \u043F\u043E\u0432\u0435\u0440\u0445\u043D\u043E\u0441\u0442\u043D\u043E\u0439 \u0432\u043E\u0434\u044B \u0432 \u043A\u043E\u0440\u043D\u0435\u0432\u0443\u044E \u0437\u043E\u043D\u0443.",
+        "unit": "\u043C\u043C",
+        "precision": 3,
+        "signed": false,
+        "effects": [
+          {
+            "state": "SurfaceWater",
+            "factor": -1
+          },
+          {
+            "state": "RootWater",
+            "factor": 1
+          }
+        ]
+      },
+      "observations": 13,
+      "signedTotal": 12477.634343164429,
+      "absoluteTotal": 12477.634343164429,
+      "positiveTotal": 12477.634343164429,
+      "negativeTotal": 0,
+      "annualAbsolutePerCell": 194.9630366119442,
+      "activeCellFraction": 0.7716346153846154,
+      "maximumAbsolutePerObservation": 8790.786338806152,
+      "nonFinite": 0
+    },
+    {
+      "flux": "Percolation",
+      "descriptor": {
+        "id": "Percolation",
+        "group": "Hydrology",
+        "groupTitle": "\u0413\u0418\u0414\u0420\u041E\u041B\u041E\u0413\u0418\u042F",
+        "order": 220,
+        "title": "\u041F\u0435\u0440\u043A\u043E\u043B\u044F\u0446\u0438\u044F",
+        "shortTitle": "\u041F\u0435\u0440\u043A\u043E\u043B\u044F\u0446\u0438\u044F",
+        "description": "\u041F\u0435\u0440\u0435\u0445\u043E\u0434 \u0432\u043E\u0434\u044B \u043A\u043E\u0440\u043D\u0435\u0432\u043E\u0439 \u0437\u043E\u043D\u044B \u0432 \u0433\u0440\u0443\u043D\u0442\u043E\u0432\u044B\u0439 \u0440\u0435\u0437\u0435\u0440\u0432\u0443\u0430\u0440.",
+        "unit": "\u043C\u043C",
+        "precision": 3,
+        "signed": false,
+        "effects": [
+          {
+            "state": "RootWater",
+            "factor": -1
+          },
+          {
+            "state": "Groundwater",
+            "factor": 1
+          }
+        ]
+      },
+      "observations": 13,
+      "signedTotal": 8418.508977600854,
+      "absoluteTotal": 8418.508977600854,
+      "positiveTotal": 8418.508977600854,
+      "negativeTotal": 0,
+      "annualAbsolutePerCell": 131.53920277501334,
+      "activeCellFraction": 0.3233173076923077,
+      "maximumAbsolutePerObservation": 6317.268795013428,
+      "nonFinite": 0
+    },
+    {
+      "flux": "RunoffIn",
+      "descriptor": {
+        "id": "RunoffIn",
+        "group": "Hydrology",
+        "groupTitle": "\u0413\u0418\u0414\u0420\u041E\u041B\u041E\u0413\u0418\u042F",
+        "order": 230,
+        "title": "\u041F\u0440\u0438\u0445\u043E\u0434 \u043F\u043E\u0432\u0435\u0440\u0445\u043D\u043E\u0441\u0442\u043D\u043E\u0433\u043E \u0441\u0442\u043E\u043A\u0430",
+        "shortTitle": "\u0421\u0442\u043E\u043A \u0432\u043E\u0448\u0451\u043B",
+        "description": "\u041F\u043E\u0432\u0435\u0440\u0445\u043D\u043E\u0441\u0442\u043D\u0430\u044F \u0432\u043E\u0434\u0430, \u043F\u0440\u0438\u0448\u0435\u0434\u0448\u0430\u044F \u0438\u0437 \u0441\u043E\u0441\u0435\u0434\u043D\u0438\u0445 \u044F\u0447\u0435\u0435\u043A.",
+        "unit": "\u043C\u043C",
+        "precision": 3,
+        "signed": false,
+        "effects": [
+          {
+            "state": "SurfaceWater",
+            "factor": 1
+          }
+        ]
+      },
+      "observations": 13,
+      "signedTotal": 16675.75401106663,
+      "absoluteTotal": 16675.75401106663,
+      "positiveTotal": 16675.75401106663,
+      "negativeTotal": 0,
+      "annualAbsolutePerCell": 260.5586564229161,
+      "activeCellFraction": 0.13701923076923078,
+      "maximumAbsolutePerObservation": 13056.362485021353,
+      "nonFinite": 0
+    },
+    {
+      "flux": "RunoffOut",
+      "descriptor": {
+        "id": "RunoffOut",
+        "group": "Hydrology",
+        "groupTitle": "\u0413\u0418\u0414\u0420\u041E\u041B\u041E\u0413\u0418\u042F",
+        "order": 240,
+        "title": "\u0423\u0445\u043E\u0434 \u043F\u043E\u0432\u0435\u0440\u0445\u043D\u043E\u0441\u0442\u043D\u043E\u0433\u043E \u0441\u0442\u043E\u043A\u0430",
+        "shortTitle": "\u0421\u0442\u043E\u043A \u0432\u044B\u0448\u0435\u043B",
+        "description": "\u041F\u043E\u0432\u0435\u0440\u0445\u043D\u043E\u0441\u0442\u043D\u0430\u044F \u0432\u043E\u0434\u0430, \u0443\u0448\u0435\u0434\u0448\u0430\u044F \u0432 \u0441\u043B\u0435\u0434\u0443\u044E\u0449\u0443\u044E \u044F\u0447\u0435\u0439\u043A\u0443 \u0438\u043B\u0438 \u0437\u0430 \u0433\u0440\u0430\u043D\u0438\u0446\u0443 \u043C\u0438\u0440\u0430.",
+        "unit": "\u043C\u043C",
+        "precision": 3,
+        "signed": false,
+        "effects": [
+          {
+            "state": "SurfaceWater",
+            "factor": -1
+          }
+        ]
+      },
+      "observations": 13,
+      "signedTotal": 29525.96261361055,
+      "absoluteTotal": 29525.96261361055,
+      "positiveTotal": 29525.96261361055,
+      "negativeTotal": 0,
+      "annualAbsolutePerCell": 461.34316583766486,
+      "activeCellFraction": 0.24639423076923078,
+      "maximumAbsolutePerObservation": 22088.1352532804,
+      "nonFinite": 0
+    },
+    {
+      "flux": "GroundwaterTransport",
+      "descriptor": {
+        "id": "GroundwaterTransport",
+        "group": "Hydrology",
+        "groupTitle": "\u0413\u0418\u0414\u0420\u041E\u041B\u041E\u0413\u0418\u042F",
+        "order": 250,
+        "title": "\u041F\u043E\u0434\u0437\u0435\u043C\u043D\u044B\u0439 \u043E\u0431\u043C\u0435\u043D",
+        "shortTitle": "\u041F\u043E\u0434\u0437\u0435\u043C\u043D\u044B\u0439 \u043E\u0431\u043C\u0435\u043D",
+        "description": "\u0427\u0438\u0441\u0442\u043E\u0435 \u0438\u0437\u043C\u0435\u043D\u0435\u043D\u0438\u0435 \u0433\u0440\u0443\u043D\u0442\u043E\u0432\u043E\u0439 \u0432\u043E\u0434\u044B \u0438\u0437-\u0437\u0430 \u043E\u0431\u043C\u0435\u043D\u0430 \u0441 \u0441\u043E\u0441\u0435\u0434\u044F\u043C\u0438.",
+        "unit": "\u043C\u043C",
+        "precision": 3,
+        "signed": true,
+        "effects": [
+          {
+            "state": "Groundwater",
+            "factor": 1
+          }
+        ]
+      },
+      "observations": 13,
+      "signedTotal": -0.0017465360307262756,
+      "absoluteTotal": 15408.821817429538,
+      "positiveTotal": 7704.410035446754,
+      "negativeTotal": 7704.411781982783,
+      "annualAbsolutePerCell": 240.76284089733653,
+      "activeCellFraction": 0.8737980769230769,
+      "maximumAbsolutePerObservation": 2309.987914532423,
+      "nonFinite": 0
+    },
+    {
+      "flux": "GroundwaterDischarge",
+      "descriptor": {
+        "id": "GroundwaterDischarge",
+        "group": "Hydrology",
+        "groupTitle": "\u0413\u0418\u0414\u0420\u041E\u041B\u041E\u0413\u0418\u042F",
+        "order": 260,
+        "title": "\u0420\u0430\u0437\u0433\u0440\u0443\u0437\u043A\u0430 \u0433\u0440\u0443\u043D\u0442\u043E\u0432\u044B\u0445 \u0432\u043E\u0434",
+        "shortTitle": "\u0420\u0430\u0437\u0433\u0440\u0443\u0437\u043A\u0430",
+        "description": "\u0412\u044B\u0445\u043E\u0434 \u0438\u0437\u0431\u044B\u0442\u043A\u0430 \u0433\u0440\u0443\u043D\u0442\u043E\u0432\u043E\u0439 \u0432\u043E\u0434\u044B \u043D\u0430 \u043F\u043E\u0432\u0435\u0440\u0445\u043D\u043E\u0441\u0442\u044C.",
+        "unit": "\u043C\u043C",
+        "precision": 3,
+        "signed": false,
+        "effects": [
+          {
+            "state": "Groundwater",
+            "factor": -1
+          },
+          {
+            "state": "SurfaceWater",
+            "factor": 1
+          }
+        ]
+      },
+      "observations": 13,
+      "signedTotal": 5582.889005103949,
+      "absoluteTotal": 5582.889005103949,
+      "positiveTotal": 5582.889005103949,
+      "negativeTotal": 0,
+      "annualAbsolutePerCell": 87.2326407047492,
+      "activeCellFraction": 0.2980769230769231,
+      "maximumAbsolutePerObservation": 1069.4609861373901,
+      "nonFinite": 0
+    },
+    {
+      "flux": "SurfaceEvaporation",
+      "descriptor": {
+        "id": "SurfaceEvaporation",
+        "group": "Hydrology",
+        "groupTitle": "\u0413\u0418\u0414\u0420\u041E\u041B\u041E\u0413\u0418\u042F",
+        "order": 270,
+        "title": "\u0418\u0441\u043F\u0430\u0440\u0435\u043D\u0438\u0435 \u0441 \u043F\u043E\u0432\u0435\u0440\u0445\u043D\u043E\u0441\u0442\u0438",
+        "shortTitle": "\u0418\u0441\u043F\u0430\u0440\u0435\u043D\u0438\u0435",
+        "description": "\u041F\u0435\u0440\u0435\u0445\u043E\u0434 \u043F\u043E\u0432\u0435\u0440\u0445\u043D\u043E\u0441\u0442\u043D\u043E\u0439 \u0432\u043E\u0434\u044B \u0432 \u0430\u0442\u043C\u043E\u0441\u0444\u0435\u0440\u043D\u0443\u044E \u0432\u043B\u0430\u0433\u0443.",
+        "unit": "\u043C\u043C",
+        "precision": 3,
+        "signed": false,
+        "effects": [
+          {
+            "state": "SurfaceWater",
+            "factor": -1
+          },
+          {
+            "state": "Humidity",
+            "factor": 1
+          }
+        ]
+      },
+      "observations": 13,
+      "signedTotal": 2883.7593508660793,
+      "absoluteTotal": 2883.7593508660793,
+      "positiveTotal": 2883.7593508660793,
+      "negativeTotal": 0,
+      "annualAbsolutePerCell": 45.05873985728249,
+      "activeCellFraction": 0.5925480769230769,
+      "maximumAbsolutePerObservation": 521.1304051876068,
+      "nonFinite": 0
+    },
+    {
+      "flux": "Transpiration",
+      "descriptor": {
+        "id": "Transpiration",
+        "group": "Hydrology",
+        "groupTitle": "\u0413\u0418\u0414\u0420\u041E\u041B\u041E\u0413\u0418\u042F",
+        "order": 280,
+        "title": "\u0422\u0440\u0430\u043D\u0441\u043F\u0438\u0440\u0430\u0446\u0438\u044F",
+        "shortTitle": "\u0422\u0440\u0430\u043D\u0441\u043F\u0438\u0440\u0430\u0446\u0438\u044F",
+        "description": "\u041F\u0435\u0440\u0435\u0445\u043E\u0434 \u0432\u043E\u0434\u044B \u043A\u043E\u0440\u043D\u0435\u0432\u043E\u0439 \u0437\u043E\u043D\u044B \u0432 \u0430\u0442\u043C\u043E\u0441\u0444\u0435\u0440\u0443 \u0447\u0435\u0440\u0435\u0437 \u0440\u0430\u0441\u0442\u0435\u043D\u0438\u044F.",
+        "unit": "\u043C\u043C",
+        "precision": 3,
+        "signed": false,
+        "effects": [
+          {
+            "state": "RootWater",
+            "factor": -1
+          },
+          {
+            "state": "Humidity",
+            "factor": 1
+          }
+        ]
+      },
+      "observations": 13,
+      "signedTotal": 1851.479618290832,
+      "absoluteTotal": 1851.479618290832,
+      "positiveTotal": 1851.479618290832,
+      "negativeTotal": 0,
+      "annualAbsolutePerCell": 28.92936903579425,
+      "activeCellFraction": 0.90625,
+      "maximumAbsolutePerObservation": 350.1536877155304,
+      "nonFinite": 0
+    },
+    {
+      "flux": "PlantGrowth",
+      "descriptor": {
+        "id": "PlantGrowth",
+        "group": "Biology",
+        "groupTitle": "\u0411\u0418\u041E\u041B\u041E\u0413\u0418\u042F",
+        "order": 310,
+        "title": "\u0420\u043E\u0441\u0442 \u0440\u0430\u0441\u0442\u0435\u043D\u0438\u0439",
+        "shortTitle": "\u0420\u043E\u0441\u0442",
+        "description": "\u041F\u0440\u0438\u0440\u043E\u0441\u0442 \u0436\u0438\u0432\u043E\u0439 \u0440\u0430\u0441\u0442\u0438\u0442\u0435\u043B\u044C\u043D\u043E\u0439 \u043C\u0430\u0441\u0441\u044B.",
+        "unit": "\u0433/\u043C\u00B2",
+        "precision": 3,
+        "signed": false,
+        "effects": [
+          {
+            "state": "LiveBiomass",
+            "factor": 1
+          }
+        ]
+      },
+      "observations": 13,
+      "signedTotal": 10596.6740097894,
+      "absoluteTotal": 10596.6740097894,
+      "positiveTotal": 10596.6740097894,
+      "negativeTotal": 0,
+      "annualAbsolutePerCell": 165.57303140295937,
+      "activeCellFraction": 0.6213942307692307,
+      "maximumAbsolutePerObservation": 2210.585289001465,
+      "nonFinite": 0
+    },
+    {
+      "flux": "PlantMortality",
+      "descriptor": {
+        "id": "PlantMortality",
+        "group": "Biology",
+        "groupTitle": "\u0411\u0418\u041E\u041B\u041E\u0413\u0418\u042F",
+        "order": 320,
+        "title": "\u041E\u0442\u043C\u0438\u0440\u0430\u043D\u0438\u0435 \u0440\u0430\u0441\u0442\u0435\u043D\u0438\u0439",
+        "shortTitle": "\u041E\u0442\u043C\u0438\u0440\u0430\u043D\u0438\u0435",
+        "description": "\u041F\u0435\u0440\u0435\u0445\u043E\u0434 \u0436\u0438\u0432\u043E\u0439 \u0431\u0438\u043E\u043C\u0430\u0441\u0441\u044B \u0432 \u0441\u0443\u0445\u0443\u044E \u0441\u0442\u043E\u044F\u0449\u0443\u044E \u043C\u0430\u0441\u0441\u0443.",
+        "unit": "\u0433/\u043C\u00B2",
+        "precision": 3,
+        "signed": false,
+        "effects": [
+          {
+            "state": "LiveBiomass",
+            "factor": -1
+          },
+          {
+            "state": "DryBiomass",
+            "factor": 1
+          }
+        ]
+      },
+      "observations": 13,
+      "signedTotal": 8710.523258812089,
+      "absoluteTotal": 8710.523258812089,
+      "positiveTotal": 8710.523258812089,
+      "negativeTotal": 0,
+      "annualAbsolutePerCell": 136.1019259189389,
+      "activeCellFraction": 0.9146634615384616,
+      "maximumAbsolutePerObservation": 2450.1722354888916,
+      "nonFinite": 0
+    },
+    {
+      "flux": "PlantNitrogenSenescence",
+      "descriptor": {
+        "id": "PlantNitrogenSenescence",
+        "group": "Biology",
+        "groupTitle": "\u0411\u0418\u041E\u041B\u041E\u0413\u0418\u042F",
+        "order": 325,
+        "title": "\u0412\u043E\u0437\u0432\u0440\u0430\u0442 \u0430\u0437\u043E\u0442\u0430 \u043F\u0440\u0438 \u043E\u0442\u043C\u0438\u0440\u0430\u043D\u0438\u0438",
+        "shortTitle": "\u0412\u043E\u0437\u0432\u0440\u0430\u0442 N",
+        "description": "\u041F\u0435\u0440\u0435\u0445\u043E\u0434 \u0430\u0437\u043E\u0442\u0430 \u043E\u0442\u043C\u0435\u0440\u0448\u0435\u0439 \u0436\u0438\u0432\u043E\u0439 \u043C\u0430\u0441\u0441\u044B \u0432 \u043E\u0440\u0433\u0430\u043D\u0438\u0447\u0435\u0441\u043A\u0438\u0439 \u0440\u0435\u0437\u0435\u0440\u0432\u0443\u0430\u0440.",
+        "unit": "\u0433/\u043C\u00B2",
+        "precision": 4,
+        "signed": false,
+        "effects": [
+          {
+            "state": "PlantNitrogen",
+            "factor": -1
+          },
+          {
+            "state": "OrganicNitrogen",
+            "factor": 1
+          }
+        ]
+      },
+      "observations": 13,
+      "signedTotal": 156.78939602635634,
+      "absoluteTotal": 156.78939602635634,
+      "positiveTotal": 156.78939602635634,
+      "negativeTotal": 0,
+      "annualAbsolutePerCell": 2.449834312911818,
+      "activeCellFraction": 0.9146634615384616,
+      "maximumAbsolutePerObservation": 44.10309076309204,
+      "nonFinite": 0
+    },
+    {
+      "flux": "DryBiomassLodging",
+      "descriptor": {
+        "id": "DryBiomassLodging",
+        "group": "Biology",
+        "groupTitle": "\u0411\u0418\u041E\u041B\u041E\u0413\u0418\u042F",
+        "order": 330,
+        "title": "\u041F\u043E\u043B\u0435\u0433\u0430\u043D\u0438\u0435 \u0441\u0443\u0445\u043E\u0441\u0442\u043E\u044F",
+        "shortTitle": "\u041F\u043E\u043B\u0435\u0433\u0430\u043D\u0438\u0435",
+        "description": "\u041F\u0435\u0440\u0435\u0445\u043E\u0434 \u0441\u0443\u0445\u043E\u0439 \u0441\u0442\u043E\u044F\u0449\u0435\u0439 \u043C\u0430\u0441\u0441\u044B \u0432 \u043F\u043E\u0434\u0441\u0442\u0438\u043B\u043A\u0443.",
+        "unit": "\u0433/\u043C\u00B2",
+        "precision": 3,
+        "signed": false,
+        "effects": [
+          {
+            "state": "DryBiomass",
+            "factor": -1
+          },
+          {
+            "state": "LitterBiomass",
+            "factor": 1
+          }
+        ]
+      },
+      "observations": 13,
+      "signedTotal": 15133.05755019188,
+      "absoluteTotal": 15133.05755019188,
+      "positiveTotal": 15133.05755019188,
+      "negativeTotal": 0,
+      "annualAbsolutePerCell": 236.4540242217481,
+      "activeCellFraction": 1,
+      "maximumAbsolutePerObservation": 2306.104179382324,
+      "nonFinite": 0
+    },
+    {
+      "flux": "LitterDecomposition",
+      "descriptor": {
+        "id": "LitterDecomposition",
+        "group": "Biology",
+        "groupTitle": "\u0411\u0418\u041E\u041B\u041E\u0413\u0418\u042F",
+        "order": 340,
+        "title": "\u0420\u0430\u0437\u043B\u043E\u0436\u0435\u043D\u0438\u0435 \u043F\u043E\u0434\u0441\u0442\u0438\u043B\u043A\u0438",
+        "shortTitle": "\u0420\u0430\u0437\u043B\u043E\u0436\u0435\u043D\u0438\u0435",
+        "description": "\u0420\u0430\u0437\u043B\u043E\u0436\u0435\u043D\u0438\u0435 \u043F\u043E\u0434\u0441\u0442\u0438\u043B\u043A\u0438 \u0438 \u043F\u043E\u0441\u0442\u0443\u043F\u043B\u0435\u043D\u0438\u0435 \u0435\u0451 \u0443\u0441\u0442\u043E\u0439\u0447\u0438\u0432\u043E\u0439 \u0447\u0430\u0441\u0442\u0438 \u0432 \u043F\u043E\u0447\u0432\u0443.",
+        "unit": "\u0433/\u043C\u00B2",
+        "precision": 3,
+        "signed": false,
+        "effects": [
+          {
+            "state": "LitterBiomass",
+            "factor": -1
+          },
+          {
+            "state": "SoilOrganicMatter",
+            "factor": 0.35
+          }
+        ]
+      },
+      "observations": 13,
+      "signedTotal": 14549.565028876448,
+      "absoluteTotal": 14549.565028876448,
+      "positiveTotal": 14549.565028876448,
+      "negativeTotal": 0,
+      "annualAbsolutePerCell": 227.3369535761945,
+      "activeCellFraction": 0.7151442307692307,
+      "maximumAbsolutePerObservation": 3425.8050079345703,
+      "nonFinite": 0
+    },
+    {
+      "flux": "SoilOrganicMatterRespiration",
+      "descriptor": {
+        "id": "SoilOrganicMatterRespiration",
+        "group": "Biology",
+        "groupTitle": "\u0411\u0418\u041E\u041B\u041E\u0413\u0418\u042F",
+        "order": 345,
+        "title": "\u0414\u044B\u0445\u0430\u043D\u0438\u0435 \u043F\u043E\u0447\u0432\u0435\u043D\u043D\u043E\u0439 \u043E\u0440\u0433\u0430\u043D\u0438\u043A\u0438",
+        "shortTitle": "\u0414\u044B\u0445\u0430\u043D\u0438\u0435 SOM",
+        "description": "\u041C\u0435\u0434\u043B\u0435\u043D\u043D\u0430\u044F \u043F\u043E\u0442\u0435\u0440\u044F \u043E\u0440\u0433\u0430\u043D\u0438\u0447\u0435\u0441\u043A\u043E\u0433\u043E \u0432\u0435\u0449\u0435\u0441\u0442\u0432\u0430 \u043F\u043E\u0447\u0432\u044B \u043F\u0440\u0438 \u043C\u0438\u043A\u0440\u043E\u0431\u043D\u043E\u043C \u0434\u044B\u0445\u0430\u043D\u0438\u0438.",
+        "unit": "\u0433/\u043C\u00B2",
+        "precision": 3,
+        "signed": false,
+        "effects": [
+          {
+            "state": "SoilOrganicMatter",
+            "factor": -1
+          }
+        ]
+      },
+      "observations": 13,
+      "signedTotal": 1409.6599228064815,
+      "absoluteTotal": 1409.6599228064815,
+      "positiveTotal": 1409.6599228064815,
+      "negativeTotal": 0,
+      "annualAbsolutePerCell": 22.025936293851274,
+      "activeCellFraction": 0.7151442307692307,
+      "maximumAbsolutePerObservation": 274.7478723526001,
+      "nonFinite": 0
+    },
+    {
+      "flux": "NitrogenUptake",
+      "descriptor": {
+        "id": "NitrogenUptake",
+        "group": "Biology",
+        "groupTitle": "\u0411\u0418\u041E\u041B\u041E\u0413\u0418\u042F",
+        "order": 350,
+        "title": "\u041F\u043E\u0433\u043B\u043E\u0449\u0435\u043D\u0438\u0435 \u0430\u0437\u043E\u0442\u0430",
+        "shortTitle": "\u041F\u043E\u0433\u043B\u043E\u0449\u0435\u043D\u0438\u0435 N",
+        "description": "\u041F\u0435\u0440\u0435\u0445\u043E\u0434 \u043C\u0438\u043D\u0435\u0440\u0430\u043B\u044C\u043D\u043E\u0433\u043E \u0430\u0437\u043E\u0442\u0430 \u0432 \u0436\u0438\u0432\u0443\u044E \u0440\u0430\u0441\u0442\u0438\u0442\u0435\u043B\u044C\u043D\u0443\u044E \u043C\u0430\u0441\u0441\u0443.",
+        "unit": "\u0433/\u043C\u00B2",
+        "precision": 4,
+        "signed": false,
+        "effects": [
+          {
+            "state": "AvailableNitrogen",
+            "factor": -1
+          },
+          {
+            "state": "PlantNitrogen",
+            "factor": 1
+          }
+        ]
+      },
+      "observations": 13,
+      "signedTotal": 190.74012403475896,
+      "absoluteTotal": 190.74012403475896,
+      "positiveTotal": 190.74012403475896,
+      "negativeTotal": 0,
+      "annualAbsolutePerCell": 2.980314438043109,
+      "activeCellFraction": 0.6213942307692307,
+      "maximumAbsolutePerObservation": 39.790531158447266,
+      "nonFinite": 0
+    },
+    {
+      "flux": "NitrogenMineralization",
+      "descriptor": {
+        "id": "NitrogenMineralization",
+        "group": "Biology",
+        "groupTitle": "\u0411\u0418\u041E\u041B\u041E\u0413\u0418\u042F",
+        "order": 360,
+        "title": "\u041C\u0438\u043D\u0435\u0440\u0430\u043B\u0438\u0437\u0430\u0446\u0438\u044F \u0430\u0437\u043E\u0442\u0430",
+        "shortTitle": "\u041C\u0438\u043D\u0435\u0440\u0430\u043B\u0438\u0437\u0430\u0446\u0438\u044F N",
+        "description": "\u041F\u0435\u0440\u0435\u0445\u043E\u0434 \u043E\u0440\u0433\u0430\u043D\u0438\u0447\u0435\u0441\u043A\u043E\u0433\u043E \u0430\u0437\u043E\u0442\u0430 \u0432 \u0434\u043E\u0441\u0442\u0443\u043F\u043D\u044B\u0439 \u043C\u0438\u043D\u0435\u0440\u0430\u043B\u044C\u043D\u044B\u0439 \u0440\u0435\u0437\u0435\u0440\u0432\u0443\u0430\u0440.",
+        "unit": "\u0433/\u043C\u00B2",
+        "precision": 4,
+        "signed": false,
+        "effects": [
+          {
+            "state": "OrganicNitrogen",
+            "factor": -1
+          },
+          {
+            "state": "AvailableNitrogen",
+            "factor": 1
+          }
+        ]
+      },
+      "observations": 13,
+      "signedTotal": 52.74804580898012,
+      "absoluteTotal": 52.74804580898012,
+      "positiveTotal": 52.74804580898012,
+      "negativeTotal": 0,
+      "annualAbsolutePerCell": 0.8241882157653144,
+      "activeCellFraction": 0.7151442307692307,
+      "maximumAbsolutePerObservation": 10.336257874965668,
+      "nonFinite": 0
+    },
+    {
+      "flux": "SeedBankChange",
+      "descriptor": {
+        "id": "SeedBankChange",
+        "group": "Biology",
+        "groupTitle": "\u0411\u0418\u041E\u041B\u041E\u0413\u0418\u042F",
+        "order": 370,
+        "title": "\u0418\u0437\u043C\u0435\u043D\u0435\u043D\u0438\u0435 \u0441\u0435\u043C\u0435\u043D\u043D\u043E\u0433\u043E \u0431\u0430\u043D\u043A\u0430",
+        "shortTitle": "\u0421\u0435\u043C\u0435\u043D\u043D\u043E\u0439 \u0431\u0430\u043D\u043A",
+        "description": "\u0427\u0438\u0441\u0442\u043E\u0435 \u043F\u043E\u043F\u043E\u043B\u043D\u0435\u043D\u0438\u0435 \u0438\u043B\u0438 \u0438\u0441\u0442\u043E\u0449\u0435\u043D\u0438\u0435 \u0441\u043F\u043E\u0441\u043E\u0431\u043D\u043E\u0441\u0442\u0438 \u0440\u0430\u0441\u0442\u0438\u0442\u0435\u043B\u044C\u043D\u043E\u0441\u0442\u0438 \u043A \u0432\u043E\u0441\u0441\u0442\u0430\u043D\u043E\u0432\u043B\u0435\u043D\u0438\u044E.",
+        "unit": "\u0434\u043E\u043B\u044F",
+        "precision": 5,
+        "signed": true,
+        "effects": [
+          {
+            "state": "SeedBank",
+            "factor": 1
+          }
+        ]
+      },
+      "observations": 13,
+      "signedTotal": 0.5957141220569611,
+      "absoluteTotal": 1.0717539489269257,
+      "positiveTotal": 0.8337340354919434,
+      "negativeTotal": 0.2380199134349823,
+      "annualAbsolutePerCell": 0.016746155451983213,
+      "activeCellFraction": 0.75,
+      "maximumAbsolutePerObservation": 0.1768459677696228,
+      "nonFinite": 0
+    },
+    {
+      "flux": "WaterErosion",
+      "descriptor": {
+        "id": "WaterErosion",
+        "group": "Material",
+        "groupTitle": "\u041F\u0415\u0420\u0415\u041D\u041E\u0421 \u0412\u0415\u0429\u0415\u0421\u0422\u0412\u0410",
+        "order": 410,
+        "title": "\u0412\u043E\u0434\u043D\u0430\u044F \u044D\u0440\u043E\u0437\u0438\u044F",
+        "shortTitle": "\u042D\u0440\u043E\u0437\u0438\u044F",
+        "description": "\u0420\u044B\u0445\u043B\u044B\u0439 \u043C\u0430\u0442\u0435\u0440\u0438\u0430\u043B, \u043F\u043E\u0434\u043D\u044F\u0442\u044B\u0439 \u043F\u043E\u0432\u0435\u0440\u0445\u043D\u043E\u0441\u0442\u043D\u044B\u043C \u043F\u043E\u0442\u043E\u043A\u043E\u043C \u0438 \u043E\u0442\u043F\u0440\u0430\u0432\u043B\u0435\u043D\u043D\u044B\u0439 \u0432\u043D\u0438\u0437 \u043F\u043E \u0441\u0442\u043E\u043A\u0443.",
+        "unit": "\u043A\u0433/\u043C\u00B2",
+        "precision": 4,
+        "signed": false,
+        "effects": [
+          {
+            "state": "LooseSediment",
+            "factor": -1
+          }
+        ]
+      },
+      "observations": 13,
+      "signedTotal": 38.32790964243986,
+      "absoluteTotal": 38.32790964243986,
+      "positiveTotal": 38.32790964243986,
+      "negativeTotal": 0,
+      "annualAbsolutePerCell": 0.5988735881631229,
+      "activeCellFraction": 0.15985576923076922,
+      "maximumAbsolutePerObservation": 30.182978168123554,
+      "nonFinite": 0
+    },
+    {
+      "flux": "SedimentDeposition",
+      "descriptor": {
+        "id": "SedimentDeposition",
+        "group": "Material",
+        "groupTitle": "\u041F\u0415\u0420\u0415\u041D\u041E\u0421 \u0412\u0415\u0429\u0415\u0421\u0422\u0412\u0410",
+        "order": 420,
+        "title": "\u041F\u0440\u0438\u0445\u043E\u0434 \u043E\u0441\u0430\u0434\u043A\u0430",
+        "shortTitle": "\u041E\u0441\u0430\u0436\u0434\u0435\u043D\u0438\u0435",
+        "description": "\u0420\u044B\u0445\u043B\u044B\u0439 \u043C\u0430\u0442\u0435\u0440\u0438\u0430\u043B, \u043F\u0440\u0438\u043D\u0435\u0441\u0451\u043D\u043D\u044B\u0439 \u0432\u043E\u0434\u043D\u044B\u043C \u043F\u043E\u0442\u043E\u043A\u043E\u043C \u0438\u0437 \u0441\u043E\u0441\u0435\u0434\u043D\u0435\u0439 \u044F\u0447\u0435\u0439\u043A\u0438.",
+        "unit": "\u043A\u0433/\u043C\u00B2",
+        "precision": 4,
+        "signed": false,
+        "effects": [
+          {
+            "state": "LooseSediment",
+            "factor": 1
+          }
+        ]
+      },
+      "observations": 13,
+      "signedTotal": 38.327908961014515,
+      "absoluteTotal": 38.327908961014515,
+      "positiveTotal": 38.327908961014515,
+      "negativeTotal": 0,
+      "annualAbsolutePerCell": 0.5988735775158518,
+      "activeCellFraction": 0.13942307692307693,
+      "maximumAbsolutePerObservation": 30.182977619858534,
+      "nonFinite": 0
+    },
+    {
+      "flux": "SedimentExport",
+      "descriptor": {
+        "id": "SedimentExport",
+        "group": "Material",
+        "groupTitle": "\u041F\u0415\u0420\u0415\u041D\u041E\u0421 \u0412\u0415\u0429\u0415\u0421\u0422\u0412\u0410",
+        "order": 425,
+        "title": "\u0412\u044B\u043D\u043E\u0441 \u043E\u0441\u0430\u0434\u043A\u0430 \u0437\u0430 \u0433\u0440\u0430\u043D\u0438\u0446\u0443",
+        "shortTitle": "\u042D\u043A\u0441\u043F\u043E\u0440\u0442 \u043E\u0441\u0430\u0434\u043A\u0430",
+        "description": "\u0420\u044B\u0445\u043B\u044B\u0439 \u043C\u0430\u0442\u0435\u0440\u0438\u0430\u043B, \u043F\u043E\u043A\u0438\u043D\u0443\u0432\u0448\u0438\u0439 \u043A\u043E\u043D\u0435\u0447\u043D\u044B\u0439 \u043C\u0438\u0440 \u0432\u043C\u0435\u0441\u0442\u0435 \u0441 \u043F\u043E\u0432\u0435\u0440\u0445\u043D\u043E\u0441\u0442\u043D\u044B\u043C \u0441\u0442\u043E\u043A\u043E\u043C.",
+        "unit": "\u043A\u0433/\u043C\u00B2",
+        "precision": 4,
+        "signed": false,
+        "effects": [
+          {
+            "state": "LooseSediment",
+            "factor": -1
+          }
+        ]
+      },
+      "observations": 13,
+      "signedTotal": 19.96691804076545,
+      "absoluteTotal": 19.96691804076545,
+      "positiveTotal": 19.96691804076545,
+      "negativeTotal": 0,
+      "annualAbsolutePerCell": 0.31198309438696015,
+      "activeCellFraction": 0.078125,
+      "maximumAbsolutePerObservation": 13.407388865947723,
+      "nonFinite": 0
+    },
+    {
+      "flux": "SoilDepthChange",
+      "descriptor": {
+        "id": "SoilDepthChange",
+        "group": "Material",
+        "groupTitle": "\u041F\u0415\u0420\u0415\u041D\u041E\u0421 \u0412\u0415\u0429\u0415\u0421\u0422\u0412\u0410",
+        "order": 430,
+        "title": "\u0418\u0437\u043C\u0435\u043D\u0435\u043D\u0438\u0435 \u0433\u043B\u0443\u0431\u0438\u043D\u044B \u043F\u043E\u0447\u0432\u044B",
+        "shortTitle": "\u0413\u043B\u0443\u0431\u0438\u043D\u0430 \u043F\u043E\u0447\u0432\u044B",
+        "description": "\u0427\u0438\u0441\u0442\u043E\u0435 \u0438\u0437\u043C\u0435\u043D\u0435\u043D\u0438\u0435 \u043C\u043E\u0449\u043D\u043E\u0441\u0442\u0438 \u043F\u043E\u0447\u0432\u044B \u0438\u0437-\u0437\u0430 \u044D\u0440\u043E\u0437\u0438\u0438 \u0438 \u043E\u0441\u0430\u0436\u0434\u0435\u043D\u0438\u044F.",
+        "unit": "\u043C",
+        "precision": 6,
+        "signed": true,
+        "effects": [
+          {
+            "state": "SoilDepth",
+            "factor": 1
+          }
+        ]
+      },
+      "observations": 13,
+      "signedTotal": -0.0007610917091369629,
+      "absoluteTotal": 0.001272737979888916,
+      "positiveTotal": 0.00025582313537597656,
+      "negativeTotal": 0.0010169148445129395,
+      "annualAbsolutePerCell": 1.9886530935764313E-05,
+      "activeCellFraction": 0.13822115384615385,
+      "maximumAbsolutePerObservation": 0.000961601734161377,
+      "nonFinite": 0
+    },
+    {
+      "flux": "DustLift",
+      "descriptor": {
+        "id": "DustLift",
+        "group": "Material",
+        "groupTitle": "\u041F\u0415\u0420\u0415\u041D\u041E\u0421 \u0412\u0415\u0429\u0415\u0421\u0422\u0412\u0410",
+        "order": 440,
+        "title": "\u041F\u043E\u0434\u044A\u0451\u043C \u043F\u044B\u043B\u0438",
+        "shortTitle": "\u041F\u043E\u0434\u044A\u0451\u043C \u043F\u044B\u043B\u0438",
+        "description": "\u041F\u0435\u0440\u0435\u0445\u043E\u0434 \u0440\u044B\u0445\u043B\u043E\u0433\u043E \u043F\u043E\u0432\u0435\u0440\u0445\u043D\u043E\u0441\u0442\u043D\u043E\u0433\u043E \u043C\u0430\u0442\u0435\u0440\u0438\u0430\u043B\u0430 \u0432 \u0430\u0442\u043C\u043E\u0441\u0444\u0435\u0440\u043D\u0443\u044E \u043F\u044B\u043B\u044C.",
+        "unit": "\u0433/\u043C\u00B2",
+        "precision": 4,
+        "signed": false,
+        "effects": [
+          {
+            "state": "LooseSediment",
+            "factor": -0.001
+          },
+          {
+            "state": "Dust",
+            "factor": 1
+          }
+        ]
+      },
+      "observations": 13,
+      "signedTotal": 233.91272704445146,
+      "absoluteTotal": 233.91272704445146,
+      "positiveTotal": 233.91272704445146,
+      "negativeTotal": 0,
+      "annualAbsolutePerCell": 3.654886360069554,
+      "activeCellFraction": 0.16466346153846154,
+      "maximumAbsolutePerObservation": 31.971374047920108,
+      "nonFinite": 0
+    },
+    {
+      "flux": "DustDeposition",
+      "descriptor": {
+        "id": "DustDeposition",
+        "group": "Material",
+        "groupTitle": "\u041F\u0415\u0420\u0415\u041D\u041E\u0421 \u0412\u0415\u0429\u0415\u0421\u0422\u0412\u0410",
+        "order": 450,
+        "title": "\u041E\u0441\u0430\u0436\u0434\u0435\u043D\u0438\u0435 \u043F\u044B\u043B\u0438",
+        "shortTitle": "\u041E\u0441\u0430\u0436\u0434\u0435\u043D\u0438\u0435 \u043F\u044B\u043B\u0438",
+        "description": "\u0412\u043E\u0437\u0432\u0440\u0430\u0442 \u0430\u0442\u043C\u043E\u0441\u0444\u0435\u0440\u043D\u043E\u0439 \u043F\u044B\u043B\u0438 \u0432 \u0440\u044B\u0445\u043B\u044B\u0439 \u043F\u043E\u0432\u0435\u0440\u0445\u043D\u043E\u0441\u0442\u043D\u044B\u0439 \u043C\u0430\u0442\u0435\u0440\u0438\u0430\u043B.",
+        "unit": "\u0433/\u043C\u00B2",
+        "precision": 4,
+        "signed": false,
+        "effects": [
+          {
+            "state": "Dust",
+            "factor": -1
+          },
+          {
+            "state": "LooseSediment",
+            "factor": 0.001
+          }
+        ]
+      },
+      "observations": 13,
+      "signedTotal": 53.67126954308621,
+      "absoluteTotal": 53.67126954308621,
+      "positiveTotal": 53.67126954308621,
+      "negativeTotal": 0,
+      "annualAbsolutePerCell": 0.838613586610722,
+      "activeCellFraction": 0.4026442307692308,
+      "maximumAbsolutePerObservation": 6.849737420839119,
+      "nonFinite": 0
+    },
+    {
+      "flux": "DustTransport",
+      "descriptor": {
+        "id": "DustTransport",
+        "group": "Material",
+        "groupTitle": "\u041F\u0415\u0420\u0415\u041D\u041E\u0421 \u0412\u0415\u0429\u0415\u0421\u0422\u0412\u0410",
+        "order": 460,
+        "title": "\u041F\u0435\u0440\u0435\u043D\u043E\u0441 \u043F\u044B\u043B\u0438",
+        "shortTitle": "\u041F\u0435\u0440\u0435\u043D\u043E\u0441 \u043F\u044B\u043B\u0438",
+        "description": "\u0427\u0438\u0441\u0442\u044B\u0439 \u043F\u0440\u0438\u0445\u043E\u0434 \u0438\u043B\u0438 \u0443\u0445\u043E\u0434 \u0430\u0442\u043C\u043E\u0441\u0444\u0435\u0440\u043D\u043E\u0439 \u043F\u044B\u043B\u0438 \u0441 \u0432\u0435\u0442\u0440\u043E\u043C.",
+        "unit": "\u0433/\u043C\u00B2",
+        "precision": 4,
+        "signed": true,
+        "effects": [
+          {
+            "state": "Dust",
+            "factor": 1
+          }
+        ]
+      },
+      "observations": 13,
+      "signedTotal": -180.00631655019637,
+      "absoluteTotal": 226.7287216433368,
+      "positiveTotal": 23.361202546570222,
+      "negativeTotal": 203.36751909676659,
+      "annualAbsolutePerCell": 3.5426362756771375,
+      "activeCellFraction": 0.4026442307692308,
+      "maximumAbsolutePerObservation": 30.490485895204984,
+      "nonFinite": 0
+    },
+    {
+      "flux": "SurfaceCrustChange",
+      "descriptor": {
+        "id": "SurfaceCrustChange",
+        "group": "Material",
+        "groupTitle": "\u041F\u0415\u0420\u0415\u041D\u041E\u0421 \u0412\u0415\u0429\u0415\u0421\u0422\u0412\u0410",
+        "order": 470,
+        "title": "\u0418\u0437\u043C\u0435\u043D\u0435\u043D\u0438\u0435 \u043F\u043E\u0432\u0435\u0440\u0445\u043D\u043E\u0441\u0442\u043D\u043E\u0439 \u043A\u043E\u0440\u043A\u0438",
+        "shortTitle": "\u0418\u0437\u043C\u0435\u043D\u0435\u043D\u0438\u0435 \u043A\u043E\u0440\u043A\u0438",
+        "description": "\u0427\u0438\u0441\u0442\u043E\u0435 \u0444\u043E\u0440\u043C\u0438\u0440\u043E\u0432\u0430\u043D\u0438\u0435 \u0438\u043B\u0438 \u0440\u0430\u0437\u0440\u0443\u0448\u0435\u043D\u0438\u0435 \u043F\u043E\u0447\u0432\u0435\u043D\u043D\u043E\u0439 \u043A\u043E\u0440\u043A\u0438.",
+        "unit": "\u0434\u043E\u043B\u044F",
+        "precision": 6,
+        "signed": true,
+        "effects": [
+          {
+            "state": "SurfaceCrust",
+            "factor": 1
+          }
+        ]
+      },
+      "observations": 13,
+      "signedTotal": -0.7128889122977853,
+      "absoluteTotal": 3.5428131921216846,
+      "positiveTotal": 1.4149621399119496,
+      "negativeTotal": 2.127851052209735,
+      "annualAbsolutePerCell": 0.05535645612690132,
+      "activeCellFraction": 1,
+      "maximumAbsolutePerObservation": 1.0083322152495384,
+      "nonFinite": 0
+    },
+    {
+      "flux": "ExternalSurfaceWater",
+      "descriptor": {
+        "id": "ExternalSurfaceWater",
+        "group": "Intervention",
+        "groupTitle": "\u0412\u041D\u0415\u0428\u041D\u0415\u0415 \u0412\u041E\u0417\u0414\u0415\u0419\u0421\u0422\u0412\u0418\u0415",
+        "order": 510,
+        "title": "\u0414\u043E\u0431\u0430\u0432\u043B\u0435\u043D\u043D\u0430\u044F \u043F\u043E\u0432\u0435\u0440\u0445\u043D\u043E\u0441\u0442\u043D\u0430\u044F \u0432\u043E\u0434\u0430",
+        "shortTitle": "\u0414\u043E\u0431\u0430\u0432\u043B\u0435\u043D\u043D\u0430\u044F \u0432\u043E\u0434\u0430",
+        "description": "\u0412\u043E\u0434\u0430, \u044F\u0432\u043D\u043E \u0434\u043E\u0431\u0430\u0432\u043B\u0435\u043D\u043D\u0430\u044F \u0447\u0435\u0440\u0435\u0437 \u0432\u043D\u0435\u0448\u043D\u0438\u0439 \u0438\u043D\u0442\u0435\u0440\u0444\u0435\u0439\u0441 \u0441\u0438\u043C\u0443\u043B\u044F\u0446\u0438\u0438.",
+        "unit": "\u043C\u043C",
+        "precision": 3,
+        "signed": false,
+        "effects": [
+          {
+            "state": "SurfaceWater",
+            "factor": 1
+          }
+        ]
+      },
+      "observations": 13,
+      "signedTotal": 0,
+      "absoluteTotal": 0,
+      "positiveTotal": 0,
+      "negativeTotal": 0,
+      "annualAbsolutePerCell": 0,
+      "activeCellFraction": 0,
+      "maximumAbsolutePerObservation": 0,
+      "nonFinite": 0
+    }
+  ],
+  "vectors": [
+    {
+      "process": "Wind",
+      "descriptor": {
+        "process": "Wind",
+        "title": "\u0412\u0435\u0442\u0435\u0440",
+        "description": "\u041C\u0433\u043D\u043E\u0432\u0435\u043D\u043D\u0430\u044F \u0441\u043A\u043E\u0440\u043E\u0441\u0442\u044C \u043F\u0435\u0440\u0435\u043D\u043E\u0441\u0430 \u0432\u043E\u0437\u0434\u0443\u0445\u0430.",
+        "unit": "\u043C/\u0441",
+        "measure": "Instantaneous",
+        "carrierLayer": "Wind"
+      },
+      "observations": 13,
+      "totalMagnitude": 2154.4425489604473,
+      "totalGrossMagnitude": 2154.4425489604473,
+      "directionalCoherence": 1,
+      "weightedAlignment": null,
+      "activeCellFraction": 1,
+      "maximumMagnitude": 11.806709,
+      "nonFinite": 0,
+      "wind": {
+        "meanX": 1.2019948433153331,
+        "meanY": 0.07052168544144549,
+        "westwardFraction": 0.30649038461538464,
+        "above20MsFraction": 0,
+        "pressureGradientAlignment": 0.8628264673864648,
+        "slopeSpeedCorrelation": -0.07027645239803727
+      }
+    },
+    {
+      "process": "DrainageDirection",
+      "descriptor": {
+        "process": "DrainageDirection",
+        "title": "\u041D\u0430\u043F\u0440\u0430\u0432\u043B\u0435\u043D\u0438\u0435 \u0441\u0443\u0445\u043E\u0433\u043E \u0434\u0440\u0435\u043D\u0430\u0436\u0430",
+        "description": "\u0421\u0442\u0430\u0442\u0438\u0447\u0435\u0441\u043A\u0438\u0439 \u0435\u0434\u0438\u043D\u0438\u0447\u043D\u044B\u0439 \u0432\u0435\u043A\u0442\u043E\u0440 \u0441\u043F\u0443\u0441\u043A\u0430 \u043F\u043E \u0441\u0443\u0445\u043E\u043C\u0443 \u0440\u0435\u043B\u044C\u0435\u0444\u0443; \u0437\u0430\u043F\u043E\u043B\u043D\u0435\u043D\u043D\u044B\u0435 \u0432\u043F\u0430\u0434\u0438\u043D\u044B \u043F\u0435\u0440\u0435\u043B\u0438\u0432\u0430\u044E\u0442\u0441\u044F \u043F\u043E \u0442\u0435\u043A\u0443\u0449\u0435\u0439 \u0433\u0438\u0434\u0440\u0430\u0432\u043B\u0438\u0447\u0435\u0441\u043A\u043E\u0439 \u043F\u043E\u0432\u0435\u0440\u0445\u043D\u043E\u0441\u0442\u0438.",
+        "unit": "\u043D\u0430\u043F\u0440\u0430\u0432\u043B\u0435\u043D\u0438\u0435",
+        "measure": "Direction",
+        "carrierLayer": "Drainage"
+      },
+      "observations": 13,
+      "totalMagnitude": 467.99997985363007,
+      "totalGrossMagnitude": 467.99997985363007,
+      "directionalCoherence": 1,
+      "weightedAlignment": null,
+      "activeCellFraction": 0.5625,
+      "maximumMagnitude": 1,
+      "nonFinite": 0,
+      "wind": null
+    },
+    {
+      "process": "AirTemperatureAdvection",
+      "descriptor": {
+        "process": "AirTemperatureAdvection",
+        "title": "\u0410\u0434\u0432\u0435\u043A\u0446\u0438\u044F \u0442\u0435\u043C\u043F\u0435\u0440\u0430\u0442\u0443\u0440\u044B",
+        "description": "\u041A\u0438\u043D\u0435\u043C\u0430\u0442\u0438\u0447\u0435\u0441\u043A\u0438\u0439 \u043C\u043E\u043C\u0435\u043D\u0442 \u043F\u0435\u0440\u0435\u043D\u043E\u0441\u0430 \u0442\u0435\u043C\u043F\u0435\u0440\u0430\u0442\u0443\u0440\u044B \u0432\u0435\u0442\u0440\u043E\u043C \u0437\u0430 \u043F\u0435\u0440\u0438\u043E\u0434.",
+        "unit": "\u00B0C\u00B7\u044F\u0447\u0435\u0439\u043A\u0430",
+        "measure": "TransportMoment",
+        "carrierLayer": "AirTemperature"
+      },
+      "observations": 13,
+      "totalMagnitude": 673402.2077548504,
+      "totalGrossMagnitude": 726930.1633987427,
+      "directionalCoherence": 0.926364376746146,
+      "weightedAlignment": 0.9287935711121569,
+      "activeCellFraction": 1,
+      "maximumMagnitude": 2929.8638,
+      "nonFinite": 0,
+      "wind": null
+    },
+    {
+      "process": "HumidityAdvection",
+      "descriptor": {
+        "process": "HumidityAdvection",
+        "title": "\u0410\u0434\u0432\u0435\u043A\u0446\u0438\u044F \u0432\u043B\u0430\u0436\u043D\u043E\u0441\u0442\u0438",
+        "description": "\u041A\u0438\u043D\u0435\u043C\u0430\u0442\u0438\u0447\u0435\u0441\u043A\u0438\u0439 \u043C\u043E\u043C\u0435\u043D\u0442 \u043F\u0435\u0440\u0435\u043D\u043E\u0441\u0430 \u0430\u0442\u043C\u043E\u0441\u0444\u0435\u0440\u043D\u043E\u0439 \u0432\u043B\u0430\u0433\u0438 \u0432\u0435\u0442\u0440\u043E\u043C \u0437\u0430 \u043F\u0435\u0440\u0438\u043E\u0434.",
+        "unit": "\u043C\u043C\u00B7\u044F\u0447\u0435\u0439\u043A\u0430",
+        "measure": "TransportMoment",
+        "carrierLayer": "Humidity"
+      },
+      "observations": 13,
+      "totalMagnitude": 474842.9742259979,
+      "totalGrossMagnitude": 503885.69134902954,
+      "directionalCoherence": 0.9423624889103779,
+      "weightedAlignment": 0.9237026224188883,
+      "activeCellFraction": 1,
+      "maximumMagnitude": 1709.375,
+      "nonFinite": 0,
+      "wind": null
+    },
+    {
+      "process": "CloudAdvection",
+      "descriptor": {
+        "process": "CloudAdvection",
+        "title": "\u0410\u0434\u0432\u0435\u043A\u0446\u0438\u044F \u043E\u0431\u043B\u0430\u043A\u043E\u0432",
+        "description": "\u041A\u0438\u043D\u0435\u043C\u0430\u0442\u0438\u0447\u0435\u0441\u043A\u0438\u0439 \u043C\u043E\u043C\u0435\u043D\u0442 \u043F\u0435\u0440\u0435\u043D\u043E\u0441\u0430 \u043E\u0431\u043B\u0430\u0447\u043D\u043E\u0439 \u0432\u043E\u0434\u044B \u0432\u0435\u0442\u0440\u043E\u043C \u0437\u0430 \u043F\u0435\u0440\u0438\u043E\u0434.",
+        "unit": "\u043C\u043C\u00B7\u044F\u0447\u0435\u0439\u043A\u0430",
+        "measure": "TransportMoment",
+        "carrierLayer": "CloudWater"
+      },
+      "observations": 13,
+      "totalMagnitude": 28927.323094952153,
+      "totalGrossMagnitude": 30768.773538517475,
+      "directionalCoherence": 0.9401519712425285,
+      "weightedAlignment": 0.8883756301616366,
+      "activeCellFraction": 0.9987980769230769,
+      "maximumMagnitude": 257.83688,
+      "nonFinite": 0,
+      "wind": null
+    },
+    {
+      "process": "SurfaceRunoff",
+      "descriptor": {
+        "process": "SurfaceRunoff",
+        "title": "\u041F\u043E\u0432\u0435\u0440\u0445\u043D\u043E\u0441\u0442\u043D\u044B\u0439 \u0441\u0442\u043E\u043A",
+        "description": "\u0424\u0430\u043A\u0442\u0438\u0447\u0435\u0441\u043A\u0438\u0439 \u043E\u0431\u044A\u0451\u043C \u0432\u043E\u0434\u044B, \u043E\u0442\u043F\u0440\u0430\u0432\u043B\u0435\u043D\u043D\u044B\u0439 \u0438\u0437 \u044F\u0447\u0435\u0439\u043A\u0438 \u0432\u043D\u0438\u0437 \u043F\u043E \u0434\u0440\u0435\u043D\u0430\u0436\u0443 \u0437\u0430 \u043F\u0435\u0440\u0438\u043E\u0434.",
+        "unit": "\u043C\u043C",
+        "measure": "AccumulatedTransfer",
+        "carrierLayer": "SurfaceWater"
+      },
+      "observations": 13,
+      "totalMagnitude": 29479.510040143505,
+      "totalGrossMagnitude": 29525.962613640353,
+      "directionalCoherence": 0.9984267211164392,
+      "weightedAlignment": 0.8428072253235175,
+      "activeCellFraction": 0.24639423076923078,
+      "maximumMagnitude": 4010.127,
+      "nonFinite": 0,
+      "wind": null
+    },
+    {
+      "process": "GroundwaterFlow",
+      "descriptor": {
+        "process": "GroundwaterFlow",
+        "title": "\u041F\u043E\u0434\u0437\u0435\u043C\u043D\u044B\u0439 \u043F\u043E\u0442\u043E\u043A",
+        "description": "\u0424\u0430\u043A\u0442\u0438\u0447\u0435\u0441\u043A\u0438\u0439 \u043E\u0431\u043C\u0435\u043D \u0433\u0440\u0443\u043D\u0442\u043E\u0432\u043E\u0439 \u0432\u043E\u0434\u044B \u043C\u0435\u0436\u0434\u0443 \u0441\u043E\u0441\u0435\u0434\u043D\u0438\u043C\u0438 \u044F\u0447\u0435\u0439\u043A\u0430\u043C\u0438 \u0437\u0430 \u043F\u0435\u0440\u0438\u043E\u0434.",
+        "unit": "\u043C\u043C",
+        "measure": "AccumulatedTransfer",
+        "carrierLayer": "Groundwater"
+      },
+      "observations": 13,
+      "totalMagnitude": 7567.908080308764,
+      "totalGrossMagnitude": 13008.840599473993,
+      "directionalCoherence": 0.5817511577945516,
+      "weightedAlignment": 0.49702037356358136,
+      "activeCellFraction": 0.6502403846153846,
+      "maximumMagnitude": 40.729458,
+      "nonFinite": 0,
+      "wind": null
+    },
+    {
+      "process": "SnowTransport",
+      "descriptor": {
+        "process": "SnowTransport",
+        "title": "\u0412\u0435\u0442\u0440\u043E\u0432\u043E\u0439 \u043F\u0435\u0440\u0435\u043D\u043E\u0441 \u0441\u043D\u0435\u0433\u0430",
+        "description": "\u0424\u0430\u043A\u0442\u0438\u0447\u0435\u0441\u043A\u0438\u0439 \u0441\u043D\u0435\u0436\u043D\u044B\u0439 \u0437\u0430\u043F\u0430\u0441, \u043F\u0435\u0440\u0435\u043C\u0435\u0449\u0451\u043D\u043D\u044B\u0439 \u0432 \u0441\u043E\u0441\u0435\u0434\u043D\u044E\u044E \u044F\u0447\u0435\u0439\u043A\u0443 \u0437\u0430 \u043F\u0435\u0440\u0438\u043E\u0434.",
+        "unit": "\u043C\u043C SWE",
+        "measure": "AccumulatedTransfer",
+        "carrierLayer": "Snow"
+      },
+      "observations": 13,
+      "totalMagnitude": 7749.619946266292,
+      "totalGrossMagnitude": 7808.071148286341,
+      "directionalCoherence": 0.992514002381641,
+      "weightedAlignment": 0.9540206446384865,
+      "activeCellFraction": 0.28125,
+      "maximumMagnitude": 573.08466,
+      "nonFinite": 0,
+      "wind": null
+    },
+    {
+      "process": "SedimentTransport",
+      "descriptor": {
+        "process": "SedimentTransport",
+        "title": "\u041F\u0435\u0440\u0435\u043D\u043E\u0441 \u043E\u0441\u0430\u0434\u043A\u0430",
+        "description": "\u0420\u044B\u0445\u043B\u044B\u0439 \u043C\u0430\u0442\u0435\u0440\u0438\u0430\u043B, \u043E\u0442\u043F\u0440\u0430\u0432\u043B\u0435\u043D\u043D\u044B\u0439 \u0432\u043D\u0438\u0437 \u043F\u043E \u043F\u043E\u0432\u0435\u0440\u0445\u043D\u043E\u0441\u0442\u043D\u043E\u043C\u0443 \u0441\u0442\u043E\u043A\u0443 \u0437\u0430 \u043F\u0435\u0440\u0438\u043E\u0434.",
+        "unit": "\u043A\u0433/\u043C\u00B2",
+        "measure": "AccumulatedTransfer",
+        "carrierLayer": "LooseSediment"
+      },
+      "observations": 13,
+      "totalMagnitude": 58.28964568459105,
+      "totalGrossMagnitude": 58.29482768657408,
+      "directionalCoherence": 0.9999111070023075,
+      "weightedAlignment": 0.9535119756244472,
+      "activeCellFraction": 0.23798076923076922,
+      "maximumMagnitude": 8.780748,
+      "nonFinite": 0,
+      "wind": null
+    },
+    {
+      "process": "DustAdvection",
+      "descriptor": {
+        "process": "DustAdvection",
+        "title": "\u0410\u0434\u0432\u0435\u043A\u0446\u0438\u044F \u043F\u044B\u043B\u0438",
+        "description": "\u041A\u0438\u043D\u0435\u043C\u0430\u0442\u0438\u0447\u0435\u0441\u043A\u0438\u0439 \u043C\u043E\u043C\u0435\u043D\u0442 \u043F\u0435\u0440\u0435\u043D\u043E\u0441\u0430 \u0430\u0442\u043C\u043E\u0441\u0444\u0435\u0440\u043D\u043E\u0439 \u043F\u044B\u043B\u0438 \u0432\u0435\u0442\u0440\u043E\u043C \u0437\u0430 \u043F\u0435\u0440\u0438\u043E\u0434.",
+        "unit": "\u0433/\u043C\u00B2\u00B7\u044F\u0447\u0435\u0439\u043A\u0430",
+        "measure": "TransportMoment",
+        "carrierLayer": "Dust"
+      },
+      "observations": 13,
+      "totalMagnitude": 461.7771828985829,
+      "totalGrossMagnitude": 481.786496480413,
+      "directionalCoherence": 0.9584685047671452,
+      "weightedAlignment": 0.8998275742087521,
+      "activeCellFraction": 0.3701923076923077,
+      "maximumMagnitude": 10.648153,
+      "nonFinite": 0,
+      "wind": null
+    }
+  ],
+  "events": [
+    {
+      "kind": "Snowmelt",
+      "count": 4,
+      "maximumSeverity": 1,
+      "maximumIndicator": 13.509083
+    },
+    {
+      "kind": "FloodPulse",
+      "count": 3,
+      "maximumSeverity": 1,
+      "maximumIndicator": 0.6920811
+    },
+    {
+      "kind": "GreenUp",
+      "count": 1,
+      "maximumSeverity": 1,
+      "maximumIndicator": 1.2615356
+    },
+    {
+      "kind": "Drought",
+      "count": 0,
+      "maximumSeverity": 0,
+      "maximumIndicator": 0
+    },
+    {
+      "kind": "DustEpisode",
+      "count": 32,
+      "maximumSeverity": 0.54984176,
+      "maximumIndicator": 0.016495252
+    }
+  ],
+  "annual": [
+    {
+      "year": 1,
+      "storedWaterMmPerCell": 291.78443253040314,
+      "externalInputMmPerCell": 1001.2644007227061,
+      "externalOutputMmPerCell": 838.6667636948571,
+      "waterRelativeError": 2.145574150089079E-06,
+      "storedNitrogenGm2PerCell": 19.564919143915176,
+      "nitrogenRelativeError": -2.315344071073532E-07,
+      "layerMeans": {
+        "Elevation": 346.61035,
+        "Slope": 0.29563943,
+        "Aspect": -0.16743271,
+        "SoilDepth": 1.5105919,
+        "SandFraction": 0.4020513,
+        "SiltFraction": 0.3165248,
+        "ClayFraction": 0.2814239,
+        "Porosity": 0.37754175,
+        "Permeability": 11.284875,
+        "MineralContent": 0.40382254,
+        "FaultInfluence": 0.062276047,
+        "RockHardness": 0.44215724,
+        "DepressionStorage": 27.500153,
+        "Drainage": 0,
+        "Catchments": 12.75,
+        "SolarRadiation": 0,
+        "SurfaceTemperature": -9.297794,
+        "SoilTemperature": -8.839824,
+        "AirTemperature": -7.578223,
+        "Pressure": 972.43835,
+        "Wind": 2.3971543,
+        "Humidity": 3.5478985,
+        "CloudWater": 1.1529315,
+        "Precipitation": 0.07980861,
+        "SurfaceWater": 0.27723783,
+        "RootWater": 88.271935,
+        "Groundwater": 104.30687,
+        "Snow": 94.22756,
+        "FrozenSoil": 0.9999999,
+        "LiveBiomass": 128.48033,
+        "DryBiomass": 99.770905,
+        "LitterBiomass": 144.12585,
+        "SeedBank": 0.537329,
+        "SoilOrganicMatter": 1267.6411,
+        "AvailableNitrogen": 4.3444557,
+        "PlantNitrogen": 2.3126457,
+        "OrganicNitrogen": 12.907818,
+        "LooseSediment": 4.6744075,
+        "SurfaceCrust": 0.089278966,
+        "Dust": 0.0036739744
+      },
+      "layerMaxima": {
+        "Elevation": 582.13,
+        "Slope": 0.742614,
+        "Aspect": 3.1156328,
+        "SoilDepth": 1.6791526,
+        "SandFraction": 0.5282547,
+        "SiltFraction": 0.50097376,
+        "ClayFraction": 0.3724646,
+        "Porosity": 0.3993915,
+        "Permeability": 14.405594,
+        "MineralContent": 0.58338124,
+        "FaultInfluence": 0.6958832,
+        "RockHardness": 0.69139886,
+        "DepressionStorage": 220.00122,
+        "Drainage": 0,
+        "Catchments": 27,
+        "SolarRadiation": 0,
+        "SurfaceTemperature": -7.7073092,
+        "SoilTemperature": -7.3703127,
+        "AirTemperature": -6.7756777,
+        "Pressure": 990.88995,
+        "Wind": 4.888605,
+        "Humidity": 4.440546,
+        "CloudWater": 1.8289121,
+        "Precipitation": 0.5382736,
+        "SurfaceWater": 1.1118947,
+        "RootWater": 156.97107,
+        "Groundwater": 204.15987,
+        "Snow": 453.46158,
+        "FrozenSoil": 0.9999999,
+        "LiveBiomass": 140.27176,
+        "DryBiomass": 107.24603,
+        "LitterBiomass": 178.63943,
+        "SeedBank": 0.55246603,
+        "SoilOrganicMatter": 1332.1913,
+        "AvailableNitrogen": 4.8184037,
+        "PlantNitrogen": 2.5248885,
+        "OrganicNitrogen": 13.439359,
+        "LooseSediment": 8.869051,
+        "SurfaceCrust": 0.21435876,
+        "Dust": 0.035328537
+      },
+      "nonFiniteCount": 0
+    }
+  ]
+}

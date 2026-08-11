@@ -63,6 +63,15 @@ ExportedObj/
 *.opendb
 *.VC.db
 
+# The autonomous world model is hand-authored rather than Unity-generated.
+!/WorldModel/**/*.csproj
+!/WorldModel/**/*.slnx
+/WorldModel/**/[Bb]in/
+/WorldModel/**/[Oo]bj/
+/WorldModel/**/*.steppe
+/WorldModel/StressResults/*.log
+/WorldModel/StressResults/calibration-initial-*.csv
+
 # Unity3D generated meta files
 *.pidb.meta
 *.pdb.meta
