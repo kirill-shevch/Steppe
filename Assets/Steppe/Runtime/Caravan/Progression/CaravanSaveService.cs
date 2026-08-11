@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Text;
+using Steppe.Player;
 using Steppe.World;
 using UnityEngine;
 using UnityEngine.InputSystem;
@@ -62,6 +63,12 @@ namespace Steppe.Caravan
         public float rotationZ;
         public float rotationW = 1f;
         public float travelledMetres;
+        public bool hasPlayerState;
+        public double playerWorldX;
+        public double playerWorldZ;
+        public float playerWorldY;
+        public float playerYaw;
+        public float playerPitch;
     }
 
     /// <summary>
@@ -94,6 +101,7 @@ namespace Steppe.Caravan
         private CaravanProgressionWorldRig progressionWorld;
         private CaravanProgressionDirector progressionDirector;
         private CaravanBuildModeController buildMode;
+        private CaravanFirstPersonController player;
         private float feedbackUntil;
         private float autosaveDueAt;
         private float lastAutosaveAt = float.NegativeInfinity;
@@ -174,6 +182,7 @@ namespace Steppe.Caravan
                 ? director
                 : throw new ArgumentNullException(nameof(director));
             buildMode = builder;
+            player = GetComponent<CaravanFirstPersonController>();
             SetSavePaths(
                 string.IsNullOrWhiteSpace(savePath)
                     ? Path.Combine(
@@ -210,24 +219,8 @@ namespace Steppe.Caravan
 
         private void Update()
         {
-            TickAutosave();
             var keyboard = Keyboard.current;
-            if (keyboard == null)
-            {
-                return;
-            }
-            if (keyboard.f5Key.wasPressedThisFrame)
-            {
-                if (TrySave(out var error))
-                {
-                    SetFeedback("Игра сохранена  •  F9 — загрузить", false);
-                }
-                else
-                {
-                    SetFeedback($"Не удалось сохранить: {error}", true);
-                }
-            }
-            if (keyboard.f9Key.wasPressedThisFrame)
+            if (keyboard != null && keyboard.f9Key.wasPressedThisFrame)
             {
                 if (TryLoad(out var error))
                 {
@@ -236,12 +229,37 @@ namespace Steppe.Caravan
                         : "ручное сохранение";
                     var backup = LastLoadWasBackup ? " (резервная копия)" : string.Empty;
                     SetFeedback($"Загружено: {source}{backup}", false);
+                    Debug.Log($"Steppe save loaded: {source}{backup}.");
                 }
                 else
                 {
                     SetFeedback($"Не удалось загрузить: {error}", true);
+                    Debug.LogError($"Steppe save load failed: {error}");
                 }
+
+                // Loading must win over an autosave that became due on the
+                // same frame. Otherwise F9 first overwrites the old state and
+                // immediately restores that identical snapshot.
+                return;
             }
+
+            if (keyboard != null && keyboard.f5Key.wasPressedThisFrame)
+            {
+                if (TrySave(out var error))
+                {
+                    SetFeedback("Игра сохранена  •  F9 — загрузить", false);
+                    Debug.Log("Steppe manual save written.");
+                }
+                else
+                {
+                    SetFeedback($"Не удалось сохранить: {error}", true);
+                    Debug.LogError($"Steppe manual save failed: {error}");
+                }
+
+                return;
+            }
+
+            TickAutosave();
         }
 
         public CaravanSaveSnapshot CaptureSnapshot()
@@ -250,6 +268,10 @@ namespace Steppe.Caravan
             var worldPosition = floatingOrigin.LocalToWorld(
                 chassis.transform.position);
             var rotation = chassis.transform.rotation;
+            var hasPlayerState = player != null;
+            var playerWorldPosition = hasPlayerState
+                ? floatingOrigin.LocalToWorld(player.transform.position)
+                : worldPosition;
             return new CaravanSaveSnapshot
             {
                 progression = progression.CaptureSnapshot(),
@@ -266,7 +288,13 @@ namespace Steppe.Caravan
                 rotationX = rotation.x,
                 rotationY = rotation.y,
                 rotationZ = rotation.z,
-                rotationW = rotation.w
+                rotationW = rotation.w,
+                hasPlayerState = hasPlayerState,
+                playerWorldX = playerWorldPosition.X,
+                playerWorldY = (float)playerWorldPosition.Y,
+                playerWorldZ = playerWorldPosition.Z,
+                playerYaw = hasPlayerState ? player.YawDegrees : 0f,
+                playerPitch = hasPlayerState ? player.PitchDegrees : 0f
             };
         }
 
@@ -467,21 +495,32 @@ namespace Steppe.Caravan
                 snapshot.caravanWorldX,
                 snapshot.caravanWorldY,
                 snapshot.caravanWorldZ);
-            chassis.Teleport(localPosition);
-            chassis.RestoreTravelledMetres(snapshot.travelledMetres);
             var restoredRotation = new Quaternion(
                 snapshot.rotationX,
                 snapshot.rotationY,
                 snapshot.rotationZ,
                 snapshot.rotationW).normalized;
-            chassis.transform.rotation = restoredRotation;
-            if (body != null)
+            chassis.Teleport(localPosition, restoredRotation);
+            chassis.RestoreTravelledMetres(snapshot.travelledMetres);
+            if (player != null)
             {
-                body.rotation = restoredRotation;
+                var playerPosition = snapshot.hasPlayerState
+                    ? floatingOrigin.WorldToLocal(
+                        snapshot.playerWorldX,
+                        snapshot.playerWorldY,
+                        snapshot.playerWorldZ)
+                    : chassis.transform.TransformPoint(
+                        new Vector3(0.55f, 0.08f, 0.15f));
+                var playerYaw = snapshot.hasPlayerState
+                    ? snapshot.playerYaw
+                    : restoredRotation.eulerAngles.y;
+                var playerPitch = snapshot.hasPlayerState
+                    ? snapshot.playerPitch
+                    : 0f;
+                player.Teleport(playerPosition, playerYaw, playerPitch);
             }
             Physics.SyncTransforms();
             progressionDirector.RecalculateStage();
-            RestoreKinematic(body, wasKinematic);
             error = string.Empty;
             return true;
         }

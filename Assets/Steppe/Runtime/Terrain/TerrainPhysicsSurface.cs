@@ -1,185 +1,290 @@
+using System;
+using System.Collections.Generic;
 using Steppe.World;
 using UnityEngine;
-using UnityEngine.Rendering;
 
 namespace Steppe.Terrain
 {
     /// <summary>
-    /// A double-buffered collision carpet around the caravan. Keeping every nearby
-    /// terrain triangle in one MeshCollider prevents PhysX from treating chunk
-    /// borders as separate collision edges and kicking wheels sideways.
+    /// Streams height samples into one continuous TerrainCollider. The collider
+    /// covers the full expedition area and never changes identity or position
+    /// relative to the world root, so wheels cannot cross a collider edge during
+    /// normal play. Only distant heightmap patches are populated as the caravan
+    /// travels; generated patches remain resident for the lifetime of the world.
     /// </summary>
     internal sealed class TerrainPhysicsSurface
     {
-        private readonly SurfaceBuffer[] buffers;
-        private int activeIndex = -1;
-        private double minimumWorldX;
-        private double minimumWorldZ;
-        private double maximumWorldX;
-        private double maximumWorldZ;
+        private const int ChunksPerPatch = 4;
+        private const int PatchRadius = 1;
+        private const int WorldChunksAcross = 128;
+        private const float MinimumCollisionHeight = -1024f;
+        private const float CollisionHeightRange = 2048f;
 
-        public TerrainPhysicsSurface(Transform parent)
-        {
-            buffers = new[]
-            {
-                new SurfaceBuffer(parent, 0),
-                new SurfaceBuffer(parent, 1)
-            };
-        }
+        private readonly HashSet<ChunkCoordinate> generated =
+            new HashSet<ChunkCoordinate>();
+        private readonly HashSet<ChunkCoordinate> desired =
+            new HashSet<ChunkCoordinate>();
+        private readonly List<BuildRequest> pending = new List<BuildRequest>();
+        private readonly Transform parent;
+        private readonly TerrainHeightGenerator generator;
+        private readonly FloatingOriginSystem floatingOrigin;
+        private readonly float patchSize;
+        private readonly float sampleSpacing;
+        private readonly int patchResolution;
+        private readonly float worldSize;
+        private readonly int worldResolution;
 
-        public bool IsReady => activeIndex >= 0;
-        public int ActiveColliderCount => IsReady ? 1 : 0;
-        public int VertexCount => IsReady ? buffers[activeIndex].Mesh.vertexCount : 0;
+        private ContinuousSurface surface;
+        private bool hasCenter;
+        private ChunkCoordinate center;
 
-        public bool Contains(double worldX, double worldZ)
-        {
-            return IsReady
-                   && worldX >= minimumWorldX
-                   && worldX <= maximumWorldX
-                   && worldZ >= minimumWorldZ
-                   && worldZ <= maximumWorldZ;
-        }
-
-        public void Rebuild(
+        public TerrainPhysicsSurface(
+            Transform parent,
             TerrainHeightGenerator generator,
-            ChunkCoordinate center,
-            int chunkRadius,
             float chunkSize,
             int chunkResolution,
             FloatingOriginSystem floatingOrigin)
         {
-            var radius = Mathf.Max(1, chunkRadius);
-            var segmentsPerChunk = Mathf.Max(1, chunkResolution - 1);
-            var chunksAcross = radius * 2 + 1;
-            var resolution = chunksAcross * segmentsPerChunk + 1;
-            var vertexCount = resolution * resolution;
-            var triangleIndexCount = (resolution - 1) * (resolution - 1) * 6;
-            var step = chunkSize / segmentsPerChunk;
-            var minimumCoordinate = center.Offset(-radius, -radius);
-            var originX = minimumCoordinate.X * (double)chunkSize;
-            var originZ = minimumCoordinate.Z * (double)chunkSize;
+            this.parent = parent;
+            this.generator = generator;
+            this.floatingOrigin = floatingOrigin;
+            patchSize = chunkSize * ChunksPerPatch;
+            sampleSpacing = chunkSize / Mathf.Max(1, chunkResolution - 1);
+            patchResolution = Mathf.RoundToInt(patchSize / sampleSpacing) + 1;
+            worldSize = chunkSize * WorldChunksAcross;
+            worldResolution = Mathf.RoundToInt(worldSize / sampleSpacing) + 1;
+        }
 
-            var vertices = new Vector3[vertexCount];
-            var triangles = new int[triangleIndexCount];
-            for (var z = 0; z < resolution; z++)
+        public bool IsReady => generated.Count > 0;
+        public bool HasPendingWork => pending.Count > 0;
+        public int ActiveColliderCount => surface != null ? 1 : 0;
+        public int VertexCount => surface != null
+            ? worldResolution * worldResolution
+            : 0;
+        public float TileSize => patchSize;
+
+        public bool Contains(double worldX, double worldZ)
+        {
+            if (surface == null || !surface.Contains(worldX, worldZ))
             {
-                for (var x = 0; x < resolution; x++)
+                return false;
+            }
+
+            var coordinate = ChunkCoordinate.FromWorld(
+                worldX,
+                worldZ,
+                patchSize);
+            return generated.Contains(coordinate);
+        }
+
+        public void Refresh(double worldX, double worldZ)
+        {
+            if (surface == null)
+            {
+                var halfWorld = worldSize * 0.5;
+                var minimumWorldX = Math.Floor(
+                    (worldX + halfWorld) / worldSize) * worldSize - halfWorld;
+                var minimumWorldZ = Math.Floor(
+                    (worldZ + halfWorld) / worldSize) * worldSize - halfWorld;
+                surface = new ContinuousSurface(
+                    parent,
+                    floatingOrigin,
+                    minimumWorldX,
+                    minimumWorldZ,
+                    worldSize,
+                    worldResolution);
+            }
+
+            var nextCenter = ChunkCoordinate.FromWorld(
+                worldX,
+                worldZ,
+                patchSize);
+            if (hasCenter && nextCenter == center)
+            {
+                return;
+            }
+
+            center = nextCenter;
+            hasCenter = true;
+            desired.Clear();
+            pending.Clear();
+            for (var z = -PatchRadius; z <= PatchRadius; z++)
+            {
+                for (var x = -PatchRadius; x <= PatchRadius; x++)
                 {
-                    var localX = x * step;
-                    var localZ = z * step;
-                    vertices[z * resolution + x] = new Vector3(
-                        localX,
-                        (float)generator.SampleHeight(originX + localX, originZ + localZ),
-                        localZ);
+                    var coordinate = center.Offset(x, z);
+                    if (!surface.ContainsPatch(coordinate, patchSize))
+                    {
+                        continue;
+                    }
+
+                    desired.Add(coordinate);
+                    if (!generated.Contains(coordinate))
+                    {
+                        pending.Add(new BuildRequest(
+                            coordinate,
+                            x * x + z * z));
+                    }
                 }
             }
 
-            var triangleIndex = 0;
-            for (var z = 0; z < resolution - 1; z++)
+            pending.Sort((left, right) =>
+                left.DistanceSquared.CompareTo(right.DistanceSquared));
+        }
+
+        public void ExecuteWorkStep()
+        {
+            if (surface == null || pending.Count == 0)
             {
-                for (var x = 0; x < resolution - 1; x++)
+                return;
+            }
+
+            var request = pending[0];
+            pending.RemoveAt(0);
+            if (!desired.Contains(request.Coordinate)
+                || generated.Contains(request.Coordinate))
+            {
+                return;
+            }
+
+            var minimumWorldX = request.Coordinate.X * (double)patchSize;
+            var minimumWorldZ = request.Coordinate.Z * (double)patchSize;
+            var heights = new float[patchResolution, patchResolution];
+            for (var z = 0; z < patchResolution; z++)
+            {
+                for (var x = 0; x < patchResolution; x++)
                 {
-                    var bottomLeft = z * resolution + x;
-                    var bottomRight = bottomLeft + 1;
-                    var topLeft = bottomLeft + resolution;
-                    var topRight = topLeft + 1;
-                    triangles[triangleIndex++] = bottomLeft;
-                    triangles[triangleIndex++] = topLeft;
-                    triangles[triangleIndex++] = topRight;
-                    triangles[triangleIndex++] = bottomLeft;
-                    triangles[triangleIndex++] = topRight;
-                    triangles[triangleIndex++] = bottomRight;
+                    var height = generator.SampleHeight(
+                        minimumWorldX + x * sampleSpacing,
+                        minimumWorldZ + z * sampleSpacing);
+                    heights[z, x] = Mathf.Clamp01(
+                        ((float)height - MinimumCollisionHeight)
+                        / CollisionHeightRange);
                 }
             }
 
-            var nextIndex = activeIndex == 0 ? 1 : 0;
-            var next = buffers[nextIndex];
-            next.Apply(
-                vertices,
-                triangles,
-                floatingOrigin.WorldToLocal(originX, 0.0, originZ));
-
-            if (activeIndex >= 0)
-            {
-                buffers[activeIndex].Deactivate();
-            }
-
-            activeIndex = nextIndex;
-            minimumWorldX = originX;
-            minimumWorldZ = originZ;
-            maximumWorldX = originX + chunksAcross * (double)chunkSize;
-            maximumWorldZ = originZ + chunksAcross * (double)chunkSize;
-            Physics.SyncTransforms();
+            surface.ApplyPatch(
+                minimumWorldX,
+                minimumWorldZ,
+                sampleSpacing,
+                heights);
+            generated.Add(request.Coordinate);
         }
 
         public void Dispose()
         {
-            for (var index = 0; index < buffers.Length; index++)
-            {
-                buffers[index].Dispose();
-            }
+            surface?.Dispose();
+            surface = null;
+            generated.Clear();
+            desired.Clear();
+            pending.Clear();
         }
 
-        private sealed class SurfaceBuffer
+        private sealed class ContinuousSurface
         {
             private readonly GameObject gameObject;
-            private readonly MeshCollider collider;
+            private readonly TerrainData terrainData;
+            private readonly double minimumWorldX;
+            private readonly double minimumWorldZ;
+            private readonly double maximumWorldX;
+            private readonly double maximumWorldZ;
 
-            public SurfaceBuffer(Transform parent, int index)
+            public ContinuousSurface(
+                Transform parent,
+                FloatingOriginSystem floatingOrigin,
+                double minimumWorldX,
+                double minimumWorldZ,
+                float worldSize,
+                int resolution)
             {
-                gameObject = new GameObject($"Terrain Physics Surface {index + 1}");
+                this.minimumWorldX = minimumWorldX;
+                this.minimumWorldZ = minimumWorldZ;
+                maximumWorldX = minimumWorldX + worldSize;
+                maximumWorldZ = minimumWorldZ + worldSize;
+
+                gameObject = new GameObject("Terrain Physics Surface");
                 gameObject.transform.SetParent(parent, false);
-                collider = gameObject.AddComponent<MeshCollider>();
-                collider.cookingOptions =
-                    MeshColliderCookingOptions.CookForFasterSimulation
-                    | MeshColliderCookingOptions.EnableMeshCleaning
-                    | MeshColliderCookingOptions.WeldColocatedVertices
-                    | MeshColliderCookingOptions.UseFastMidphase;
-                Mesh = new Mesh
+                terrainData = new TerrainData
                 {
-                    name = $"Steppe Unified Terrain Collision {index + 1}",
+                    name = "Steppe Continuous Terrain Collision",
                     hideFlags = HideFlags.DontSave,
-                    indexFormat = IndexFormat.UInt32
+                    heightmapResolution = resolution,
+                    size = new Vector3(
+                        worldSize,
+                        CollisionHeightRange,
+                        worldSize)
                 };
-                Mesh.MarkDynamic();
-                gameObject.SetActive(false);
+                var collider = gameObject.AddComponent<TerrainCollider>();
+                gameObject.transform.position = floatingOrigin.WorldToLocal(
+                    minimumWorldX,
+                    MinimumCollisionHeight,
+                    minimumWorldZ);
+                collider.terrainData = terrainData;
             }
 
-            public Mesh Mesh { get; }
-
-            public void Apply(Vector3[] vertices, int[] triangles, Vector3 position)
+            public bool Contains(double worldX, double worldZ)
             {
-                collider.sharedMesh = null;
-                Mesh.Clear();
-                Mesh.vertices = vertices;
-                Mesh.triangles = triangles;
-                Mesh.RecalculateBounds();
-                gameObject.transform.position = position;
-                gameObject.SetActive(true);
-                collider.sharedMesh = Mesh;
-                collider.enabled = true;
+                return worldX >= minimumWorldX
+                       && worldX <= maximumWorldX
+                       && worldZ >= minimumWorldZ
+                       && worldZ <= maximumWorldZ;
             }
 
-            public void Deactivate()
+            public bool ContainsPatch(
+                ChunkCoordinate coordinate,
+                float patchSize)
             {
-                collider.enabled = false;
-                collider.sharedMesh = null;
-                gameObject.SetActive(false);
+                var patchMinimumX = coordinate.X * (double)patchSize;
+                var patchMinimumZ = coordinate.Z * (double)patchSize;
+                return patchMinimumX >= minimumWorldX
+                       && patchMinimumX + patchSize <= maximumWorldX
+                       && patchMinimumZ >= minimumWorldZ
+                       && patchMinimumZ + patchSize <= maximumWorldZ;
+            }
+
+            public void ApplyPatch(
+                double patchMinimumWorldX,
+                double patchMinimumWorldZ,
+                float sampleSpacing,
+                float[,] heights)
+            {
+                var sampleX = Mathf.RoundToInt(
+                    (float)((patchMinimumWorldX - minimumWorldX)
+                            / sampleSpacing));
+                var sampleZ = Mathf.RoundToInt(
+                    (float)((patchMinimumWorldZ - minimumWorldZ)
+                            / sampleSpacing));
+                terrainData.SetHeights(sampleX, sampleZ, heights);
+                Physics.SyncTransforms();
             }
 
             public void Dispose()
             {
                 if (Application.isPlaying)
                 {
-                    Object.Destroy(Mesh);
-                    Object.Destroy(gameObject);
+                    UnityEngine.Object.Destroy(terrainData);
+                    UnityEngine.Object.Destroy(gameObject);
                 }
                 else
                 {
-                    Object.DestroyImmediate(Mesh);
-                    Object.DestroyImmediate(gameObject);
+                    UnityEngine.Object.DestroyImmediate(terrainData);
+                    UnityEngine.Object.DestroyImmediate(gameObject);
                 }
             }
+        }
+
+        private readonly struct BuildRequest
+        {
+            public BuildRequest(
+                ChunkCoordinate coordinate,
+                int distanceSquared)
+            {
+                Coordinate = coordinate;
+                DistanceSquared = distanceSquared;
+            }
+
+            public ChunkCoordinate Coordinate { get; }
+            public int DistanceSquared { get; }
         }
     }
 }

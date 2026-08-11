@@ -49,6 +49,8 @@ namespace Steppe.Player
         public bool InteractionControl =>
             controlMode == CaravanPlayerControlMode.Station;
         public CaravanPlayerControlMode ControlMode => controlMode;
+        public float YawDegrees => yaw;
+        public float PitchDegrees => pitch;
         public bool IsOnCaravan { get; private set; }
         public bool CaravanContactIsolationEnabled =>
             caravanCollisionProxy != null && caravanCollisionProxy.IsActive;
@@ -111,6 +113,55 @@ namespace Steppe.Player
             {
                 controlMode = CaravanPlayerControlMode.Free;
             }
+        }
+
+        /// <summary>
+        /// Restores the keeper independently from caravan motion. This is used
+        /// by save loading after the chassis has reached its saved transform.
+        /// </summary>
+        public void Teleport(
+            Vector3 localPosition,
+            float yawDegrees,
+            float pitchDegrees)
+        {
+            yaw = yawDegrees;
+            pitch = Mathf.Clamp(pitchDegrees, -82f, 82f);
+            var restoredRotation = Quaternion.Euler(0f, yaw, 0f);
+            if (character == null)
+            {
+                transform.SetPositionAndRotation(localPosition, restoredRotation);
+            }
+            else
+            {
+                var wasEnabled = character.enabled;
+                character.enabled = false;
+                transform.SetPositionAndRotation(localPosition, restoredRotation);
+                character.enabled = wasEnabled;
+            }
+
+            if (viewCamera != null)
+            {
+                viewCamera.transform.localPosition = cameraBaseLocalPosition;
+                viewCamera.transform.localRotation = Quaternion.Euler(pitch, 0f, 0f);
+            }
+
+            verticalVelocity = 0f;
+            inheritedVelocity = Vector3.zero;
+            planarVelocity = Vector3.zero;
+            jumpBufferRemaining = 0f;
+            coyoteRemaining = 0f;
+            bobPhase = 0f;
+            landingOffset = 0f;
+            wasGrounded = false;
+            IsOnCaravan = false;
+            previousCarrierPosition = caravan != null
+                ? caravan.transform.position
+                : previousCarrierPosition;
+            previousCarrierRotation = caravan != null
+                ? caravan.transform.rotation
+                : previousCarrierRotation;
+            caravanCollisionProxy?.Synchronize();
+            Physics.SyncTransforms();
         }
 
         /// <summary>

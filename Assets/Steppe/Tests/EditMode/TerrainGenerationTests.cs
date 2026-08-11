@@ -226,6 +226,9 @@ namespace Steppe.Tests
         [Test]
         public void GrassCellBuilderIsDeterministicAndOwnsNoSceneState()
         {
+            Assert.That(settings.GrassCandidateSpacing, Is.LessThanOrEqualTo(0.65f));
+            Assert.That(settings.GrassFullDensityRadius, Is.GreaterThanOrEqualTo(180f));
+            Assert.That(settings.GrassDrawRadius, Is.GreaterThanOrEqualTo(384f));
             var builder = new GrassCellDataBuilder(settings);
             var coordinate = new ChunkCoordinate(7, -11);
             var first = builder.Build(coordinate);

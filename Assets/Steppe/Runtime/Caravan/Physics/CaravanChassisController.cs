@@ -112,8 +112,13 @@ namespace Steppe.Caravan
             FloatingOriginSystem origin,
             CaravanEnvironmentSampler environmentSampler)
         {
+            if (floatingOrigin != null)
+            {
+                floatingOrigin.Shifted -= HandleFloatingOriginShift;
+            }
             settings = worldSettings != null ? worldSettings : throw new ArgumentNullException(nameof(worldSettings));
             floatingOrigin = origin != null ? origin : throw new ArgumentNullException(nameof(origin));
+            floatingOrigin.Shifted += HandleFloatingOriginShift;
             environment = environmentSampler ?? throw new ArgumentNullException(nameof(environmentSampler));
             body = GetComponent<Rigidbody>();
             vehicle = GetComponent<VPVehicleController>();
@@ -360,26 +365,33 @@ namespace Steppe.Caravan
 
         public void Teleport(Vector3 localPosition)
         {
+            var rotation = body != null ? body.rotation : transform.rotation;
+            Teleport(localPosition, rotation);
+        }
+
+        public void Teleport(Vector3 localPosition, Quaternion localRotation)
+        {
             var previousPosition = transform.position;
             hasTravelSample = false;
             if (body == null)
             {
-                transform.position = localPosition;
+                transform.SetPositionAndRotation(localPosition, localRotation);
                 Teleported?.Invoke(localPosition - previousPosition);
                 return;
             }
 
             if (vehicle != null)
             {
-                vehicle.HardReposition(localPosition, body.rotation, true);
+                vehicle.HardReposition(localPosition, localRotation, true);
             }
             else
             {
                 body.linearVelocity = Vector3.zero;
                 body.angularVelocity = Vector3.zero;
                 body.position = localPosition;
-                transform.SetPositionAndRotation(localPosition, body.rotation);
+                body.rotation = localRotation;
             }
+            transform.SetPositionAndRotation(localPosition, localRotation);
             Physics.SyncTransforms();
             body.isKinematic = true;
             physicsStarted = false;
@@ -617,6 +629,24 @@ namespace Steppe.Caravan
                             * 0.0006f);
                     }
                 }
+            }
+        }
+
+        private void HandleFloatingOriginShift(Vector3 shift)
+        {
+            // VPP caches the vehicle's previous world-space position to derive
+            // velocities and suspension state. A floating-origin shift moves the
+            // Rigidbody without representing real motion, so the same delta must
+            // be applied to that cache. Without this notification VPP interprets
+            // every 2048 m recenter as an enormous lateral impact.
+            vehicle?.NotifyPositionChanged(-shift);
+        }
+
+        private void OnDestroy()
+        {
+            if (floatingOrigin != null)
+            {
+                floatingOrigin.Shifted -= HandleFloatingOriginShift;
             }
         }
 

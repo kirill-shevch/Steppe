@@ -14,6 +14,10 @@ namespace Steppe.Prototype
     [DisallowMultipleComponent]
     public sealed class SteppePrototypeBootstrap : MonoBehaviour
     {
+        private const string PcDisplayMigrationKey =
+            "Steppe.PcDisplaySettingsVersion";
+        private const int PcDisplayMigrationVersion = 1;
+
         [SerializeField] private SteppeWorldSettings settings;
         [SerializeField] private Material terrainMaterial;
         [SerializeField] private Material vegetationMaterial;
@@ -35,6 +39,41 @@ namespace Steppe.Prototype
 
             var root = new GameObject("Steppe Prototype");
             root.AddComponent<SteppePrototypeBootstrap>();
+        }
+
+        [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.BeforeSceneLoad)]
+        private static void RestorePcDisplaySettings()
+        {
+#if UNITY_STANDALONE_WIN && !UNITY_EDITOR
+            if (PlayerPrefs.GetInt(PcDisplayMigrationKey, 0)
+                >= PcDisplayMigrationVersion)
+            {
+                return;
+            }
+
+            var display = Display.main;
+            var width = display != null ? display.systemWidth : 0;
+            var height = display != null ? display.systemHeight : 0;
+            if (width <= 0 || height <= 0)
+            {
+                var current = Screen.currentResolution;
+                width = current.width;
+                height = current.height;
+            }
+
+            var refreshRate = Screen.currentResolution.refreshRateRatio;
+            Screen.SetResolution(
+                width,
+                height,
+                FullScreenMode.FullScreenWindow,
+                refreshRate);
+            PlayerPrefs.SetInt(
+                PcDisplayMigrationKey,
+                PcDisplayMigrationVersion);
+            PlayerPrefs.Save();
+            Debug.Log(
+                $"Steppe display migration: {width}x{height} borderless native.");
+#endif
         }
 
         private void Awake()
@@ -286,7 +325,12 @@ namespace Steppe.Prototype
             var grassObject = new GameObject("Grass Field");
             grassObject.transform.SetParent(worldSpaceObject.transform, false);
             var grassRenderer = grassObject.AddComponent<SteppeGrassRenderer>();
-            grassRenderer.Configure(runtimeSettings, floatingOrigin, caravanRig.Root.transform, workScheduler, grassMaterial);
+            grassRenderer.Configure(
+                runtimeSettings,
+                floatingOrigin,
+                playerObject.transform,
+                workScheduler,
+                grassMaterial);
 
             var chunkStreamer = gameObject.AddComponent<TerrainChunkStreamer>();
             chunkStreamer.Configure(

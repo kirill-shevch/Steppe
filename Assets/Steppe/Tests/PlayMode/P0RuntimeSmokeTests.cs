@@ -5,6 +5,7 @@ using Steppe.Ecology;
 using Steppe.Player;
 using Steppe.Prototype;
 using Steppe.Rendering;
+using Steppe.Settings;
 using Steppe.Terrain;
 using Steppe.Time;
 using Steppe.Weather;
@@ -16,6 +17,242 @@ namespace Steppe.Tests
 {
     public sealed class P0RuntimeSmokeTests
     {
+        [UnityTest, Order(-99)]
+        public IEnumerator TerrainHeightfieldSurvivesRepeatedChunkRecentering()
+        {
+            var owner = new GameObject("Repeated Terrain Recenter Test");
+            var root = new GameObject("Repeated Terrain World");
+            var focus = new GameObject("Repeated Terrain Focus");
+            root.transform.SetParent(owner.transform, false);
+            focus.transform.SetParent(owner.transform, false);
+            var settings = SteppeWorldSettings.CreateRuntimeDefaults();
+            var origin = owner.AddComponent<FloatingOriginSystem>();
+            var scheduler = owner.AddComponent<WorldWorkScheduler>();
+            scheduler.Configure(settings.WorldWorkBudgetMilliseconds);
+            var streamer = owner.AddComponent<TerrainChunkStreamer>();
+            streamer.Configure(
+                settings,
+                origin,
+                focus.transform,
+                root.transform,
+                scheduler);
+
+            const float baseCoordinate = 50000f;
+            for (var crossing = 0; crossing < 8; crossing++)
+            {
+                focus.transform.position = new Vector3(
+                    baseCoordinate + crossing * 520f,
+                    0f,
+                    baseCoordinate - crossing * 520f);
+                var world = origin.LocalToWorld(focus.transform.position);
+                for (var frame = 0;
+                     frame < 12 && !streamer.HasPhysicsSurfaceAt(world.X, world.Z);
+                     frame++)
+                {
+                    yield return null;
+                }
+
+                Assert.That(
+                    streamer.HasPhysicsSurfaceAt(world.X, world.Z),
+                    Is.True,
+                    $"Heightfield buffer {crossing} did not cover its new center.");
+                Physics.SyncTransforms();
+                var rayOrigin = origin.WorldToLocal(world.X, 500.0, world.Z);
+                Assert.That(
+                    Physics.Raycast(rayOrigin, Vector3.down, out var hit, 1000f),
+                    Is.True,
+                    $"Heightfield buffer {crossing} could not be raycast.");
+                Assert.That(hit.collider, Is.TypeOf<TerrainCollider>());
+                Assert.That(hit.collider.transform.IsChildOf(root.transform), Is.True);
+                Assert.That(
+                    root.GetComponentsInChildren<TerrainCollider>(false),
+                    Has.Length.EqualTo(1),
+                    "Streaming must keep one continuous terrain collider.");
+                Assert.That(streamer.ActivePhysicsSurfaceCount, Is.EqualTo(1));
+            }
+
+            Object.Destroy(owner);
+            Object.Destroy(settings);
+            yield return null;
+        }
+
+        [UnityTest, Order(-98)]
+        public IEnumerator CaravanCrossesFloatingOriginBoundaryWithoutYawKick()
+        {
+            if (Object.FindAnyObjectByType<SteppePrototypeBootstrap>() == null)
+            {
+                new GameObject("Physics Seam Test Bootstrap")
+                    .AddComponent<SteppePrototypeBootstrap>();
+            }
+            yield return null;
+            yield return null;
+
+            var caravan = Object.FindAnyObjectByType<CaravanChassisController>();
+            var streamer = Object.FindAnyObjectByType<TerrainChunkStreamer>();
+            var origin = Object.FindAnyObjectByType<FloatingOriginSystem>();
+            var sail = Object.FindAnyObjectByType<CaravanSailModule>();
+            var steering = System.Array.Find(
+                Object.FindObjectsByType<CaravanControlStation>(
+                    FindObjectsInactive.Include),
+                station => station.Kind == CaravanControlKind.Steering);
+            Assert.That(caravan, Is.Not.Null);
+            Assert.That(streamer, Is.Not.Null);
+            Assert.That(origin, Is.Not.Null);
+            Assert.That(sail, Is.Not.Null);
+            Assert.That(steering, Is.Not.Null);
+
+            var originalWorldPosition = origin.LocalToWorld(
+                caravan.transform.position);
+            var originalRotation = caravan.Body.rotation;
+            var originalDriveEnabled = caravan.DefaultDriveEnabled;
+            var initialForward = Vector3.ProjectOnPlane(
+                caravan.transform.forward,
+                Vector3.up).normalized;
+            var physicsTileSize = streamer.PhysicsTileSize;
+            Assert.That(physicsTileSize, Is.GreaterThan(streamer.ChunkSize));
+            var crossesX = Mathf.Abs(initialForward.x) >= Mathf.Abs(initialForward.z);
+            var travelSign = Mathf.Sign(crossesX ? initialForward.x : initialForward.z);
+            var boundary = -physicsTileSize;
+            var startAxis = boundary - travelSign * 12.0;
+            // The reported production failure occurs immediately after Z=-2048 at
+            // X=-279, exactly where the floating origin recenters. Keep the
+            // orthogonal coordinate on that route and trigger the same recenter.
+            var startWorldX = crossesX ? startAxis : -279.1;
+            var startWorldZ = crossesX ? -2089.2 : startAxis;
+
+            var rayOrigin = origin.WorldToLocal(
+                startWorldX,
+                500.0,
+                startWorldZ);
+            var terrainHits = Physics.RaycastAll(
+                rayOrigin,
+                Vector3.down,
+                1000f);
+            var terrainHit = System.Array.Find(
+                terrainHits,
+                hit => hit.collider is TerrainCollider);
+            Assert.That(terrainHit.collider, Is.Not.Null);
+
+            steering.SetNormalized(0f);
+            caravan.SetDefaultDriveEnabled(false);
+            caravan.Teleport(terrainHit.point + Vector3.up * 1.35f);
+            for (var step = 0; step < 80 && !caravan.PhysicsStarted; step++)
+            {
+                yield return new WaitForFixedUpdate();
+            }
+            Assert.That(caravan.PhysicsStarted, Is.True);
+
+            var targetAxis = boundary + travelSign * 12.0;
+            var targetWorldX = crossesX ? targetAxis : startWorldX;
+            var targetWorldZ = crossesX ? startWorldZ : targetAxis;
+            for (var step = 0;
+                 step < 80
+                 && !streamer.HasPhysicsSurfaceAt(targetWorldX, targetWorldZ);
+                 step++)
+            {
+                yield return new WaitForFixedUpdate();
+            }
+            Assert.That(
+                streamer.HasPhysicsSurfaceAt(targetWorldX, targetWorldZ),
+                Is.True,
+                "The physics patch beyond the seam was not preloaded.");
+
+            caravan.Body.linearVelocity = initialForward * 9f;
+            caravan.Body.angularVelocity = Vector3.zero;
+            var startingOriginX = origin.OriginX;
+            var startingOriginZ = origin.OriginZ;
+            var crossed = false;
+            var maximumHeadingChange = 0f;
+            var maximumLateralSpeed = 0f;
+            var maximumYawSpeed = 0f;
+            var stepsAfterCrossing = 0;
+            for (var step = 0; step < 220; step++)
+            {
+                yield return new WaitForFixedUpdate();
+                var forward = Vector3.ProjectOnPlane(
+                    caravan.transform.forward,
+                    Vector3.up).normalized;
+                var planarVelocity = Vector3.ProjectOnPlane(
+                    caravan.Body.linearVelocity,
+                    Vector3.up);
+                maximumHeadingChange = Mathf.Max(
+                    maximumHeadingChange,
+                    Vector3.Angle(initialForward, forward));
+                maximumLateralSpeed = Mathf.Max(
+                    maximumLateralSpeed,
+                    Mathf.Abs(Vector3.Dot(planarVelocity, caravan.transform.right)));
+                maximumYawSpeed = Mathf.Max(
+                    maximumYawSpeed,
+                    Mathf.Abs(caravan.Body.angularVelocity.y) * Mathf.Rad2Deg);
+                var worldPosition = origin.LocalToWorld(caravan.transform.position);
+                var currentAxis = crossesX ? worldPosition.X : worldPosition.Z;
+                if (travelSign > 0f
+                        ? currentAxis >= boundary
+                        : currentAxis <= boundary)
+                {
+                    crossed = true;
+                }
+                if (crossed && ++stepsAfterCrossing >= 60)
+                {
+                    break;
+                }
+            }
+
+            TestContext.WriteLine(
+                $"floating-origin crossing: heading={maximumHeadingChange:F2} deg, "
+                + $"lateral={maximumLateralSpeed:F2} m/s, "
+                + $"yaw={maximumYawSpeed:F2} deg/s, "
+                + $"after={stepsAfterCrossing} fixed steps");
+            Assert.That(crossed, Is.True, "The test caravan never crossed the floating-origin boundary.");
+            Assert.That(
+                crossesX ? origin.OriginX : origin.OriginZ,
+                Is.Not.EqualTo(crossesX ? startingOriginX : startingOriginZ),
+                "The test did not trigger a floating-origin recenter.");
+            var worldAfterCrossing = origin.LocalToWorld(caravan.transform.position);
+            var colliderAfterCrossing = System.Array.Find(
+                Physics.RaycastAll(
+                    origin.WorldToLocal(
+                        worldAfterCrossing.X,
+                        500.0,
+                        worldAfterCrossing.Z),
+                    Vector3.down,
+                    1000f),
+                hit => hit.collider is TerrainCollider).collider;
+            Assert.That(
+                colliderAfterCrossing,
+                Is.SameAs(terrainHit.collider),
+                "Crossing a streamed heightmap patch replaced the continuous collider.");
+            Assert.That(
+                maximumHeadingChange,
+                Is.LessThan(12f),
+                $"Floating-origin recenter kicked the caravan heading by {maximumHeadingChange:F1} degrees.");
+            Assert.That(
+                maximumLateralSpeed,
+                Is.LessThan(2.5f),
+                $"Floating-origin recenter produced {maximumLateralSpeed:F1} m/s lateral speed.");
+            Assert.That(
+                maximumYawSpeed,
+                Is.LessThan(35f),
+                $"Floating-origin recenter produced {maximumYawSpeed:F1} deg/s yaw.");
+            caravan.Body.linearVelocity = Vector3.zero;
+            caravan.Body.angularVelocity = Vector3.zero;
+            caravan.Body.rotation = originalRotation;
+            caravan.transform.rotation = originalRotation;
+            caravan.Teleport(origin.WorldToLocal(
+                originalWorldPosition.X,
+                originalWorldPosition.Y,
+                originalWorldPosition.Z));
+            caravan.SetDefaultDriveEnabled(originalDriveEnabled);
+            for (var step = 0; step < 40 && !caravan.PhysicsStarted; step++)
+            {
+                yield return new WaitForFixedUpdate();
+            }
+            Assert.That(
+                caravan.PhysicsStarted,
+                Is.True,
+                "The caravan did not recover after the floating-origin regression test.");
+        }
+
         [UnityTest, Order(-100)]
         public IEnumerator PrototypeCreatesPhysicalCaravanKeeperAndStreamsTerrain()
         {
@@ -369,14 +606,16 @@ namespace Steppe.Tests
             }
             Assert.That(caravan.Body.isKinematic, Is.False, "Caravan never attached to a streamed terrain collider.");
             var activeTerrainColliders = System.Array.FindAll(
-                Object.FindObjectsByType<MeshCollider>(),
+                Object.FindObjectsByType<TerrainCollider>(),
                 collider => collider.name.StartsWith("Terrain Physics Surface"));
             Assert.That(activeTerrainColliders, Has.Length.EqualTo(1));
-            Assert.That(streamer.ActivePhysicsSurfaceCount, Is.EqualTo(1));
+            Assert.That(
+                streamer.ActivePhysicsSurfaceCount,
+                Is.EqualTo(activeTerrainColliders.Length));
             Assert.That(
                 streamer.PhysicsSurfaceVertexCount,
                 Is.GreaterThan(10000),
-                "The physics carpet must span multiple near chunks in one mesh.");
+                "The physics heightfield must span multiple near chunks.");
             var chunkColliders = System.Array.FindAll(
                 Object.FindObjectsByType<MeshCollider>(FindObjectsInactive.Include),
                 collider => collider.GetComponent<MeshFilter>() != null
@@ -426,6 +665,10 @@ namespace Steppe.Tests
             Assert.That(caravan.TravelledMetres, Is.GreaterThan(0f));
             Assert.That(tracks.StoredTrackCellCount, Is.GreaterThan(0), "The caravan did not leave a canonical track.");
             Assert.That(streamer, Is.Not.Null);
+            for (var frame = 0; frame < 120 && streamer.LoadedCount == 0; frame++)
+            {
+                yield return null;
+            }
             Assert.That(streamer.LoadedCount, Is.GreaterThan(0));
             Assert.That(Object.FindAnyObjectByType<BiomeDebugNavigator>(), Is.Not.Null);
             Assert.That(Object.FindAnyObjectByType<SteppeTimeSystem>(), Is.Not.Null);
@@ -437,6 +680,10 @@ namespace Steppe.Tests
             Assert.That(dust, Is.Not.Null);
             Assert.That(snow, Is.Not.Null);
             Assert.That(Object.FindAnyObjectByType<SteppeGrassRenderer>(), Is.Not.Null);
+            Assert.That(
+                grass.StreamingFocus,
+                Is.SameAs(firstPerson.transform),
+                "Grass streaming must follow the keeper, not the caravan chassis.");
             Assert.That(workScheduler, Is.Not.Null);
             Assert.That(workScheduler.RegisteredSourceCount, Is.GreaterThanOrEqualTo(4));
             Assert.That(workScheduler.TotalStepsExecuted, Is.GreaterThan(0));
@@ -1854,6 +2101,8 @@ namespace Steppe.Tests
             var grid = Object.FindAnyObjectByType<CaravanMountGrid>();
             var build = Object.FindAnyObjectByType<CaravanBuildModeController>();
             var caravan = Object.FindAnyObjectByType<CaravanChassisController>();
+            var keeper =
+                Object.FindAnyObjectByType<CaravanFirstPersonController>();
             var electrical =
                 Object.FindAnyObjectByType<CaravanElectricalNetwork>();
             var fluid = Object.FindAnyObjectByType<CaravanFluidNetwork>();
@@ -1869,6 +2118,7 @@ namespace Steppe.Tests
             Assert.That(platform, Is.Not.Null);
             Assert.That(grid, Is.Not.Null);
             Assert.That(build, Is.Not.Null);
+            Assert.That(keeper, Is.Not.Null);
 
             PrepareElectricalModules(build, true);
             PrepareConstructionState(10, 18);
@@ -1892,6 +2142,9 @@ namespace Steppe.Tests
             batteryPart.SetStoredAmount(27f);
             batteryModule.RestoreState(0.22f, 0.81f, 0.13f);
             caravan.RestoreTravelledMetres(4321f);
+            var savedKeeperPosition = caravan.transform.TransformPoint(
+                new Vector3(0.42f, 0.09f, -0.37f));
+            keeper.Teleport(savedKeeperPosition, 127f, -24f);
 
             var captured = service.CaptureSnapshot();
             var json = JsonUtility.ToJson(captured);
@@ -1908,6 +2161,9 @@ namespace Steppe.Tests
             var capturedMechanicalCount = captured.mechanicalConnections.Length;
             var capturedFabric = progression.GetResource(
                 CaravanConstructionResourceKind.Fabric);
+            Assert.That(captured.hasPlayerState, Is.True);
+            Assert.That(captured.playerYaw, Is.EqualTo(127f).Within(0.01f));
+            Assert.That(captured.playerPitch, Is.EqualTo(-24f).Within(0.01f));
 
             Assert.That(
                 TryFindExpansionCandidate(grid, out var extraCell),
@@ -1919,6 +2175,10 @@ namespace Steppe.Tests
             mechanical.ClearConnections();
             progression.ResetToNewGame();
             caravan.Body.linearVelocity = Vector3.zero;
+            keeper.Teleport(
+                savedKeeperPosition + new Vector3(90f, 14f, -60f),
+                11f,
+                35f);
             Assert.That(build.TryEnterBuildMode(), Is.True);
             Assert.That(build.TryRemoveModule(batteryModule), Is.True);
             build.ExitBuildMode();
@@ -1927,6 +2187,11 @@ namespace Steppe.Tests
                 service.TryRestoreSnapshot(serialized, out var error),
                 Is.True,
                 error);
+            Assert.That(
+                Vector3.Distance(keeper.transform.position, savedKeeperPosition),
+                Is.LessThan(0.05f));
+            Assert.That(keeper.YawDegrees, Is.EqualTo(127f).Within(0.01f));
+            Assert.That(keeper.PitchDegrees, Is.EqualTo(-24f).Within(0.01f));
             yield return null;
 
             Assert.That(platform.CellCount, Is.EqualTo(capturedPlatformCount));
@@ -1954,6 +2219,23 @@ namespace Steppe.Tests
                 Is.EqualTo(capturedFabric));
             Assert.That(progression.IsSiteSearched("save-test-farm"), Is.True);
             Assert.That(progression.IsWreckDepleted("save-test-wreck"), Is.True);
+
+            // Schema 1 saves written by older builds have no player fields.
+            // They must still load and put the keeper back on the saved caravan.
+            serialized.hasPlayerState = false;
+            keeper.Teleport(
+                caravan.transform.position + new Vector3(120f, 20f, 80f),
+                33f,
+                17f);
+            Assert.That(
+                service.TryRestoreSnapshot(serialized, out error),
+                Is.True,
+                error);
+            var legacyPlayerLocal = caravan.transform.InverseTransformPoint(
+                keeper.transform.position);
+            Assert.That(legacyPlayerLocal.x, Is.EqualTo(0.55f).Within(0.03f));
+            Assert.That(legacyPlayerLocal.y, Is.EqualTo(0.08f).Within(0.03f));
+            Assert.That(legacyPlayerLocal.z, Is.EqualTo(0.15f).Within(0.03f));
         }
 
         [UnityTest, Order(110)]
