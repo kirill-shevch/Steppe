@@ -13,7 +13,8 @@ internal static class WorldPersistence
         WorldClock clock,
         WorldState state,
         WaterBudget budget,
-        NitrogenBudget nitrogenBudget)
+        NitrogenBudget nitrogenBudget,
+        WorldFauna fauna)
     {
         using var gzip = new GZipStream(destination, CompressionLevel.Optimal, leaveOpen: true);
         using var writer = new BinaryWriter(gzip, Encoding.UTF8, leaveOpen: true);
@@ -27,13 +28,18 @@ internal static class WorldPersistence
         writer.Write(config.AxialTiltDegrees);
         writer.Write(config.BaseStepMinutes);
         writer.Write(config.GeographyErosionPasses);
+        writer.Write(config.GiantHarvesterCount);
+        writer.Write(config.ClimateVariability);
         writer.Write(clock.ElapsedHours);
 
         var snapshot = budget.Snapshot(state);
         writer.Write(snapshot.InitialStoredMmCells);
         writer.Write(snapshot.ExternalInputMmCells);
         writer.Write(snapshot.ExternalOutputMmCells);
-        writer.Write(nitrogenBudget.Snapshot(state).InitialStoredGm2Cells);
+        var nitrogen = nitrogenBudget.Snapshot(state);
+        writer.Write(nitrogen.InitialStoredGm2Cells);
+        writer.Write(nitrogen.ExternalInputGm2Cells);
+        writer.Write(nitrogen.ExternalOutputGm2Cells);
 
         var fields = state.SerializableFloatFields().ToArray();
         writer.Write(fields.Length);
@@ -44,6 +50,7 @@ internal static class WorldPersistence
 
         Write(state.DrainTo, writer);
         Write(state.CatchmentId, writer);
+        fauna.Save(writer);
     }
 
     public static FiniteWorld Load(Stream source)
@@ -56,7 +63,7 @@ internal static class WorldPersistence
         }
 
         var schemaVersion = reader.ReadInt32();
-        if (schemaVersion != WorldConfig.CurrentSchemaVersion)
+        if (schemaVersion is < 3 or > WorldConfig.CurrentSchemaVersion)
         {
             throw new InvalidDataException($"Unsupported world schema {schemaVersion}.");
         }
@@ -70,15 +77,23 @@ internal static class WorldPersistence
             LatitudeDegrees = reader.ReadDouble(),
             AxialTiltDegrees = reader.ReadDouble(),
             BaseStepMinutes = reader.ReadInt32(),
-            GeographyErosionPasses = reader.ReadInt32()
+            GeographyErosionPasses = reader.ReadInt32(),
+            GiantHarvesterCount = schemaVersion >= 4 ? reader.ReadInt32() : 0,
+            ClimateVariability = schemaVersion >= 5 ? reader.ReadSingle() : 1f
         }.Validate();
         var clock = new WorldClock(reader.ReadDouble());
         var initialWater = reader.ReadDouble();
         var externalInput = reader.ReadDouble();
         var externalOutput = reader.ReadDouble();
         var initialNitrogen = reader.ReadDouble();
+        var externalNitrogenInput = schemaVersion >= 4 ? reader.ReadDouble() : 0d;
+        var externalNitrogenOutput = schemaVersion >= 4 ? reader.ReadDouble() : 0d;
         var state = new WorldState(config.CellCount);
-        var fields = state.SerializableFloatFields().ToArray();
+        var fields = schemaVersion >= 4
+            ? state.SerializableFloatFields().ToArray()
+            : state.SerializableFloatFields()
+                .Where(field => !ReferenceEquals(field, state.SoilCompactionFraction))
+                .ToArray();
         var fieldCount = reader.ReadInt32();
         if (fieldCount != fields.Length)
         {
@@ -92,11 +107,12 @@ internal static class WorldPersistence
 
         Read(state.DrainTo, reader);
         Read(state.CatchmentId, reader);
+        var fauna = schemaVersion >= 4 ? WorldFauna.Load(reader) : WorldFauna.Generate(config);
         var budget = new WaterBudget();
         budget.Restore(initialWater, externalInput, externalOutput);
         var nitrogenBudget = new NitrogenBudget();
-        nitrogenBudget.Restore(initialNitrogen);
-        return new FiniteWorld(config, clock, state, budget, nitrogenBudget);
+        nitrogenBudget.Restore(initialNitrogen, externalNitrogenInput, externalNitrogenOutput);
+        return new FiniteWorld(config, clock, state, budget, nitrogenBudget, fauna);
     }
 
     private static void Write(float[] values, BinaryWriter writer)

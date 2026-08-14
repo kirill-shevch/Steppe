@@ -18,12 +18,14 @@ builder.Services.AddResponseCompression(options =>
 
 var size = ReadArgument(args, "--size", 96);
 var seed = ReadArgument(args, "--seed", 12345);
+var harvesters = ReadArgument(args, "--harvesters", 10);
 builder.Services.AddSingleton(new ObserverWorldHost(new WorldConfig
 {
     Width = size,
     Height = size,
     Seed = seed,
-    BaseStepMinutes = 180
+    BaseStepMinutes = 180,
+    GiantHarvesterCount = harvesters
 }));
 
 var app = builder.Build();
@@ -32,6 +34,14 @@ app.UseDefaultFiles();
 app.UseStaticFiles();
 
 app.MapGet("/api/summary", (ObserverWorldHost host) => host.Read(world => world.GetSummary()));
+app.MapGet("/api/climate", (ObserverWorldHost host) =>
+    host.Read(world => world.CaptureClimateForcing()));
+app.MapGet("/api/climate/year/{year:int}", (int year, ObserverWorldHost host) =>
+    year is >= 1 and <= 10000
+        ? Results.Ok(host.Read(world => world.CaptureAnnualClimateRegime(year)))
+        : Results.BadRequest(new { message = "year must be between 1 and 10000" }));
+app.MapGet("/api/fauna/giant-harvesters", (ObserverWorldHost host) =>
+    host.Read(world => world.CaptureGiantHarvesters()));
 app.MapGet("/api/states", () => StateCatalog.All);
 app.MapGet("/api/fluxes", () => FluxCatalog.All);
 app.MapGet("/api/events/catalog", () => WorldEventCatalog.All);

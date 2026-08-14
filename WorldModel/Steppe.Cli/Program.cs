@@ -21,7 +21,9 @@ try
             CellSizeMeters = options.CellSizeMeters,
             Seed = options.Seed,
             LatitudeDegrees = options.Latitude,
-            BaseStepMinutes = options.StepMinutes
+            BaseStepMinutes = options.StepMinutes,
+            GiantHarvesterCount = options.Harvesters,
+            ClimateVariability = options.ClimateVariability
         });
 
     if (options.AdvanceHours > 0)
@@ -60,7 +62,7 @@ try
     }
 
     stopwatch.Stop();
-    PrintSummary(world.GetSummary(), stopwatch.Elapsed, options.SavePath);
+    PrintSummary(world.GetSummary(), world.CaptureClimateForcing(), stopwatch.Elapsed, options.SavePath);
     return 0;
 }
 catch (Exception exception)
@@ -89,11 +91,17 @@ static void ExportCsv(LayerSnapshot layer, string path)
     }
 }
 
-static void PrintSummary(WorldSummary summary, TimeSpan runtime, string? savePath)
+static void PrintSummary(
+    WorldSummary summary,
+    ClimateForcingSnapshot climate,
+    TimeSpan runtime,
+    string? savePath)
 {
     Console.WriteLine("STEPPE WORLD MODEL");
     Console.WriteLine($"World       {summary.Width} × {summary.Height} cells, {summary.CellSizeMeters:N0} m/cell, seed {summary.Seed}");
     Console.WriteLine($"Time        year {summary.Year}, day {summary.DayOfYear:000}, {summary.HourOfDay:00.0}h ({summary.Season})");
+    Console.WriteLine($"Climate     T {climate.TemperatureOffsetC:+0.0;-0.0;0.0} °C, moisture ×{climate.MoistureMultiplier:N2}, wind ×{climate.WindSpeedMultiplier:N2}");
+    Console.WriteLine($"Extremes    heat={climate.Heatwave}, cold={climate.ColdSnap}, rain={climate.RainBurst}, wind={climate.WindStorm}");
     Console.WriteLine($"Sun         {summary.SunElevationDegrees,6:N1}°, day length {summary.DayLengthHours:N1}h");
     Console.WriteLine($"Surface     {summary.MeanSurfaceTemperatureC,6:N1} °C mean");
     Console.WriteLine($"Rain        {summary.MeanPrecipitationMmPerHour,6:N3} mm/h mean");
@@ -116,6 +124,8 @@ internal sealed record CliOptions(
     float CellSizeMeters,
     double Latitude,
     int StepMinutes,
+    int Harvesters,
+    float ClimateVariability,
     double AdvanceHours,
     string? LoadPath,
     string? SavePath,
@@ -166,6 +176,8 @@ internal sealed record CliOptions(
             (float)ReadDouble(values, "cell-size", 250),
             ReadDouble(values, "latitude", 48),
             ReadInt(values, "step-minutes", 180),
+            ReadInt(values, "harvesters", 10),
+            (float)ReadDouble(values, "climate-variability", 1),
             hours,
             ReadString(values, "load"),
             ReadString(values, "save"),
@@ -190,6 +202,8 @@ internal sealed record CliOptions(
               --seed N             Deterministic world seed
               --latitude DEGREES   World latitude (default 48)
               --step-minutes N     Base simulation step dividing 1440 (default 180)
+              --harvesters N       Giant harvester population (default 10)
+              --climate-variability N  Interannual anomaly strength, 0..2 (default 1)
               --hours N            Hours to advance
               --days N             Days to advance
               --years N            365-day years to advance

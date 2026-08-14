@@ -18,6 +18,7 @@ internal sealed class WorldState
         Porosity = New();
         PermeabilityMmPerHour = New();
         MineralContent = New();
+        SoilCompactionFraction = New();
         FaultInfluence = New();
         RockHardness = New();
         DepressionStorageMm = New();
@@ -72,6 +73,7 @@ internal sealed class WorldState
     public float[] Porosity { get; }
     public float[] PermeabilityMmPerHour { get; }
     public float[] MineralContent { get; }
+    public float[] SoilCompactionFraction { get; }
     public float[] FaultInfluence { get; }
     public float[] RockHardness { get; }
     public float[] DepressionStorageMm { get; }
@@ -125,6 +127,7 @@ internal sealed class WorldState
         yield return Porosity;
         yield return PermeabilityMmPerHour;
         yield return MineralContent;
+        yield return SoilCompactionFraction;
         yield return FaultInfluence;
         yield return RockHardness;
         yield return DepressionStorageMm;

@@ -6,7 +6,7 @@ namespace Steppe.Simulation;
 /// </summary>
 public sealed record WorldConfig
 {
-    public const int CurrentSchemaVersion = 3;
+    public const int CurrentSchemaVersion = 5;
 
     public int Width { get; init; } = 96;
     public int Height { get; init; } = 96;
@@ -16,6 +16,8 @@ public sealed record WorldConfig
     public double AxialTiltDegrees { get; init; } = 23.44;
     public int BaseStepMinutes { get; init; } = 60;
     public int GeographyErosionPasses { get; init; } = 18;
+    public int GiantHarvesterCount { get; init; } = 10;
+    public float ClimateVariability { get; init; } = 1f;
 
     public int CellCount => checked(Width * Height);
     public float WidthKilometers => Width * CellSizeMeters / 1000f;
@@ -46,6 +48,16 @@ public sealed record WorldConfig
         if (GeographyErosionPasses is < 0 or > 100)
         {
             throw new ArgumentOutOfRangeException(nameof(GeographyErosionPasses));
+        }
+
+        if (GiantHarvesterCount is < 0 or > 128)
+        {
+            throw new ArgumentOutOfRangeException(nameof(GiantHarvesterCount));
+        }
+
+        if (!float.IsFinite(ClimateVariability) || ClimateVariability is < 0f or > 2f)
+        {
+            throw new ArgumentOutOfRangeException(nameof(ClimateVariability));
         }
 
         return this;

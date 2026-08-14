@@ -11,7 +11,8 @@ public enum VectorProcess
     GroundwaterFlow,
     SnowTransport,
     SedimentTransport,
-    DustAdvection
+    DustAdvection,
+    GiantHarvesterMovement
 }
 
 public enum VectorProcessMeasure
@@ -43,7 +44,8 @@ public static class VectorProcessCatalog
         new(VectorProcess.GroundwaterFlow, "Подземный поток", "Фактический обмен грунтовой воды между соседними ячейками за период.", "мм", VectorProcessMeasure.AccumulatedTransfer, SimulationLayer.Groundwater),
         new(VectorProcess.SnowTransport, "Ветровой перенос снега", "Фактический снежный запас, перемещённый в соседнюю ячейку за период.", "мм SWE", VectorProcessMeasure.AccumulatedTransfer, SimulationLayer.Snow),
         new(VectorProcess.SedimentTransport, "Перенос осадка", "Рыхлый материал, отправленный вниз по поверхностному стоку за период.", "кг/м²", VectorProcessMeasure.AccumulatedTransfer, SimulationLayer.LooseSediment),
-        new(VectorProcess.DustAdvection, "Адвекция пыли", "Кинематический момент переноса атмосферной пыли ветром за период.", "г/м²·ячейка", VectorProcessMeasure.TransportMoment, SimulationLayer.Dust)
+        new(VectorProcess.DustAdvection, "Адвекция пыли", "Кинематический момент переноса атмосферной пыли ветром за период.", "г/м²·ячейка", VectorProcessMeasure.TransportMoment, SimulationLayer.Dust),
+        new(VectorProcess.GiantHarvesterMovement, "Миграция гигантских сенокосцев", "Фактическое направление и длина перемещения биологических фронтов за период.", "ячейка", VectorProcessMeasure.AccumulatedTransfer, SimulationLayer.LiveBiomass)
     ];
 
     private static readonly IReadOnlyDictionary<VectorProcess, VectorProcessDescriptor> ByProcess =

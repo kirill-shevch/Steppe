@@ -1,3 +1,5 @@
+using System.IO.Compression;
+using System.Text;
 using Steppe.Simulation;
 
 var tests = new (string Name, Action Run)[]
@@ -6,8 +8,13 @@ var tests = new (string Name, Action Run)[]
     ("drainage spill rises match finite depression storage", DrainageSpillsMatchStorage),
     ("runoff reaches a lower neighbour", RunoffReachesLowerNeighbour),
     ("solar seasons emerge from astronomy", SolarSeasonsEmergeFromAstronomy),
+    ("climate regimes are deterministic and diverse", ClimateRegimesAreDeterministicAndDiverse),
+    ("anomalous climate remains ecologically bounded", AnomalousClimateRemainsEcologicallyBounded),
     ("water ledger closes across open boundaries", WaterLedgerCloses),
     ("save and load preserve the world", SaveLoadRoundTrip),
+    ("giant harvesters migrate and leave readable trails", GiantHarvestersLeaveReadableTrails),
+    ("save and load preserve fauna and trails", SaveLoadPreservesFaunaAndTrails),
+    ("schema 3 saves migrate without fauna or compaction", SchemaThreeSaveMigrates),
     ("long simulation remains finite", LongSimulationRemainsFinite),
     ("seasonal steppe remains sustainable across seeds", SeasonalSteppeRemainsSustainableAcrossSeeds),
     ("every state is catalogued and observable", EveryStateIsCataloguedAndObservable),
@@ -42,7 +49,8 @@ static WorldConfig SmallConfig(int seed = 42) => new()
     Height = 24,
     Seed = seed,
     BaseStepMinutes = 180,
-    GeographyErosionPasses = 4
+    GeographyErosionPasses = 4,
+    GiantHarvesterCount = 0
 };
 
 static void GenerationIsDeterministic()
@@ -147,6 +155,107 @@ static void SolarSeasonsEmergeFromAstronomy()
     Assert(summerSun.DayLengthHours > winterSun.DayLengthHours, "summer day is not longer");
 }
 
+static void ClimateRegimesAreDeterministicAndDiverse()
+{
+    var config = SmallConfig(123) with { ClimateVariability = 1f };
+    var first = Enumerable.Range(1, 100)
+        .Select(year => ClimateRegimeModel.GetAnnualRegime(config, year))
+        .ToArray();
+    var repeated = Enumerable.Range(1, 100)
+        .Select(year => ClimateRegimeModel.GetAnnualRegime(config, year))
+        .ToArray();
+    Assert(first.SequenceEqual(repeated), "annual climate regimes changed for a fixed seed");
+
+    var temperatureRange = first.Max(item => item.TemperatureAnomalyC)
+        - first.Min(item => item.TemperatureAnomalyC);
+    var moistureRange = first.Max(item => item.MoistureMultiplier)
+        - first.Min(item => item.MoistureMultiplier);
+    var windRange = first.Max(item => item.WindSpeedMultiplier)
+        - first.Min(item => item.WindSpeedMultiplier);
+    Assert(temperatureRange >= 7f, $"century temperature anomaly range is only {temperatureRange:F2} C");
+    Assert(moistureRange >= 1f, $"century moisture multiplier range is only {moistureRange:F2}");
+    Assert(windRange >= 0.65f, $"century wind multiplier range is only {windRange:F2}");
+    Assert(first.Any(item => item.SevereHeat), "century contains no severe hot year");
+    Assert(first.Any(item => item.SevereCold), "century contains no severe cold year");
+    Assert(first.Any(item => item.SevereDrought), "century contains no severe drought");
+    Assert(first.Any(item => item.ExtremeWet), "century contains no extreme wet year");
+    Assert(first.Any(item => item.SevereWind), "century contains no severe windy year");
+
+    var forcing = new List<ClimateForcingSnapshot>();
+    for (var year = 1; year <= 100; year++)
+    {
+        for (var day = 1; day <= 365; day += 2)
+        {
+            forcing.Add(ClimateRegimeModel.GetForcing(config, year, day));
+        }
+    }
+
+    Assert(forcing.Any(item => item.Heatwave), "century contains no heatwave episode");
+    Assert(forcing.Any(item => item.ColdSnap), "century contains no cold-snap episode");
+    Assert(forcing.Any(item => item.RainBurst), "century contains no extreme-rain episode");
+    Assert(forcing.Any(item => item.WindStorm), "century contains no windstorm episode");
+    Assert(forcing.Max(item => item.StormIntensityMultiplier) >= 3f,
+        "extreme rain never becomes materially stronger than normal storms");
+    Assert(forcing.Max(item => item.WindSpeedMultiplier) >= 1.65f,
+        "windstorms never become materially stronger than normal wind");
+
+    var quietConfig = config with { ClimateVariability = 0f };
+    var quiet = ClimateRegimeModel.GetForcing(quietConfig, 17, 200f);
+    Assert(quiet.TemperatureOffsetC == 0f
+            && quiet.MoistureMultiplier == 1f
+            && quiet.WindSpeedMultiplier == 1f
+            && !quiet.Heatwave
+            && !quiet.ColdSnap
+            && !quiet.RainBurst
+            && !quiet.WindStorm,
+        "zero climate variability does not reproduce the deterministic seasonal baseline");
+}
+
+static void AnomalousClimateRemainsEcologicallyBounded()
+{
+    const double yearHours = 365d * 24d;
+    foreach (var (seed, years) in new[] { (123, 40), (7, 24), (999, 24) })
+    {
+        var world = new FiniteWorld(new WorldConfig
+        {
+            Width = 16,
+            Height = 16,
+            Seed = seed,
+            BaseStepMinutes = 180,
+            GeographyErosionPasses = 4,
+            GiantHarvesterCount = 3,
+            ClimateVariability = 1f
+        });
+        var biomass = new List<double>();
+        var storedWater = new List<double>();
+        var availableNitrogen = new List<double>();
+        for (var year = 1; year <= years; year++)
+        {
+            world.AdvanceHours(yearHours);
+            var summary = world.GetSummary();
+            biomass.Add(summary.MeanLiveBiomassGm2);
+            storedWater.Add(summary.WaterBudget.StoredMmCells / world.Config.CellCount);
+            availableNitrogen.Add(Mean(world.CaptureLayer(SimulationLayer.AvailableNitrogen).Values));
+            Assert(world.CaptureLayer(SimulationLayer.SurfaceTemperature).Statistics.NonFiniteCount == 0,
+                $"seed {seed}, year {year} contains non-finite temperature");
+            Assert(world.CaptureLayer(SimulationLayer.Wind).Statistics.NonFiniteCount == 0,
+                $"seed {seed}, year {year} contains non-finite wind");
+        }
+
+        var final = world.GetSummary();
+        Assert(Math.Abs(final.WaterBudget.RelativeError) < 0.00005,
+            $"seed {seed} anomalous climate violates the water ledger ({final.WaterBudget.RelativeError})");
+        Assert(Math.Abs(final.NitrogenBudget.RelativeError) < 0.00005,
+            $"seed {seed} anomalous climate violates the nitrogen ledger ({final.NitrogenBudget.RelativeError})");
+        Assert(biomass.Skip(10).Min() > 5f, $"seed {seed} vegetation collapses after a climate anomaly");
+        Assert(storedWater.Skip(10).Min() > 20f, $"seed {seed} water storage collapses after an anomaly");
+        Assert(availableNitrogen.Skip(10).Min() > 0.15f,
+            $"seed {seed} available nitrogen collapses under climate anomalies");
+        Assert(biomass.TakeLast(5).Average() > biomass.Skip(10).Take(5).Average() * 0.55,
+            $"seed {seed} vegetation shows unresolved long-term collapse");
+    }
+}
+
 static void WaterLedgerCloses()
 {
     var world = new FiniteWorld(SmallConfig(122));
@@ -169,6 +278,139 @@ static void SaveLoadRoundTrip()
     var copy = loaded.CaptureLayer(SimulationLayer.LiveBiomass);
     Assert(original.Values.SequenceEqual(copy.Values), "biomass changed during round trip");
     Assert(Math.Abs(world.Clock.ElapsedHours - loaded.Clock.ElapsedHours) < 1e-9, "clock changed during round trip");
+}
+
+static void GiantHarvestersLeaveReadableTrails()
+{
+    var config = SmallConfig(147) with { GiantHarvesterCount = 3 };
+    var first = new FiniteWorld(config);
+    var second = new FiniteWorld(config);
+    first.AdvanceHours(60 * 24);
+    second.AdvanceHours(60 * 24);
+
+    var fauna = first.CaptureGiantHarvesters();
+    var repeated = second.CaptureGiantHarvesters();
+    Assert(fauna.Harvesters.Length == 3, "configured giant harvesters were not generated");
+    Assert(fauna.Harvesters.SequenceEqual(repeated.Harvesters),
+        "giant harvester migration is not deterministic for a fixed seed");
+    Assert(fauna.Harvesters.All(item => item.DistanceCells > 1f),
+        "a giant harvester did not migrate through the landscape");
+    Assert(fauna.Harvesters.Sum(item => item.GrazedLiveBiomassGm2 + item.GrazedDryBiomassGm2) > 1f,
+        "giant harvesters did not graze");
+
+    var compaction = first.CaptureLayer(SimulationLayer.SoilCompaction);
+    Assert(compaction.Maximum > 0.01f, "giant harvesters left no compacted trail");
+    Assert(compaction.Values.Count(value => value > 0.002f) > 3,
+        "giant harvester trail is not spatially readable");
+    var movement = first.CaptureVectorProcess(VectorProcess.GiantHarvesterMovement);
+    Assert(movement.TotalGrossMagnitude > 1, "giant harvester movement has no vector telemetry");
+    Assert(first.CaptureFlux(SimulationFlux.GiantHarvesterLiveGrazing).PositiveTotal > 0,
+        "grazing has no process telemetry");
+    Assert(first.CaptureFlux(SimulationFlux.GiantHarvesterCompaction).PositiveTotal > 0,
+        "trail compaction has no process telemetry");
+    var summary = first.GetSummary();
+    Assert(Math.Abs(summary.WaterBudget.RelativeError) < 0.00005,
+        $"harvester drinking violates the water ledger ({summary.WaterBudget.RelativeError})");
+    Assert(Math.Abs(summary.NitrogenBudget.RelativeError) < 0.00005,
+        $"harvester grazing violates the nitrogen ledger ({summary.NitrogenBudget.RelativeError})");
+
+    first.AdvanceHours(105 * 24);
+    var molt = first.CaptureGiantHarvesters().Molts.FirstOrDefault()
+        ?? throw new InvalidOperationException("giant harvesters produced no collectible molt");
+    var collected = first.CollectGiantHarvesterMolt(
+        (int)MathF.Round(molt.X),
+        (int)MathF.Round(molt.Y),
+        2f,
+        molt.ChitinKg);
+    Assert(collected > 1f, "a nearby giant-harvester molt could not be collected");
+}
+
+static void SaveLoadPreservesFaunaAndTrails()
+{
+    var world = new FiniteWorld(SmallConfig(602) with { GiantHarvesterCount = 2 });
+    world.AdvanceHours(55 * 24);
+    using var stream = new MemoryStream();
+    world.Save(stream);
+    stream.Position = 0;
+    var loaded = FiniteWorld.Load(stream);
+
+    var fauna = world.CaptureGiantHarvesters();
+    var loadedFauna = loaded.CaptureGiantHarvesters();
+    Assert(fauna.Harvesters.SequenceEqual(loadedFauna.Harvesters)
+            && fauna.Molts.SequenceEqual(loadedFauna.Molts),
+        "fauna changed during save/load round trip");
+    Assert(world.CaptureLayer(SimulationLayer.SoilCompaction).Values.SequenceEqual(
+            loaded.CaptureLayer(SimulationLayer.SoilCompaction).Values),
+        "soil compaction changed during save/load round trip");
+    Assert(world.GetSummary().WaterBudget == loaded.GetSummary().WaterBudget,
+        "fauna water withdrawals changed during save/load round trip");
+    Assert(world.GetSummary().NitrogenBudget == loaded.GetSummary().NitrogenBudget,
+        "fauna nitrogen ledger changed during save/load round trip");
+}
+
+static void SchemaThreeSaveMigrates()
+{
+    var config = new WorldConfig
+    {
+        Width = 8,
+        Height = 8,
+        Seed = 911,
+        BaseStepMinutes = 180,
+        GeographyErosionPasses = 0
+    };
+    var state = new WorldState(config.CellCount);
+    state.LiveBiomassGm2[17] = 42f;
+    using var stream = WriteSchemaThreeWorld(config, state);
+    var loaded = FiniteWorld.Load(stream);
+
+    Assert(loaded.Config.GiantHarvesterCount == 0,
+        "legacy save unexpectedly generated fauna");
+    Assert(loaded.CaptureGiantHarvesters().Harvesters.Length == 0,
+        "legacy save contains giant harvesters");
+    Assert(loaded.CaptureLayer(SimulationLayer.SoilCompaction).Values.All(value => value == 0f),
+        "legacy save did not initialize the new compaction field to zero");
+    Assert(Math.Abs(loaded.CaptureLayer(SimulationLayer.LiveBiomass).Values[17] - 42f) < 1e-6f,
+        "legacy state fields shifted during schema migration");
+}
+
+static MemoryStream WriteSchemaThreeWorld(WorldConfig config, WorldState state)
+{
+    var stream = new MemoryStream();
+    using (var gzip = new GZipStream(stream, CompressionLevel.Optimal, leaveOpen: true))
+    using (var writer = new BinaryWriter(gzip, Encoding.UTF8, leaveOpen: true))
+    {
+        writer.Write("STEPPE-WORLD-MODEL");
+        writer.Write(3);
+        writer.Write(config.Width);
+        writer.Write(config.Height);
+        writer.Write(config.CellSizeMeters);
+        writer.Write(config.Seed);
+        writer.Write(config.LatitudeDegrees);
+        writer.Write(config.AxialTiltDegrees);
+        writer.Write(config.BaseStepMinutes);
+        writer.Write(config.GeographyErosionPasses);
+        writer.Write(0d);
+        writer.Write(0d);
+        writer.Write(0d);
+        writer.Write(0d);
+        writer.Write(0d);
+        var fields = state.SerializableFloatFields()
+            .Where(field => !ReferenceEquals(field, state.SoilCompactionFraction))
+            .ToArray();
+        writer.Write(fields.Length);
+        foreach (var field in fields)
+        {
+            writer.Write(field.Length);
+            foreach (var value in field) writer.Write(value);
+        }
+        writer.Write(state.DrainTo.Length);
+        foreach (var value in state.DrainTo) writer.Write(value);
+        writer.Write(state.CatchmentId.Length);
+        foreach (var value in state.CatchmentId) writer.Write(value);
+    }
+
+    stream.Position = 0;
+    return stream;
 }
 
 static void LongSimulationRemainsFinite()
@@ -405,7 +647,8 @@ static void SeasonalSimulationEmitsReadableRegimeEvents()
         Height = 16,
         Seed = 123,
         BaseStepMinutes = 180,
-        GeographyErosionPasses = 4
+        GeographyErosionPasses = 4,
+        GiantHarvesterCount = 0
     });
     world.AdvanceHours(365 * 24);
     var snapshot = world.CaptureRegimeEvents(256);
@@ -467,7 +710,9 @@ static void SeasonalSteppeRemainsSustainableAcrossSeeds()
             Height = 20,
             Seed = seed,
             BaseStepMinutes = 180,
-            GeographyErosionPasses = 4
+            GeographyErosionPasses = 4,
+            GiantHarvesterCount = 0,
+            ClimateVariability = 0f
         });
 
         world.AdvanceHours(yearHours * 4);

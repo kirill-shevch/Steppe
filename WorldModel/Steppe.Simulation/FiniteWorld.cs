@@ -3,7 +3,7 @@ namespace Steppe.Simulation;
 /// <summary>
 /// A finite world that advances independently of rendering, frame rate, or player position.
 /// </summary>
-public sealed class FiniteWorld
+public sealed partial class FiniteWorld
 {
     private readonly object sync = new();
     private readonly WorldState state;
@@ -12,6 +12,7 @@ public sealed class FiniteWorld
     private readonly WorldFluxState fluxState;
     private readonly WorldHistory history;
     private readonly WorldEventLog events;
+    private readonly WorldFauna fauna;
 
     public FiniteWorld(WorldConfig config)
     {
@@ -23,6 +24,7 @@ public sealed class FiniteWorld
         nitrogenBudget = new NitrogenBudget();
         nitrogenBudget.Initialize(state);
         fluxState = new WorldFluxState(Config.CellCount);
+        fauna = WorldFauna.Generate(Config);
         history = new WorldHistory();
         history.Initialize(Clock.ElapsedHours, CaptureHistoryPoint, CaptureCellValues);
         events = new WorldEventLog();
@@ -34,13 +36,15 @@ public sealed class FiniteWorld
         WorldClock clock,
         WorldState state,
         WaterBudget waterBudget,
-        NitrogenBudget nitrogenBudget)
+        NitrogenBudget nitrogenBudget,
+        WorldFauna fauna)
     {
         Config = config.Validate();
         Clock = clock;
         this.state = state;
         this.waterBudget = waterBudget;
         this.nitrogenBudget = nitrogenBudget;
+        this.fauna = fauna;
         fluxState = new WorldFluxState(Config.CellCount);
         history = new WorldHistory();
         history.Initialize(Clock.ElapsedHours, CaptureHistoryPoint, CaptureCellValues);
@@ -71,6 +75,7 @@ public sealed class FiniteWorld
                     cancellationToken.ThrowIfCancellationRequested();
                     var step = Math.Min(baseStepHours, remaining);
                     WorldSystems.Step(Config, Clock, state, waterBudget, fluxState, step);
+                    fauna.Step(Config, Clock, state, waterBudget, fluxState, (float)step);
                     Clock.Advance(step);
                     if (history.RecordIfDue(Clock.ElapsedHours, CaptureHistoryPoint, CaptureCellValues))
                     {
@@ -352,6 +357,7 @@ public sealed class FiniteWorld
                 state.DryBiomassGm2[index],
                 state.LitterBiomassGm2[index],
                 state.AvailableNitrogenGm2[index],
+                state.SoilCompactionFraction[index],
                 state.LooseSedimentKgM2[index],
                 state.DustGm2[index],
                 BiomeClassifier.Describe(state, index),
@@ -456,6 +462,30 @@ public sealed class FiniteWorld
         }
     }
 
+    public GiantHarvesterPopulationSnapshot CaptureGiantHarvesters()
+    {
+        lock (sync)
+        {
+            return fauna.Capture();
+        }
+    }
+
+    public AnnualClimateRegime CaptureAnnualClimateRegime(int year)
+    {
+        lock (sync)
+        {
+            return ClimateRegimeModel.GetAnnualRegime(Config, year);
+        }
+    }
+
+    public ClimateForcingSnapshot CaptureClimateForcing()
+    {
+        lock (sync)
+        {
+            return ClimateRegimeModel.GetForcing(Config, Clock);
+        }
+    }
+
     public WorldSummary GetSummary()
     {
         lock (sync)
@@ -486,7 +516,7 @@ public sealed class FiniteWorld
         ArgumentNullException.ThrowIfNull(destination);
         lock (sync)
         {
-            WorldPersistence.Save(destination, Config, Clock, state, waterBudget, nitrogenBudget);
+            WorldPersistence.Save(destination, Config, Clock, state, waterBudget, nitrogenBudget, fauna);
         }
     }
 
@@ -518,6 +548,7 @@ public sealed class FiniteWorld
         SimulationLayer.Porosity => state.Porosity,
         SimulationLayer.Permeability => state.PermeabilityMmPerHour,
         SimulationLayer.MineralContent => state.MineralContent,
+        SimulationLayer.SoilCompaction => state.SoilCompactionFraction,
         SimulationLayer.FaultInfluence => state.FaultInfluence,
         SimulationLayer.RockHardness => state.RockHardness,
         SimulationLayer.DepressionStorage => state.DepressionStorageMm,
@@ -563,6 +594,7 @@ public sealed class FiniteWorld
         SimulationLayer.Porosity => state.Porosity[index],
         SimulationLayer.Permeability => state.PermeabilityMmPerHour[index],
         SimulationLayer.MineralContent => state.MineralContent[index],
+        SimulationLayer.SoilCompaction => state.SoilCompactionFraction[index],
         SimulationLayer.FaultInfluence => state.FaultInfluence[index],
         SimulationLayer.RockHardness => state.RockHardness[index],
         SimulationLayer.DepressionStorage => state.DepressionStorageMm[index],

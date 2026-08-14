@@ -38,7 +38,17 @@ public enum SimulationFlux
     DustDeposition,
     DustTransport,
     SurfaceCrustChange,
-    ExternalSurfaceWater
+    ExternalSurfaceWater,
+    SoilCompactionRecovery,
+    GiantHarvesterLiveGrazing,
+    GiantHarvesterDryGrazing,
+    GiantHarvesterTramplingLitter,
+    GiantHarvesterPlantNitrogenReturn,
+    GiantHarvesterManure,
+    GiantHarvesterDrinking,
+    GiantHarvesterSeedDispersal,
+    GiantHarvesterCrustBreakdown,
+    GiantHarvesterCompaction
 }
 
 public enum FluxGroup
@@ -113,7 +123,17 @@ public static class FluxCatalog
         D(SimulationFlux.DustDeposition, FluxGroup.Material, "ПЕРЕНОС ВЕЩЕСТВА", 450, "Осаждение пыли", "Осаждение пыли", "Возврат атмосферной пыли в рыхлый поверхностный материал.", "г/м²", 4, false, E(SimulationLayer.Dust, -1), E(SimulationLayer.LooseSediment, 0.001f)),
         D(SimulationFlux.DustTransport, FluxGroup.Material, "ПЕРЕНОС ВЕЩЕСТВА", 460, "Перенос пыли", "Перенос пыли", "Чистый приход или уход атмосферной пыли с ветром.", "г/м²", 4, true, E(SimulationLayer.Dust, 1)),
         D(SimulationFlux.SurfaceCrustChange, FluxGroup.Material, "ПЕРЕНОС ВЕЩЕСТВА", 470, "Изменение поверхностной корки", "Изменение корки", "Чистое формирование или разрушение почвенной корки.", "доля", 6, true, E(SimulationLayer.SurfaceCrust, 1)),
-        D(SimulationFlux.ExternalSurfaceWater, FluxGroup.Intervention, "ВНЕШНЕЕ ВОЗДЕЙСТВИЕ", 510, "Добавленная поверхностная вода", "Добавленная вода", "Вода, явно добавленная через внешний интерфейс симуляции.", "мм", 3, false, E(SimulationLayer.SurfaceWater, 1))
+        D(SimulationFlux.ExternalSurfaceWater, FluxGroup.Intervention, "ВНЕШНЕЕ ВОЗДЕЙСТВИЕ", 510, "Добавленная поверхностная вода", "Добавленная вода", "Вода, явно добавленная через внешний интерфейс симуляции.", "мм", 3, false, E(SimulationLayer.SurfaceWater, 1)),
+        D(SimulationFlux.SoilCompactionRecovery, FluxGroup.Material, "ПЕРЕНОС ВЕЩЕСТВА", 480, "Разрыхление уплотнённой почвы", "Разрыхление", "Снятие уплотнения корнями, увлажнением и циклами промерзания.", "доля", 6, false, E(SimulationLayer.SoilCompaction, -1)),
+        D(SimulationFlux.GiantHarvesterLiveGrazing, FluxGroup.Biology, "БИОЛОГИЯ", 380, "Выпас живой травы сенокосцами", "Выпас зелени", "Живая масса, снятая движущимся биологическим фронтом.", "г/м²", 3, false, E(SimulationLayer.LiveBiomass, -1)),
+        D(SimulationFlux.GiantHarvesterDryGrazing, FluxGroup.Biology, "БИОЛОГИЯ", 381, "Выпас сухостоя сенокосцами", "Выпас сухостоя", "Сухая стоящая масса, снятая сенокосцами.", "г/м²", 3, false, E(SimulationLayer.DryBiomass, -1)),
+        D(SimulationFlux.GiantHarvesterTramplingLitter, FluxGroup.Biology, "БИОЛОГИЯ", 382, "Полегание в следе сенокосцев", "След стада", "Растительная масса, примятая в подстилку тяжёлыми телами.", "г/м²", 3, false, E(SimulationLayer.LitterBiomass, 1)),
+        D(SimulationFlux.GiantHarvesterPlantNitrogenReturn, FluxGroup.Biology, "БИОЛОГИЯ", 383, "Возврат азота сенокосцами", "Возврат N стадом", "Азот съеденной растительности, возвращённый в органический резервуар следа.", "г/м²", 4, false, E(SimulationLayer.PlantNitrogen, -1), E(SimulationLayer.OrganicNitrogen, 1)),
+        D(SimulationFlux.GiantHarvesterManure, FluxGroup.Biology, "БИОЛОГИЯ", 384, "Органика сенокосцев", "Органика стада", "Часть съеденной массы, возвращённая в медленный почвенный резервуар.", "г/м²", 3, false, E(SimulationLayer.SoilOrganicMatter, 1)),
+        D(SimulationFlux.GiantHarvesterDrinking, FluxGroup.Biology, "БИОЛОГИЯ", 385, "Водопой сенокосцев", "Водопой", "Поверхностная вода, поглощённая животными и учтённая как выход из резервуаров ландшафта.", "мм", 4, false, E(SimulationLayer.SurfaceWater, -1)),
+        D(SimulationFlux.GiantHarvesterSeedDispersal, FluxGroup.Biology, "БИОЛОГИЯ", 386, "Расселение семян сенокосцами", "Семена в следе", "Пополнение банка семян вдоль миграционной трассы.", "доля", 6, false, E(SimulationLayer.SeedBank, 1)),
+        D(SimulationFlux.GiantHarvesterCrustBreakdown, FluxGroup.Biology, "БИОЛОГИЯ", 387, "Разрушение корки сенокосцами", "Разбитая корка", "Механическое разрушение поверхностной корки в свежем следе.", "доля", 6, false, E(SimulationLayer.SurfaceCrust, -1)),
+        D(SimulationFlux.GiantHarvesterCompaction, FluxGroup.Biology, "БИОЛОГИЯ", 388, "Уплотнение следа сенокосцев", "Уплотнение стадом", "Долговременное уплотнение почвы тяжёлыми животными.", "доля", 6, false, E(SimulationLayer.SoilCompaction, 1))
     ];
 
     private static readonly IReadOnlyDictionary<SimulationFlux, FluxDescriptor> ById =
