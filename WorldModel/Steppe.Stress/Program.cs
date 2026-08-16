@@ -41,10 +41,13 @@ var slope = initialLayers[SimulationLayer.Slope].Values;
 var previousBudget = world.GetSummary().WaterBudget;
 var globalNonFinite = 0L;
 var chunkCount = 0;
+var caravan = options.CaravanEnabled ? new CaravanEcologyAgent() : null;
+var caravanDaily = new List<CaravanDailyImpact>(options.CaravanEnabled ? options.Years * 365 : 0);
 
 Console.Error.WriteLine(
     $"stress qualification: {options.Years} years, {options.Size}×{options.Size}, seed {options.Seed}, "
-    + $"climate {options.ClimateVariability:F2}, wildfire {options.WildfireEnabled}, {options.StepMinutes}-minute step");
+    + $"climate {options.ClimateVariability:F2}, wildfire {options.WildfireEnabled}, "
+    + $"caravan {options.CaravanEnabled}, {options.StepMinutes}-minute step");
 
 for (var year = 1; year <= options.Years; year++)
 {
@@ -53,7 +56,17 @@ for (var year = 1; year <= options.Years; year++)
     while (daysRemaining > 0)
     {
         var days = Math.Min(options.SampleDays, daysRemaining);
-        world.AdvanceHours(days * 24d);
+        if (caravan is null)
+        {
+            world.AdvanceHours(days * 24d);
+        }
+        else
+        {
+            for (var day = 0; day < days; day++)
+            {
+                caravanDaily.Add(world.AdvanceDayWithCaravan(caravan, startObservationWindow: day == 0));
+            }
+        }
         daysRemaining -= days;
         chunkCount++;
 
@@ -179,7 +192,8 @@ var failures = EvaluateFailures(
     recovery,
     last,
     world.Config.CellCount,
-    world.Config.WildfireEnabled);
+    world.Config.WildfireEnabled,
+    caravan?.Capture());
 var lastTwenty = annual.TakeLast(Math.Min(20, annual.Count)).ToArray();
 var postSpinup = annual.Skip(Math.Min(20, annual.Count)).ToArray();
 var report = new
@@ -196,6 +210,7 @@ var report = new
         options.Harvesters,
         options.ClimateVariability,
         options.WildfireEnabled,
+        options.CaravanEnabled,
         regionalColumns,
         regionalRows,
         cellSizeMeters = world.Config.CellSizeMeters,
@@ -242,6 +257,7 @@ var report = new
     flooding = floodDiagnostics,
     climate,
     recovery,
+    caravan = caravan?.Capture(),
     layers = layerAggregates.Values.OrderBy(item => (int)item.Layer).Select(item => item.Snapshot()).ToArray(),
     fluxes = fluxAggregates.Values.OrderBy(item => (int)item.Flux).Select(item => item.Snapshot(options.Years, world.Config.CellCount)).ToArray(),
     vectors = vectorAggregates.Values.OrderBy(item => (int)item.Process).Select(item => item.Snapshot()).ToArray(),
@@ -260,15 +276,18 @@ var jsonOptions = new JsonSerializerOptions
 var faunaSuffix = options.Harvesters > 0 ? $"-harvesters{options.Harvesters}" : "";
 var climateSuffix = $"-climate{options.ClimateVariability.ToString("0.##", CultureInfo.InvariantCulture)}";
 var fireSuffix = options.WildfireEnabled ? "-fire" : "-nofire";
-var stem = $"stress-{options.Years}y-{options.Size}x{options.Size}-seed{options.Seed}{faunaSuffix}{climateSuffix}{fireSuffix}";
+var caravanSuffix = options.CaravanEnabled ? "-caravan" : "";
+var stem = $"stress-{options.Years}y-{options.Size}x{options.Size}-seed{options.Seed}{faunaSuffix}{climateSuffix}{fireSuffix}{caravanSuffix}";
 var jsonPath = Path.Combine(options.OutputDirectory, stem + ".json");
 var csvPath = Path.Combine(options.OutputDirectory, stem + "-annual.csv");
 var temporalCsvPath = Path.Combine(options.OutputDirectory, stem + "-temporal.csv");
 var regionalCsvPath = Path.Combine(options.OutputDirectory, stem + "-regional.csv");
+var caravanCsvPath = Path.Combine(options.OutputDirectory, stem + "-caravan-daily.csv");
 await File.WriteAllTextAsync(jsonPath, JsonSerializer.Serialize(report, jsonOptions));
 await WriteAnnualCsv(csvPath, annual);
 await WriteTemporalCsv(temporalCsvPath, temporal);
 await WriteRegionalCsv(regionalCsvPath, regionalTemporal, regionalColumns);
+if (caravan is not null) await WriteCaravanCsv(caravanCsvPath, caravanDaily);
 
 Console.WriteLine(failures.Count == 0 ? "PASS" : "FAIL");
 Console.WriteLine($"Runtime: {stopwatch.Elapsed}");
@@ -276,6 +295,7 @@ Console.WriteLine($"JSON: {Path.GetFullPath(jsonPath)}");
 Console.WriteLine($"CSV:  {Path.GetFullPath(csvPath)}");
 Console.WriteLine($"Temporal CSV: {Path.GetFullPath(temporalCsvPath)}");
 Console.WriteLine($"Regional CSV: {Path.GetFullPath(regionalCsvPath)}");
+if (caravan is not null) Console.WriteLine($"Caravan CSV: {Path.GetFullPath(caravanCsvPath)}");
 if (failures.Count > 0)
 {
     foreach (var failure in failures)
@@ -414,7 +434,8 @@ static List<string> EvaluateFailures(
     EcologicalRecoveryDiagnostics recovery,
     WorldSummary summary,
     int cellCount,
-    bool wildfireEnabled)
+    bool wildfireEnabled,
+    CaravanEcologySnapshot? caravan)
 {
     var failures = new List<string>();
     if (layers.Values.Any(item => item.MaximumNonFinite > 0)) failures.Add("non-finite state values observed");
@@ -553,6 +574,37 @@ static List<string> EvaluateFailures(
             failures.Add($"water input weakly follows climate moisture regimes ({climate.MoistureInputCorrelation:F3})");
         if (recovery.EvaluableExtremeYears > 0 && recovery.RecoveredWithinFiveYearsFraction < 0.75)
             failures.Add($"ecology recovers after only {recovery.RecoveredWithinFiveYearsFraction:P0} of evaluable extremes");
+    }
+    if (caravan is not null)
+    {
+        if (caravan.SimulatedDays != annual.Count * 365)
+            failures.Add($"caravan recorded {caravan.SimulatedDays} days instead of {annual.Count * 365}");
+        if (caravan.SimulatedDays >= 30 && caravan.DistanceCells <= 5f)
+            failures.Add("caravan never migrated between readable situations");
+        if (caravan.SimulatedDays >= 365)
+        {
+            foreach (var verb in Enum.GetValues<CaravanActionVerb>())
+            {
+                if (caravan.VerbActions[verb] == 0)
+                    failures.Add($"caravan never exercised lifecycle verb {verb}");
+            }
+            if (caravan.MeaningfulExchangeDays < caravan.SimulatedDays * 0.5)
+                failures.Add("caravan has meaningful exchanges on fewer than half of simulated days");
+            if (caravan.WorldExchangeDays < caravan.SimulatedDays * 0.2)
+                failures.Add("caravan exchanges matter with the world on fewer than 20% of simulated days");
+            if (caravan.UnmetWaterDays + caravan.UnmetBiomassDays == 0)
+                failures.Add("caravan survival balance produces no resource scarcity");
+            if (caravan.UnmetWaterDays > caravan.SimulatedDays * 0.45)
+                failures.Add($"caravan lacks daily water on {caravan.UnmetWaterDays} days");
+            if (caravan.UnmetBiomassDays > caravan.SimulatedDays * 0.45)
+                failures.Add($"caravan lacks daily biomass on {caravan.UnmetBiomassDays} days");
+            if (caravan.CriticalConditionDays > caravan.SimulatedDays * 0.2)
+                failures.Add($"caravan remains in critical condition on {caravan.CriticalConditionDays} days");
+            if (caravan.OpportunityDays.Values.Count(value => value > 0) < 8)
+                failures.Add("caravan observes fewer than eight distinct kinds of steppe situation");
+            if (caravan.ActionCounts[CaravanActionKind.ReturnOrganicMatter] == 0)
+                failures.Add("caravan never returns organic matter to the steppe");
+        }
     }
     return failures;
 }
@@ -905,6 +957,46 @@ static async Task WriteRegionalCsv(
                 F(item.BurningFraction[region]),
                 F(item.MeanBurnScar[region])));
         }
+    }
+}
+
+static async Task WriteCaravanCsv(string path, IReadOnlyList<CaravanDailyImpact> impacts)
+{
+    await using var writer = new StreamWriter(path);
+    await writer.WriteLineAsync(
+        "year,day,goal,target_opportunity,from_x,from_y,to_x,to_y,distance_cells,scout_radius_cells,water_need_met,biomass_need_met,water_demand_mm_cells,water_consumed_mm_cells,biomass_demand_gm2_cells,biomass_energy_consumed_gm2_cells,condition,water_mm_cells,fresh_biomass_gm2_cells,dry_biomass_gm2_cells,residue_gm2_cells,captured_sediment_kgm2_cells,chitin_kg,opportunities,actions");
+    foreach (var item in impacts)
+    {
+        string F(double value) => value.ToString("G17", CultureInfo.InvariantCulture);
+        var opportunities = string.Join('|', item.DetectedOpportunities);
+        var actions = string.Join('|', item.Actions.Select(action =>
+            $"{action.Verb}:{action.Kind}:{action.Amount.ToString("G9", CultureInfo.InvariantCulture)}"));
+        await writer.WriteLineAsync(string.Join(',',
+            item.Year,
+            item.DayOfYear,
+            item.Goal,
+            item.TargetOpportunity?.ToString() ?? "",
+            item.FromX,
+            item.FromY,
+            item.ToX,
+            item.ToY,
+            F(item.DistanceCells),
+            item.ScoutRadiusCells,
+            item.WaterNeedMet ? 1 : 0,
+            item.BiomassNeedMet ? 1 : 0,
+            F(item.WaterDemandMmCells),
+            F(item.WaterConsumedMmCells),
+            F(item.BiomassDemandGm2Cells),
+            F(item.BiomassEnergyConsumedGm2Cells),
+            F(item.Condition),
+            F(item.WaterMmCells),
+            F(item.FreshBiomassGm2Cells),
+            F(item.DryBiomassGm2Cells),
+            F(item.OrganicResidueGm2Cells),
+            F(item.CapturedSedimentKgM2Cells),
+            F(item.ChitinKg),
+            opportunities,
+            actions));
     }
 }
 
@@ -1383,6 +1475,7 @@ internal sealed record StressOptions(
     int Harvesters,
     float ClimateVariability,
     bool WildfireEnabled,
+    bool CaravanEnabled,
     string OutputDirectory)
 {
     public static StressOptions Parse(string[] args)
@@ -1417,6 +1510,7 @@ internal sealed record StressOptions(
             Read("harvesters", 10),
             ReadFloat("climate-variability", 1f),
             ReadBool("wildfire", true),
+            ReadBool("caravan", false),
             values.GetValueOrDefault("output", Path.Combine("WorldModel", "StressResults")));
     }
 }

@@ -146,6 +146,9 @@ Runoff вычисляется double-buffered и четырьмя внутрит
 - `CaptureEventMask(kind)` — нормированная полноразмерная пространственная маска снеготаяния, паводка, озеленения, засухи, пыли или пожара;
 - `CaptureRegionalSnapshot(columns, rows)` — дешёвые агрегаты температуры, воды, снега, стресса, биомассы, пыли, огня и гари по регионам;
 - `CaptureGiantHarvesters()` — позиции, направления, активность и сброшенные покровы гигантских сенокосцев;
+- `ScanCaravanOpportunities(x, y, radius)` — интерпретация локальных состояний и всех направлений процессов без создания нового состояния мира;
+- `WithdrawSurfaceWater`, `CondenseAtmosphericWater`, `ReturnSurfaceWater`, `MeltAndWithdrawSnow`, `HarvestBiomass`, `ReturnOrganicMatter`, `CaptureDust`, `ReturnSediment`, `CompactTrail` — атомарные материальные воздействия каравана;
+- `AdvanceDayWithCaravan(agent)` — единый суточный шаг природы, сенокосцев и квалификационного каравана;
 - `CaptureClimateForcing()` — текущие температурное, влажностное, ветровое и штормовое воздействия с флагами активных экстремумов;
 - `CaptureAnnualClimateRegime(year)` — воспроизводимый климатический паспорт выбранного года;
 - `GetSummary()` — время, глобальные средние и водный ledger.
