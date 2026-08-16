@@ -30,6 +30,9 @@ namespace Steppe.Terrain
         public Color32[] Colors { get; }
         public int[] Triangles { get; }
         public int TopResolution { get; }
+        public int TopVertexCount => TopResolution * TopResolution;
+        public int TopTriangleCount =>
+            (TopResolution - 1) * (TopResolution - 1) * 6;
 
         public Vector3 GetTopVertex(int x, int z)
         {
@@ -50,7 +53,8 @@ namespace Steppe.Terrain
             float chunkSize,
             int resolution,
             float skirtDepth,
-            SteppeSurfaceGenerator surfaceGenerator = null)
+            SteppeSurfaceGenerator surfaceGenerator = null,
+            bool includeSkirts = true)
         {
             if (generator == null)
             {
@@ -110,26 +114,29 @@ namespace Steppe.Terrain
                 }
             }
 
-            var depth = Mathf.Max(0.5f, skirtDepth);
-            for (var index = 0; index < resolution - 1; index++)
+            if (includeSkirts)
             {
-                AddSkirtSegment(vertices, normals, uvs, colors, triangles,
-                    index, index + 1, Vector3.back, depth);
-                AddSkirtSegment(vertices, normals, uvs, colors, triangles,
-                    (resolution - 1) * resolution + index + 1,
-                    (resolution - 1) * resolution + index,
-                    Vector3.forward,
-                    depth);
-                AddSkirtSegment(vertices, normals, uvs, colors, triangles,
-                    (index + 1) * resolution,
-                    index * resolution,
-                    Vector3.left,
-                    depth);
-                AddSkirtSegment(vertices, normals, uvs, colors, triangles,
-                    index * resolution + resolution - 1,
-                    (index + 1) * resolution + resolution - 1,
-                    Vector3.right,
-                    depth);
+                var depth = Mathf.Max(0.5f, skirtDepth);
+                for (var index = 0; index < resolution - 1; index++)
+                {
+                    AddSkirtSegment(vertices, normals, uvs, colors, triangles,
+                        index, index + 1, Vector3.back, depth);
+                    AddSkirtSegment(vertices, normals, uvs, colors, triangles,
+                        (resolution - 1) * resolution + index + 1,
+                        (resolution - 1) * resolution + index,
+                        Vector3.forward,
+                        depth);
+                    AddSkirtSegment(vertices, normals, uvs, colors, triangles,
+                        (index + 1) * resolution,
+                        index * resolution,
+                        Vector3.left,
+                        depth);
+                    AddSkirtSegment(vertices, normals, uvs, colors, triangles,
+                        index * resolution + resolution - 1,
+                        (index + 1) * resolution + resolution - 1,
+                        Vector3.right,
+                        depth);
+                }
             }
 
             return new TerrainMeshData(
@@ -176,12 +183,14 @@ namespace Steppe.Terrain
             colors.Add(colors[firstTopIndex]);
             colors.Add(colors[secondTopIndex]);
 
+            // Skirts are viewed from outside the chunk. Their previous winding
+            // faced inward, so back-face culling exposed the sky through LOD seams.
             triangles.Add(start);
+            triangles.Add(start + 3);
             triangles.Add(start + 2);
-            triangles.Add(start + 3);
             triangles.Add(start);
-            triangles.Add(start + 3);
             triangles.Add(start + 1);
+            triangles.Add(start + 3);
         }
     }
 }

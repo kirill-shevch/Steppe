@@ -1,5 +1,8 @@
 # P17 — First expedition
 
+> **Historical implementation note:** P18 defines a new progression opening that
+> must precede and eventually reframe this expedition.
+
 P17 turns the opening tutorial into a short journey driven by the existing
 simulation. The player is not sent to fixed resource pickups. Instead, the caravan
 must be reconfigured to exploit three temporary opportunities in the steppe:

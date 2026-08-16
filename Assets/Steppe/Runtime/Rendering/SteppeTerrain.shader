@@ -4,8 +4,11 @@ Shader "Steppe/Terrain Surface"
     {
         _BaseColor("Tint", Color) = (1, 1, 1, 1)
         _Smoothness("Smoothness", Range(0, 1)) = 0.05
-        _FarVegetationDetail("Far Vegetation Detail", Range(0, 0.3)) = 0.12
+        _FarVegetationDetail("Far Vegetation Detail", Range(0, 0.3)) = 0.20
         _FarWindGustContrast("Far Wind Gust Contrast", Range(0, 0.2)) = 0.075
+        _FarGrassStartDistance("Far Grass Start Distance", Float) = 276
+        _FarGrassCoverage("Far Grass Coverage", Range(0, 1)) = 0.72
+        _FarGrassContrast("Far Grass Contrast", Range(0, 0.4)) = 0.20
         _WetDarkening("Wet Soil Darkening", Range(0, 0.75)) = 0.46
         _WetSmoothness("Wet Soil Smoothness", Range(0, 1)) = 0.72
         _CrustLightening("Dry Crust Lightening", Range(0, 0.25)) = 0.08
@@ -43,6 +46,9 @@ Shader "Steppe/Terrain Surface"
                 half _Smoothness;
                 half _FarVegetationDetail;
                 half _FarWindGustContrast;
+                float _FarGrassStartDistance;
+                half _FarGrassCoverage;
+                half _FarGrassContrast;
                 half _WetDarkening;
                 half _WetSmoothness;
                 half _CrustLightening;
@@ -136,6 +142,48 @@ Shader "Steppe/Terrain Surface"
                     1.0h.xxx,
                     lerp(curedTint, livingTint, ecology.greenFraction),
                     phenologyWeight * 0.58h);
+
+                // Individual cards become sub-pixel at long range. Preserve the
+                // visual mass of the steppe there with a world-anchored, wind-aligned
+                // grass carpet in the terrain shading. Its pattern grows coarser with
+                // distance to avoid shimmer while keeping distant slopes fibrous.
+                half cameraDistance = distance(
+                    input.positionWS.xz,
+                    _WorldSpaceCameraPos.xz);
+                half farGrassBlend = smoothstep(
+                    _FarGrassStartDistance,
+                    _FarGrassStartDistance + 220.0,
+                    cameraDistance);
+                half farGrassMass = farGrassBlend
+                                    * vegetationSignal
+                                    * ecology.biomass;
+                float2 acrossWind = float2(-wind.direction.y, wind.direction.x);
+                float patternScale = lerp(
+                    3.2,
+                    18.0,
+                    saturate((cameraDistance - _FarGrassStartDistance) / 5200.0));
+                float2 grassCoordinates = float2(
+                    dot(canonicalXZ, acrossWind),
+                    dot(canonicalXZ, wind.direction));
+                half grassStrands = SteppeWindValueNoise(
+                    grassCoordinates / float2(patternScale, patternScale * 4.6));
+                half grassClumps = SteppeWindValueNoise(
+                    canonicalXZ / (patternScale * 3.8) + 31.7);
+                half grassTexture = saturate(
+                    grassStrands * 0.64h + grassClumps * 0.36h);
+                half3 farGrassTint = albedo * lerp(
+                    curedTint * half3(0.91h, 0.88h, 0.72h),
+                    livingTint * half3(0.80h, 0.94h, 0.72h),
+                    ecology.greenFraction);
+                albedo = lerp(
+                    albedo,
+                    farGrassTint,
+                    saturate(farGrassMass
+                             * _FarGrassCoverage
+                             * (0.74h + grassTexture * 0.26h)));
+                albedo *= 1.0h - farGrassMass
+                          * _FarGrassContrast
+                          * (0.28h + grassTexture * 0.72h);
                 albedo *= 1.0h - wetness * _WetDarkening;
                 albedo = lerp(albedo, albedo * half3(0.86h, 0.93h, 1.0h), wetness * 0.24h);
                 albedo *= 1.0h + crust * _CrustLightening;

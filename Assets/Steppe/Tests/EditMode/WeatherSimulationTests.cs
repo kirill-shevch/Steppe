@@ -102,6 +102,15 @@ namespace Steppe.Tests
             Assert.That(sample.SurfaceVelocity.magnitude, Is.GreaterThan(0.1f));
             Assert.That(Vector2.Distance(sample.CloudVelocity, sample.SurfaceVelocity), Is.GreaterThan(0.25f));
             Assert.That(Vector2.Angle(sample.CloudVelocity, sample.SurfaceVelocity), Is.LessThan(45f));
+            Assert.That(settings.CloudAdvectionSpeedMultiplier, Is.EqualTo(3f));
+            var unacceleratedCloudSpeed = sample.CloudVelocity.magnitude
+                                          / settings.CloudAdvectionSpeedMultiplier;
+            Assert.That(
+                sample.SurfaceVelocity.magnitude,
+                Is.InRange(
+                    unacceleratedCloudSpeed * settings.SurfaceWindSpeedRatio * 0.86f,
+                    unacceleratedCloudSpeed * settings.SurfaceWindSpeedRatio * 1.14f),
+                "Cloud acceleration must not strengthen the surface wind.");
         }
 
         [Test]

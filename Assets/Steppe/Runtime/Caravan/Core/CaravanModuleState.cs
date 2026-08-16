@@ -46,6 +46,11 @@ namespace Steppe.Caravan
 
         public void SetForTests(float newDust, float newIntegrity, float newLoad = 0f)
         {
+            Restore(newDust, newIntegrity, newLoad);
+        }
+
+        public void Restore(float newDust, float newIntegrity, float newLoad = 0f)
+        {
             dust = Clamp01(newDust);
             integrity = Clamp01(newIntegrity);
             load = Clamp01(newLoad);

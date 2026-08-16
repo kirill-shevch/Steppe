@@ -271,6 +271,7 @@ namespace Steppe.Caravan
         public IReadOnlyList<CaravanMaterialPort> Ports => ports;
         public IReadOnlyList<CaravanMaterialLink> Links => links;
         public int LinkCount => links.Count;
+        public event Action ConnectionsChanged;
 
         public void Configure(
             CaravanMaterialNetworkKind networkKind,
@@ -370,6 +371,7 @@ namespace Steppe.Caravan
             link.Configure(first, second, transform, linkMaterial);
             LinkCouplingRopes(first, second);
             links.Add(link);
+            ConnectionsChanged?.Invoke();
             return true;
         }
 
@@ -405,6 +407,7 @@ namespace Steppe.Caravan
             link.End?.Unregister(link);
             UnlinkCouplingRopes(link.Start, link.End);
             Destroy(link.gameObject);
+            ConnectionsChanged?.Invoke();
             return true;
         }
 

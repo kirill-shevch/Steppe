@@ -37,7 +37,16 @@ Future weather systems must query the camera through `FloatingOriginSystem.Local
 - Negative and very large coordinates map to stable chunk coordinates.
 - Adjacent chunks share height samples even when rendered at different LODs.
 - Moving across chunk boundaries streams new terrain without changing previously defined coordinates.
-- Floating-origin shifts do not change the observer's absolute position.
+- Every render LOD uses outward-facing skirts to hide gaps between chunk edges. All
+  terrain renderers disable terrain shadow casting so those vertical walls cannot
+  paint rectangular shadows across the steppe.
+- Rolling physics uses one continuous `TerrainCollider` for the expedition area.
+  Height samples are streamed into distant `4 × 4`-chunk patches before the caravan
+  reaches them, while the collider object itself is never replaced or crossed at an
+  edge. Generated patches stay resident; render chunks themselves carry no colliders.
+- Floating-origin shifts do not change the observer's absolute position. The caravan
+  also forwards the artificial position delta to VPP, preventing the 2048 m recenter
+  from being interpreted as wheel velocity or a lateral collision impulse.
 - Sparse author stamps can change one region without making the world player-randomized.
 - Loaded chunk count remains bounded by the configured streaming radius.
 - The terrain is dominated by broad plains, basins, valleys, and plateaus rather than uniform small-scale noise.
@@ -51,5 +60,8 @@ Future weather systems must query the camera through `FloatingOriginSystem.Local
 
 ## Automated coverage
 
-- EditMode tests verify coordinate flooring, deterministic large-coordinate height sampling, cross-LOD chunk edges, and authored override locality.
-- PlayMode smoke tests verify that the runtime bootstrap creates a collision-free flying camera, starts terrain streaming, and preserves absolute coordinates through a floating-origin shift.
+- EditMode tests verify coordinate flooring, deterministic large-coordinate height
+  sampling, cross-LOD chunk edges, skirt coverage, and authored override locality.
+- PlayMode smoke tests verify that the runtime bootstrap creates a collision-free
+  flying camera, starts terrain streaming, uses one continuous collider across former
+  chunk borders, and preserves absolute coordinates through a floating-origin shift.

@@ -53,21 +53,15 @@ namespace Steppe.Caravan
                 Create(
                     grid,
                     palette,
-                    CaravanPartKind.Battery,
-                    new CaravanGridPlacement(0, 4, 2, 2, 0),
-                    "starter-battery"),
+                    CaravanPartKind.Sail,
+                    new CaravanGridPlacement(1, 0, 2, 2, 0),
+                    "starter-sail"),
                 Create(
                     grid,
                     palette,
-                    CaravanPartKind.ElectricMotor,
-                    new CaravanGridPlacement(2, 4, 2, 2, 0),
-                    "starter-electric-motor"),
-                Create(
-                    grid,
-                    palette,
-                    CaravanPartKind.PhotovoltaicLeaves,
-                    new CaravanGridPlacement(0, 8, 3, 3, 0),
-                    "starter-photovoltaic-leaves")
+                    CaravanPartKind.ResourceCrate,
+                    new CaravanGridPlacement(3, 4, 1, 1, 0),
+                    "starter-resource-crate")
             };
 
             return modules;
@@ -130,13 +124,9 @@ namespace Steppe.Caravan
                 instanceId);
             module.State.SetForTests(0.08f, 0.96f, 0f);
             var part = root.AddComponent<CaravanPart>();
-            var initialStoredAmount = kind switch
-            {
-                CaravanPartKind.Battery => spec.Capacity * 0.35f,
-                CaravanPartKind.WaterReservoir => spec.Capacity * 0.35f,
-                _ => 0f
-            };
-            part.Configure(kind, spec.Capacity, initialStoredAmount);
+            // Construction provides an empty vessel, never free operational payload.
+            // Saved modules restore their contents later through CaravanSaveService.
+            part.Configure(kind, spec.Capacity, 0f);
             switch (kind)
             {
                 case CaravanPartKind.Sail:
@@ -216,6 +206,9 @@ namespace Steppe.Caravan
                     root.AddComponent<CaravanCouplingRopeModule>().Configure();
                     CreateMaterialPorts(root.transform, part, kind, palette);
                     break;
+                case CaravanPartKind.ResourceCrate:
+                    root.AddComponent<CaravanResourceCrateModule>();
+                    break;
                 default:
                     throw new ArgumentOutOfRangeException(nameof(kind), kind, null);
             }
@@ -272,6 +265,9 @@ namespace Steppe.Caravan
                     break;
                 case CaravanPartKind.CouplingRope:
                     BuildCouplingRope(root, palette);
+                    break;
+                case CaravanPartKind.ResourceCrate:
+                    BuildResourceCrate(root, palette);
                     break;
                 default:
                     throw new ArgumentOutOfRangeException(nameof(kind), kind, null);
@@ -331,6 +327,36 @@ namespace Steppe.Caravan
                 new Vector3(0f, 0.18f, -0.48f),
                 new Vector3(0.5f, 0.42f, 0.06f),
                 p.Solar);
+        }
+
+        private static void BuildResourceCrate(
+            Transform root,
+            CaravanPartPalette p)
+        {
+            Primitive(
+                "Crate Body",
+                PrimitiveType.Cube,
+                root,
+                new Vector3(0f, 0.42f, 0f),
+                new Vector3(0.78f, 0.78f, 0.78f),
+                p.Biomass);
+            Primitive(
+                "Crate Lid",
+                PrimitiveType.Cube,
+                root,
+                new Vector3(0f, 0.84f, 0f),
+                new Vector3(0.86f, 0.08f, 0.86f),
+                p.DarkMetal);
+            for (var index = -1; index <= 1; index += 2)
+            {
+                Primitive(
+                    $"Crate Band {index}",
+                    PrimitiveType.Cube,
+                    root,
+                    new Vector3(index * 0.24f, 0.44f, -0.41f),
+                    new Vector3(0.08f, 0.68f, 0.05f),
+                    p.Metal);
+            }
         }
 
         private static void BuildPhotovoltaicLeaves(Transform root, CaravanPartPalette p)

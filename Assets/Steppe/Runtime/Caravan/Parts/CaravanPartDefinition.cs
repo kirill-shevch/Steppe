@@ -179,7 +179,16 @@ namespace Steppe.Caravan
                 1,
                 95f,
                 24f,
-                "Связывает механические узлы и передаёт усилие между ними.")
+                "Связывает механические узлы и передаёт усилие между ними."),
+            new CaravanPartDefinition(
+                CaravanPartKind.ResourceCrate,
+                "resource-crate",
+                "Ящик ресурсов",
+                1,
+                1,
+                85f,
+                120f,
+                "Принимает материалы разобранных караванов и снабжает строительство.")
         };
 
         private static readonly Dictionary<CaravanPartKind, CaravanPartDefinition> ByKind =

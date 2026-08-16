@@ -62,7 +62,7 @@ namespace Steppe.Rendering
                     var surface = surfaceGenerator.Sample(worldX, worldZ, height, normal.y);
 
                     var presence = Hash01(Rotate(hash, 39));
-                    if (presence > surface.VegetationPotential * 0.94)
+                    if (presence > surface.VegetationPotential * 1.08)
                     {
                         continue;
                     }

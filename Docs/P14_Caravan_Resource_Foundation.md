@@ -1,5 +1,8 @@
 # P14 — Complete caravan technical modules
 
+> **Historical implementation note:** P18 preserves these technical modules but
+> supersedes their starting availability with recipe-driven progression.
+
 P14 turns the fixed P13 electrical demonstration into a constructible technical
 caravan. The starting loadout remains deliberately minimal: photovoltaic leaves,
 one battery and one electric motor, initially disconnected.

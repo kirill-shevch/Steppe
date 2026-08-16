@@ -64,7 +64,9 @@ P3 wind + P4 static motion parameters
 - Independent 64 m vegetation cells, not 512 m terrain chunks.
 - A jittered canonical lattice produces even coverage without rows or chunk seams.
 - Stable world-coordinate hashes decide presence and all variation.
-- Cells stream around the observer and are built over multiple frames.
+- Cells stream around the keeper/player, not the caravan, and are built over
+  multiple frames. Walking away from a parked caravan therefore keeps local grass
+  coverage centered on the camera's actual point of presence.
 - One shared instance buffer and a small number of indirect draw commands render the visible set.
 - The maximum candidate field remains stable. Growth and LOD select stable hash subsets instead of regenerating positions, preventing vegetation from boiling when density changes.
 
@@ -72,9 +74,11 @@ P3 wind + P4 static motion parameters
 
 The initial tuning ranges are deliberately provisional:
 
-- 0-140 m: segmented geometry with full bend and close shading;
-- 110-320 m: simpler instances and reduced density;
-- 260 m to the terrain horizon: no individual geometry; the terrain material carries cover colour, directional highlights, and broad moving gust bands.
+- 0-180 m: dense segmented geometry with full bend and close shading;
+- 180-384 m: stable instances with progressively reduced density;
+- about 276 m to the terrain horizon: the terrain material adds a wind-aligned,
+  world-anchored grass carpet, cover colour and broad moving gust bands. This overlaps
+  the geometry transition so distant steppe remains fibrous instead of reading as dunes.
 
 Overlapping dithered transitions must hide the rings. The final radii are profiling results, not design constants.
 

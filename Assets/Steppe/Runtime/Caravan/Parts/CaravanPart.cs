@@ -17,7 +17,8 @@ namespace Steppe.Caravan
         GrassDryer,
         BiomassStorage,
         Transmission,
-        CouplingRope
+        CouplingRope,
+        ResourceCrate
     }
 
     /// <summary>

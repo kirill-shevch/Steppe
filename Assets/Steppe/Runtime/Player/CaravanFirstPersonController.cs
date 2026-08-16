@@ -49,6 +49,8 @@ namespace Steppe.Player
         public bool InteractionControl =>
             controlMode == CaravanPlayerControlMode.Station;
         public CaravanPlayerControlMode ControlMode => controlMode;
+        public float YawDegrees => yaw;
+        public float PitchDegrees => pitch;
         public bool IsOnCaravan { get; private set; }
         public bool CaravanContactIsolationEnabled =>
             caravanCollisionProxy != null && caravanCollisionProxy.IsActive;
@@ -113,6 +115,73 @@ namespace Steppe.Player
             }
         }
 
+        /// <summary>
+        /// Restores the keeper independently from caravan motion. This is used
+        /// by save loading after the chassis has reached its saved transform.
+        /// </summary>
+        public void Teleport(
+            Vector3 localPosition,
+            float yawDegrees,
+            float pitchDegrees)
+        {
+            yaw = yawDegrees;
+            pitch = Mathf.Clamp(pitchDegrees, -82f, 82f);
+            var restoredRotation = Quaternion.Euler(0f, yaw, 0f);
+            if (character == null)
+            {
+                transform.SetPositionAndRotation(localPosition, restoredRotation);
+            }
+            else
+            {
+                var wasEnabled = character.enabled;
+                character.enabled = false;
+                transform.SetPositionAndRotation(localPosition, restoredRotation);
+                character.enabled = wasEnabled;
+            }
+
+            if (viewCamera != null)
+            {
+                viewCamera.transform.localPosition = cameraBaseLocalPosition;
+                viewCamera.transform.localRotation = Quaternion.Euler(pitch, 0f, 0f);
+            }
+
+            verticalVelocity = 0f;
+            inheritedVelocity = Vector3.zero;
+            planarVelocity = Vector3.zero;
+            jumpBufferRemaining = 0f;
+            coyoteRemaining = 0f;
+            bobPhase = 0f;
+            landingOffset = 0f;
+            wasGrounded = false;
+            IsOnCaravan = false;
+            previousCarrierPosition = caravan != null
+                ? caravan.transform.position
+                : previousCarrierPosition;
+            previousCarrierRotation = caravan != null
+                ? caravan.transform.rotation
+                : previousCarrierRotation;
+            caravanCollisionProxy?.Synchronize();
+            Physics.SyncTransforms();
+        }
+
+        /// <summary>
+        /// Applies the caravan transform delta to a keeper standing on its deck.
+        /// The public entry point also lets scripted caravan moves synchronize
+        /// the character in the same frame instead of waiting for Update.
+        /// </summary>
+        public void SynchronizeCarrierMotion()
+        {
+            if (character == null || caravan == null)
+            {
+                return;
+            }
+
+            caravanCollisionProxy?.Synchronize();
+            ApplyCarrierMotion();
+            previousCarrierPosition = caravan.transform.position;
+            previousCarrierRotation = caravan.transform.rotation;
+        }
+
         private void Update()
         {
             if (settings == null || character == null || caravan == null || viewCamera == null)
@@ -121,14 +190,11 @@ namespace Steppe.Player
             }
 
             HandlePointerLock();
-            caravanCollisionProxy.Synchronize();
-            ApplyCarrierMotion();
+            SynchronizeCarrierMotion();
             UpdateGroundCarrier();
             UpdateLook();
             UpdateMovement();
             UpdateCameraMotion();
-            previousCarrierPosition = caravan.transform.position;
-            previousCarrierRotation = caravan.transform.rotation;
         }
 
         private void HandlePointerLock()
@@ -156,6 +222,16 @@ namespace Steppe.Player
             var previousRelative = transform.position - previousCarrierPosition;
             var carrierPosition = caravan.transform.position + rotationDelta * previousRelative;
             character.Move(carrierPosition - transform.position);
+            if ((carrierPosition - transform.position).sqrMagnitude > 0.0025f)
+            {
+                // CharacterController can reject the whole carrier delta when
+                // its collision recovery meets a synchronously moved proxy.
+                // Both the deck and its proxy moved rigidly, so restoring the
+                // previous local point is the physically consistent fallback.
+                character.enabled = false;
+                transform.position = carrierPosition;
+                character.enabled = true;
+            }
         }
 
         private void UpdateGroundCarrier()

@@ -15,6 +15,8 @@ namespace Steppe.Caravan
         private CaravanControlStation activeStation;
         private CaravanControlStation focusedStation;
         private CaravanModule focusedModule;
+        private CaravanWorldInteractable focusedInteractable;
+        private CaravanWorldInteractable dismantleTarget;
         private float feedbackUntil;
         private string feedbackMessage;
         private bool feedbackIsError;
@@ -24,6 +26,7 @@ namespace Steppe.Caravan
         public CaravanControlStation ActiveStation => activeStation;
         public CaravanControlStation FocusedStation => focusedStation;
         public CaravanModule FocusedModule => focusedModule;
+        public CaravanWorldInteractable FocusedInteractable => focusedInteractable;
         public string FeedbackMessage => feedbackMessage;
         public bool FeedbackIsError => feedbackIsError;
         public bool FeedbackVisible =>
@@ -40,6 +43,10 @@ namespace Steppe.Caravan
                 if (focusedStation != null)
                 {
                     return $"E — использовать: {GetControlName(focusedStation.Kind)}";
+                }
+                if (focusedInteractable != null)
+                {
+                    return focusedInteractable.ContextPrompt;
                 }
                 if (focusedModule != null)
                 {
@@ -77,6 +84,7 @@ namespace Steppe.Caravan
             if (buildMode != null && buildMode.IsActive)
             {
                 SetFocusedStation(null);
+                SetFocusedInteractable(null);
                 focusedModule = null;
                 if (activeStation != null)
                 {
@@ -88,6 +96,7 @@ namespace Steppe.Caravan
             if (activeStation != null)
             {
                 SetFocusedStation(activeStation);
+                SetFocusedInteractable(null);
                 focusedModule = activeStation.GetComponentInParent<CaravanModule>();
                 if (keyboard.eKey.wasPressedThisFrame)
                 {
@@ -105,6 +114,12 @@ namespace Steppe.Caravan
             var target = RaycastTarget();
             var targetStation = FindTargetedStation();
             SetFocusedStation(targetStation);
+            var targetInteractable = target.collider != null
+                ? target.collider.GetComponentInParent<CaravanWorldInteractable>()
+                : null;
+            SetFocusedInteractable(targetStation == null
+                ? targetInteractable
+                : null);
             focusedModule = target.collider != null
                 ? target.collider.GetComponentInParent<CaravanModule>()
                 : null;
@@ -114,8 +129,62 @@ namespace Steppe.Caravan
                 return;
             }
 
+            if (focusedInteractable != null)
+            {
+                if (keyboard.eKey.wasPressedThisFrame)
+                {
+                    focusedInteractable.TryInteract(
+                        out var interactionFeedback,
+                        out var interactionError);
+                    if (!string.IsNullOrWhiteSpace(interactionFeedback))
+                    {
+                        SetFeedback(
+                            interactionFeedback,
+                            interactionError,
+                            3.2f);
+                    }
+                }
+
+                if (keyboard.xKey.isPressed
+                    && focusedInteractable.SupportsDismantle)
+                {
+                    if (firstPerson.IsOnCaravan)
+                    {
+                        focusedInteractable.CancelDismantle();
+                        dismantleTarget = null;
+                        if (keyboard.xKey.wasPressedThisFrame)
+                        {
+                            SetFeedback(
+                                "Для разборки сойдите с платформы",
+                                true,
+                                1.8f);
+                        }
+                        return;
+                    }
+                    dismantleTarget = focusedInteractable;
+                    if (focusedInteractable.AdvanceDismantle(
+                            UnityEngine.Time.deltaTime,
+                            out var dismantleFeedback,
+                            out var dismantleError)
+                        && !string.IsNullOrWhiteSpace(dismantleFeedback))
+                    {
+                        SetFeedback(
+                            dismantleFeedback,
+                            dismantleError,
+                            4f);
+                    }
+                }
+                else if (dismantleTarget != null)
+                {
+                    dismantleTarget.CancelDismantle();
+                    dismantleTarget = null;
+                }
+                return;
+            }
+
             if (target.collider == null)
             {
+                SetFocusedInteractable(null);
                 focusedModule = null;
                 return;
             }
@@ -236,6 +305,22 @@ namespace Steppe.Caravan
                 viewCamera.transform.forward));
         }
 
+        private void SetFocusedInteractable(
+            CaravanWorldInteractable interactable)
+        {
+            if (focusedInteractable == interactable)
+            {
+                return;
+            }
+            if (dismantleTarget != null
+                && dismantleTarget != interactable)
+            {
+                dismantleTarget.CancelDismantle();
+                dismantleTarget = null;
+            }
+            focusedInteractable = interactable;
+        }
+
         public CaravanControlStation ResolveControlTarget(Ray ray)
         {
             var direction = ray.direction.normalized;
@@ -309,6 +394,7 @@ namespace Steppe.Caravan
         private void OnDisable()
         {
             SetFocusedStation(null);
+            SetFocusedInteractable(null);
             focusedModule = null;
             EndControl();
         }

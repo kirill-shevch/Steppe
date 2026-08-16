@@ -58,6 +58,9 @@ Rain uses one camera-centred `ParticleSystem`:
 - particles simulate in world space;
 - existing drops remain in place while the emitter follows the camera;
 - wind supplies horizontal velocity;
+- the cloud-bearing flow and the complete rain front advect at `3×` the base air-mass
+  speed, while surface wind, sail force, vegetation, dust and precipitation slant keep
+  their previous velocity;
 - stretched billboards create lightweight streaks;
 - emission rate follows `CurrentAtFocus.RainIntensity` with a short visual fade.
 

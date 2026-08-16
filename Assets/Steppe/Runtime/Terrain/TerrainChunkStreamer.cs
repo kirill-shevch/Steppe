@@ -9,6 +9,15 @@ namespace Steppe.Terrain
 {
     public sealed class TerrainChunkStreamer : MonoBehaviour, IWorldWorkSource
     {
+        private static readonly int FarVegetationDetailId =
+            Shader.PropertyToID("_FarVegetationDetail");
+        private static readonly int FarGrassStartDistanceId =
+            Shader.PropertyToID("_FarGrassStartDistance");
+        private static readonly int FarGrassCoverageId =
+            Shader.PropertyToID("_FarGrassCoverage");
+        private static readonly int FarGrassContrastId =
+            Shader.PropertyToID("_FarGrassContrast");
+
         private readonly Dictionary<ChunkCoordinate, TerrainChunk> loaded = new Dictionary<ChunkCoordinate, TerrainChunk>();
         private readonly Dictionary<ChunkCoordinate, int> desired = new Dictionary<ChunkCoordinate, int>();
         private readonly List<BuildRequest> pending = new List<BuildRequest>();
@@ -20,6 +29,7 @@ namespace Steppe.Terrain
         private Transform worldSpaceRoot;
         private WorldWorkScheduler workScheduler;
         private TerrainHeightGenerator generator;
+        private TerrainPhysicsSurface physicsSurface;
         private SteppeSurfaceGenerator surfaceGenerator;
         private Material terrainMaterial;
         private bool ownsMaterial;
@@ -29,7 +39,14 @@ namespace Steppe.Terrain
         public int LoadedCount => loaded.Count;
         public int PendingCount => pending.Count;
         public ChunkCoordinate CenterCoordinate => center;
-        public bool HasPendingWorldWork => pending.Count > 0;
+        public float ChunkSize => settings != null ? settings.ChunkSize : 0f;
+        public bool HasPendingWorldWork =>
+            (physicsSurface != null && physicsSurface.HasPendingWork)
+            || pending.Count > 0;
+        public bool PhysicsSurfaceReady => physicsSurface != null && physicsSurface.IsReady;
+        public int PhysicsSurfaceVertexCount => physicsSurface != null ? physicsSurface.VertexCount : 0;
+        public int ActivePhysicsSurfaceCount => physicsSurface != null ? physicsSurface.ActiveColliderCount : 0;
+        public float PhysicsTileSize => physicsSurface != null ? physicsSurface.TileSize : 0f;
 
         public event Action<ChunkCoordinate, int> ChunkReady;
         public event Action<ChunkCoordinate> ChunkRemoved;
@@ -48,6 +65,12 @@ namespace Steppe.Terrain
             worldSpaceRoot = root != null ? root : throw new ArgumentNullException(nameof(root));
             workScheduler = scheduler != null ? scheduler : throw new ArgumentNullException(nameof(scheduler));
             generator = new TerrainHeightGenerator(settings);
+            physicsSurface = new TerrainPhysicsSurface(
+                worldSpaceRoot,
+                generator,
+                settings.ChunkSize,
+                settings.NearResolution,
+                floatingOrigin);
             surfaceGenerator = new SteppeSurfaceGenerator(settings);
 
             if (material != null)
@@ -60,6 +83,7 @@ namespace Steppe.Terrain
                 terrainMaterial = CreateRuntimeMaterial();
                 ownsMaterial = true;
             }
+            ConfigureTerrainMaterial();
 
             hasCenter = false;
             workScheduler.Register(this);
@@ -89,8 +113,7 @@ namespace Steppe.Terrain
                 return false;
             }
 
-            var coordinate = ChunkCoordinate.FromWorld(worldX, worldZ, settings.ChunkSize);
-            return loaded.TryGetValue(coordinate, out var chunk) && chunk.HasPhysicsCollider;
+            return physicsSurface != null && physicsSurface.Contains(worldX, worldZ);
         }
 
         private void Update()
@@ -109,6 +132,7 @@ namespace Steppe.Terrain
                 hasCenter = true;
                 RefreshDesiredChunks();
             }
+            physicsSurface.Refresh(worldPosition.X, worldPosition.Z);
         }
 
         private void RefreshDesiredChunks()
@@ -167,6 +191,12 @@ namespace Steppe.Terrain
 
         public void ExecuteWorldWorkStep()
         {
+            if (physicsSurface.HasPendingWork)
+            {
+                physicsSurface.ExecuteWorkStep();
+                return;
+            }
+
             if (pending.Count == 0)
             {
                 return;
@@ -195,7 +225,8 @@ namespace Steppe.Terrain
                 settings.ChunkSize,
                 resolution,
                 settings.SkirtDepth,
-                surfaceGenerator);
+                surfaceGenerator,
+                includeSkirts: true);
             chunk.Apply(
                 request.Coordinate,
                 request.Lod,
@@ -241,6 +272,33 @@ namespace Steppe.Terrain
             return material;
         }
 
+        private void ConfigureTerrainMaterial()
+        {
+            if (terrainMaterial == null)
+            {
+                return;
+            }
+
+            if (terrainMaterial.HasProperty(FarVegetationDetailId))
+            {
+                terrainMaterial.SetFloat(FarVegetationDetailId, 0.20f);
+            }
+            if (terrainMaterial.HasProperty(FarGrassStartDistanceId))
+            {
+                terrainMaterial.SetFloat(
+                    FarGrassStartDistanceId,
+                    settings.GrassDrawRadius * 0.72f);
+            }
+            if (terrainMaterial.HasProperty(FarGrassCoverageId))
+            {
+                terrainMaterial.SetFloat(FarGrassCoverageId, 0.72f);
+            }
+            if (terrainMaterial.HasProperty(FarGrassContrastId))
+            {
+                terrainMaterial.SetFloat(FarGrassContrastId, 0.20f);
+            }
+        }
+
         private void OnDestroy()
         {
             if (workScheduler != null)
@@ -259,6 +317,8 @@ namespace Steppe.Terrain
 
             loaded.Clear();
             pool.Clear();
+            physicsSurface?.Dispose();
+            physicsSurface = null;
 
             if (ownsMaterial && terrainMaterial != null)
             {

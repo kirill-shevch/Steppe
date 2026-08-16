@@ -59,6 +59,8 @@ namespace Steppe.Rendering
         public int LoadedCellCount => loaded.Count;
         public int PendingCount => pending.Count;
         public int InstanceCount { get; private set; }
+        public Transform StreamingFocus => focus;
+        public ChunkCoordinate CenterCoordinate => center;
         public bool UsesAuthoredMesh { get; private set; }
         public int TuftVertexCount => tuftMesh != null ? tuftMesh.vertexCount : 0;
         public int TuftTriangleCount => tuftMesh != null ? (int)tuftMesh.GetIndexCount(0) / 3 : 0;

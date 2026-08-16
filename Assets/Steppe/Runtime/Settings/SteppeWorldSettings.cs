@@ -40,14 +40,14 @@ namespace Steppe.Settings
         [SerializeField, Min(2f)] private float nearGrassSpacing = 12f;
         [SerializeField, Min(4f)] private float middleGrassSpacing = 28f;
         [SerializeField, Min(0.1f)] private float grassTuftHeight = 1.25f;
-        [SerializeField, Min(0.05f)] private float grassTuftWidth = 0.7f;
+        [SerializeField, Min(0.05f)] private float grassTuftWidth = 0.82f;
 
         [Header("P4 grass rendering")]
         [SerializeField, Min(16f)] private float grassCellSize = 64f;
         [Tooltip("Spacing between ecological samples. Each sample renders a three-tuft cluster.")]
-        [SerializeField, Min(0.35f)] private float grassCandidateSpacing = 0.7f;
-        [SerializeField, Min(16f)] private float grassFullDensityRadius = 145f;
-        [SerializeField, Min(32f)] private float grassDrawRadius = 320f;
+        [SerializeField, Min(0.35f)] private float grassCandidateSpacing = 0.64f;
+        [SerializeField, Min(16f)] private float grassFullDensityRadius = 180f;
+        [SerializeField, Min(32f)] private float grassDrawRadius = 384f;
 
         [Header("World time and clear-sky climate")]
         [Tooltip("One game day lasts twenty real minutes at the default value.")]
@@ -65,6 +65,8 @@ namespace Steppe.Settings
         [Tooltip("Direction clouds travel towards. Zero points north (+Z), 180 points south (-Z).")]
         [SerializeField, Range(0f, 360f)] private float prevailingWindDirectionDegrees = 180f;
         [SerializeField, Min(0.1f)] private float prevailingWindSpeed = 8f;
+        [Tooltip("Clouds and weather fronts move faster than the surface wind without strengthening the wind felt by the caravan.")]
+        [SerializeField, Min(0.1f)] private float cloudAdvectionSpeedMultiplier = 3f;
         [Tooltip("Weather deliberately remains readable while the seasonal debug clock runs at x100.")]
         [SerializeField, Min(0f)] private float weatherSecondsPerRealSecond = 1f;
         [Tooltip("Duration of one smoothly blended large-scale wind regime on the atmosphere timeline.")]
@@ -242,6 +244,8 @@ namespace Steppe.Settings
         public float DiurnalTemperatureAmplitude => diurnalTemperatureAmplitude;
         public float PrevailingWindDirectionDegrees => prevailingWindDirectionDegrees;
         public float PrevailingWindSpeed => prevailingWindSpeed;
+        public float CloudAdvectionSpeedMultiplier =>
+            Mathf.Max(0.1f, cloudAdvectionSpeedMultiplier);
         public float WeatherSecondsPerRealSecond => weatherSecondsPerRealSecond;
         public float WindRegimeDuration => Mathf.Max(30f, windRegimeDuration);
         public float WindDirectionVariationDegrees => Mathf.Clamp(windDirectionVariationDegrees, 0f, 120f);

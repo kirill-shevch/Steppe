@@ -35,6 +35,10 @@ namespace Steppe.Caravan
         private float electricDriveThrottle;
         private float steeringNormalized;
         private float brakeNormalized;
+        private bool hasTravelSample;
+        private double lastTravelWorldX;
+        private double lastTravelWorldZ;
+        private float travelledMetres;
 
         public Rigidbody Body => body;
         public Transform FocusTransform => transform;
@@ -62,6 +66,8 @@ namespace Steppe.Caravan
         public float Speed => body != null
             ? new Vector2(body.linearVelocity.x, body.linearVelocity.z).magnitude
             : 0f;
+        public float TravelledMetres => travelledMetres;
+        public float CurrentAirTemperatureC { get; private set; }
         public float TrackRadius => 2.6f;
         public SteppeTraversalState CurrentSurface { get; private set; }
         public float SteeringNormalized => steeringNormalized;
@@ -106,8 +112,13 @@ namespace Steppe.Caravan
             FloatingOriginSystem origin,
             CaravanEnvironmentSampler environmentSampler)
         {
+            if (floatingOrigin != null)
+            {
+                floatingOrigin.Shifted -= HandleFloatingOriginShift;
+            }
             settings = worldSettings != null ? worldSettings : throw new ArgumentNullException(nameof(worldSettings));
             floatingOrigin = origin != null ? origin : throw new ArgumentNullException(nameof(origin));
+            floatingOrigin.Shifted += HandleFloatingOriginShift;
             environment = environmentSampler ?? throw new ArgumentNullException(nameof(environmentSampler));
             body = GetComponent<Rigidbody>();
             vehicle = GetComponent<VPVehicleController>();
@@ -136,7 +147,17 @@ namespace Steppe.Caravan
             vehicleInput.enabled = false;
             terrain = new TerrainHeightGenerator(settings);
             module = GetComponent<CaravanModule>();
+            hasTravelSample = false;
+            travelledMetres = 0f;
+            CurrentAirTemperatureC = (float)environment.SampleAirTemperature(
+                transform.position);
             RefreshMassProperties();
+        }
+
+        public void RestoreTravelledMetres(float value)
+        {
+            travelledMetres = Mathf.Max(0f, value);
+            hasTravelSample = false;
         }
 
         public void SetSteeringNormalized(float value)
@@ -154,6 +175,38 @@ namespace Steppe.Caravan
         public void SetDefaultDriveEnabled(bool enabled)
         {
             SetElectricDriveThrottle(enabled ? 1f : 0f);
+        }
+
+        public bool FitWheelsToPlatformBounds(
+            float left,
+            float right,
+            float rear,
+            float front)
+        {
+            if (wheels == null || wheels.Length != 4)
+            {
+                wheels = GetComponentsInChildren<VPWheelCollider>(true);
+            }
+            if (wheels.Length != 4)
+            {
+                return false;
+            }
+
+            for (var index = 0; index < wheels.Length; index++)
+            {
+                var wheel = wheels[index];
+                if (wheel == null)
+                {
+                    return false;
+                }
+
+                var localPosition = transform.InverseTransformPoint(
+                    wheel.transform.position);
+                localPosition.x = localPosition.x < 0f ? left : right;
+                localPosition.z = localPosition.z < 0f ? rear : front;
+                wheel.transform.position = transform.TransformPoint(localPosition);
+            }
+            return true;
         }
 
         public void AttachElectricMotor(CaravanElectricMotorModule motor)
@@ -312,25 +365,33 @@ namespace Steppe.Caravan
 
         public void Teleport(Vector3 localPosition)
         {
+            var rotation = body != null ? body.rotation : transform.rotation;
+            Teleport(localPosition, rotation);
+        }
+
+        public void Teleport(Vector3 localPosition, Quaternion localRotation)
+        {
             var previousPosition = transform.position;
+            hasTravelSample = false;
             if (body == null)
             {
-                transform.position = localPosition;
+                transform.SetPositionAndRotation(localPosition, localRotation);
                 Teleported?.Invoke(localPosition - previousPosition);
                 return;
             }
 
             if (vehicle != null)
             {
-                vehicle.HardReposition(localPosition, body.rotation, true);
+                vehicle.HardReposition(localPosition, localRotation, true);
             }
             else
             {
                 body.linearVelocity = Vector3.zero;
                 body.angularVelocity = Vector3.zero;
                 body.position = localPosition;
-                transform.SetPositionAndRotation(localPosition, body.rotation);
+                body.rotation = localRotation;
             }
+            transform.SetPositionAndRotation(localPosition, localRotation);
             Physics.SyncTransforms();
             body.isKinematic = true;
             physicsStarted = false;
@@ -352,8 +413,38 @@ namespace Steppe.Caravan
                 return;
             }
 
+            UpdateTravelMetrics();
             UpdateSurfaceState();
             ApplyVehicleInput();
+        }
+
+        private void UpdateTravelMetrics()
+        {
+            CurrentAirTemperatureC = (float)environment.SampleAirTemperature(
+                transform.position);
+            if (body.isKinematic)
+            {
+                hasTravelSample = false;
+                return;
+            }
+
+            var world = floatingOrigin.LocalToWorld(transform.position);
+            if (hasTravelSample)
+            {
+                var deltaX = world.X - lastTravelWorldX;
+                var deltaZ = world.Z - lastTravelWorldZ;
+                var distance = Math.Sqrt(deltaX * deltaX + deltaZ * deltaZ);
+                // Teleports and restore operations reset the sample explicitly. The
+                // upper guard also prevents a discontinuity from becoming mileage
+                // if an external system repositions the rigidbody directly.
+                if (distance <= settings.ChunkSize * 0.5f)
+                {
+                    travelledMetres += (float)distance;
+                }
+            }
+            lastTravelWorldX = world.X;
+            lastTravelWorldZ = world.Z;
+            hasTravelSample = true;
         }
 
         private void ApplyVehicleInput()
@@ -538,6 +629,24 @@ namespace Steppe.Caravan
                             * 0.0006f);
                     }
                 }
+            }
+        }
+
+        private void HandleFloatingOriginShift(Vector3 shift)
+        {
+            // VPP caches the vehicle's previous world-space position to derive
+            // velocities and suspension state. A floating-origin shift moves the
+            // Rigidbody without representing real motion, so the same delta must
+            // be applied to that cache. Without this notification VPP interprets
+            // every 2048 m recenter as an enormous lateral impact.
+            vehicle?.NotifyPositionChanged(-shift);
+        }
+
+        private void OnDestroy()
+        {
+            if (floatingOrigin != null)
+            {
+                floatingOrigin.Shifted -= HandleFloatingOriginShift;
             }
         }
 

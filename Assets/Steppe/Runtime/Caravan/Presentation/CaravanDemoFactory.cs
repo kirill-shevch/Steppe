@@ -20,8 +20,10 @@ namespace Steppe.Caravan
             CaravanMaterialNetwork biomassNetwork,
             CaravanMaterialNetwork mechanicalNetwork,
             CaravanResourceSystem resourceSystem,
+            CaravanProgressionSystem progression,
             CaravanConstructionService construction,
             CaravanMountGrid grid,
+            CaravanPlatformController platform,
             Transform playerSpawn,
             CaravanControlStation steeringStation,
             CaravanControlStation brakeStation)
@@ -35,8 +37,10 @@ namespace Steppe.Caravan
             BiomassNetwork = biomassNetwork;
             MechanicalNetwork = mechanicalNetwork;
             ResourceSystem = resourceSystem;
+            Progression = progression;
             Construction = construction;
             MountGrid = grid;
+            Platform = platform;
             PlayerSpawn = playerSpawn;
             SteeringStation = steeringStation;
             BrakeStation = brakeStation;
@@ -51,8 +55,10 @@ namespace Steppe.Caravan
         public CaravanMaterialNetwork BiomassNetwork { get; }
         public CaravanMaterialNetwork MechanicalNetwork { get; }
         public CaravanResourceSystem ResourceSystem { get; }
+        public CaravanProgressionSystem Progression { get; }
         public CaravanConstructionService Construction { get; }
         public CaravanMountGrid MountGrid { get; }
+        public CaravanPlatformController Platform { get; }
         public Transform PlayerSpawn { get; }
         public CaravanControlStation SteeringStation { get; }
         public CaravanControlStation BrakeStation { get; }
@@ -88,8 +94,8 @@ namespace Steppe.Caravan
     /// </summary>
     public static class CaravanDemoFactory
     {
-        private const int DeckCellsWide = 10;
-        private const int DeckCellsLong = 18;
+        private const int DeckCellsWide = 4;
+        private const int DeckCellsLong = 5;
         private const float DeckWidth = DeckCellsWide;
         private const float DeckLength = DeckCellsLong;
 
@@ -120,19 +126,19 @@ namespace Steppe.Caravan
             var chassis = root.AddComponent<CaravanChassisController>();
             var grid = root.AddComponent<CaravanMountGrid>();
             grid.Configure(DeckCellsWide, DeckCellsLong, 1f, 0f);
+            var progression = root.AddComponent<CaravanProgressionSystem>();
             CreateChassisCollider(root.transform);
 
             var chassisVisual = new GameObject("Chassis Visual");
             chassisVisual.transform.SetParent(root.transform, false);
-            CreateDeck(chassisVisual.transform, deckMaterial, darkMetal);
             CreateFrame(chassisVisual.transform, metal, darkMetal);
-
-            var deckCollision = new GameObject("Deck Build Surface");
-            deckCollision.transform.SetParent(root.transform, false);
-            deckCollision.transform.localPosition = new Vector3(0f, -0.12f, 0f);
-            var deckCollider = deckCollision.AddComponent<BoxCollider>();
-            deckCollider.size = new Vector3(DeckWidth, 0.24f, DeckLength);
-            deckCollision.AddComponent<CaravanBuildSurface>();
+            var platform = root.AddComponent<CaravanPlatformController>();
+            platform.Configure(
+                grid,
+                chassis,
+                progression,
+                deckMaterial,
+                darkMetal);
 
             var chassisModule = root.AddComponent<CaravanModule>();
             chassisModule.Configure(
@@ -142,17 +148,17 @@ namespace Steppe.Caravan
                 DeckCellsWide,
                 DeckCellsLong,
                 null,
-                2600f,
-                new Vector3(0f, -0.72f, 0f),
+                760f,
+                new Vector3(0f, -0.42f, 0f),
                 "starter-chassis");
             chassisModule.State.SetForTests(0.24f, 0.91f, 0f);
 
             var wheelPositions = new[]
             {
-                new Vector3(-5.08f, -0.55f, 6.55f),
-                new Vector3(5.08f, -0.55f, 6.55f),
-                new Vector3(-5.08f, -0.55f, -6.55f),
-                new Vector3(5.08f, -0.55f, -6.55f)
+                new Vector3(-2.22f, -0.48f, 1.82f),
+                new Vector3(2.22f, -0.48f, 1.82f),
+                new Vector3(-2.22f, -0.48f, -1.82f),
+                new Vector3(2.22f, -0.48f, -1.82f)
             };
             var physicsWheels = new[]
             {
@@ -226,12 +232,13 @@ namespace Steppe.Caravan
                 fluidNetwork,
                 biomassNetwork,
                 mechanicalNetwork,
-                resourceSystem);
+                resourceSystem,
+                progression);
 
             var steeringStation = CreateControlStation(
                 root.transform,
                 "Steering Wheel",
-                new Vector3(-3.75f, 0.68f, 7.45f),
+                new Vector3(-0.62f, 0.68f, 2.38f),
                 Quaternion.Euler(18f, 0f, 0f),
                 CaravanControlKind.Steering,
                 darkMetal,
@@ -240,7 +247,7 @@ namespace Steppe.Caravan
             var brakeStation = CreateControlStation(
                 root.transform,
                 "Brake Lever",
-                new Vector3(-2.25f, 0.58f, 7.3f),
+                new Vector3(0.68f, 0.58f, 2.34f),
                 Quaternion.identity,
                 CaravanControlKind.Brake,
                 darkMetal,
@@ -249,7 +256,7 @@ namespace Steppe.Caravan
 
             var playerSpawn = new GameObject("Player Spawn").transform;
             playerSpawn.SetParent(root.transform, false);
-            playerSpawn.localPosition = new Vector3(0f, 0.06f, -5.2f);
+            playerSpawn.localPosition = new Vector3(0.55f, 0.06f, 0.15f);
 
             ConfigurePhysics(vehicle, vehicleInput, physicsWheels);
             chassisModule.RefreshRendererCache();
@@ -264,8 +271,10 @@ namespace Steppe.Caravan
                 biomassNetwork,
                 mechanicalNetwork,
                 resourceSystem,
+                progression,
                 construction,
                 grid,
+                platform,
                 playerSpawn,
                 steeringStation,
                 brakeStation);
@@ -525,7 +534,10 @@ namespace Steppe.Caravan
             collision.transform.SetParent(parent, false);
             collision.transform.localPosition = new Vector3(0f, -0.18f, 0f);
             var collider = collision.AddComponent<BoxCollider>();
-            collider.size = new Vector3(9.65f, 0.34f, 17.2f);
+            collider.size = new Vector3(
+                DeckWidth - 0.22f,
+                0.34f,
+                DeckLength - 0.22f);
         }
 
         private static void ConfigurePhysics(
@@ -555,36 +567,10 @@ namespace Steppe.Caravan
             {
                 var wheel = wheels[index];
                 wheel.mass = 110f;
-                wheel.radius = 0.72f;
+                wheel.radius = 0.52f;
                 wheel.center = Vector3.zero;
                 wheel.suspensionDistance = 0.48f;
             }
-        }
-
-        private static void CreateDeck(Transform parent, Material deck, Material frame)
-        {
-            for (var z = 0; z < DeckCellsLong; z++)
-            {
-                for (var x = 0; x < DeckCellsWide; x++)
-                {
-                    CreatePrimitive(
-                        $"Floor {x},{z}",
-                        PrimitiveType.Cube,
-                        parent,
-                        new Vector3(
-                            -(DeckCellsWide - 1) * 0.5f + x,
-                            -0.055f,
-                            -(DeckCellsLong - 1) * 0.5f + z),
-                        new Vector3(0.94f, 0.11f, 0.94f),
-                        deck,
-                        false);
-                }
-            }
-
-            CreateBeam(parent, "Left Rail", new Vector3(-DeckWidth * 0.5f, -0.2f, 0f),
-                new Vector3(0.16f, 0.28f, DeckLength), frame);
-            CreateBeam(parent, "Right Rail", new Vector3(DeckWidth * 0.5f, -0.2f, 0f),
-                new Vector3(0.16f, 0.28f, DeckLength), frame);
         }
 
         private static void CreateFrame(Transform parent, Material metal, Material darkMetal)
@@ -595,7 +581,7 @@ namespace Steppe.Caravan
                 new Vector3(DeckWidth + 0.15f, 0.18f, 0.18f), darkMetal);
             CreateBeam(parent, "Center Spine", new Vector3(0f, -0.31f, 0f),
                 new Vector3(0.28f, 0.24f, DeckLength - 0.4f), metal);
-            for (var z = -8; z <= 8; z += 2)
+            for (var z = -1; z <= 1; z += 2)
             {
                 CreateBeam(parent, $"Cross Beam {z}", new Vector3(0f, -0.3f, z),
                     new Vector3(DeckWidth - 0.2f, 0.16f, 0.16f), metal);
@@ -623,7 +609,7 @@ namespace Steppe.Caravan
                 PrimitiveType.Cylinder,
                 visualRoot.transform,
                 Vector3.zero,
-                new Vector3(0.72f, 0.22f, 0.72f),
+                new Vector3(0.52f, 0.18f, 0.52f),
                 rubber,
                 false);
             tyre.transform.localRotation = Quaternion.Euler(0f, 0f, 90f);
@@ -632,7 +618,7 @@ namespace Steppe.Caravan
                 PrimitiveType.Cylinder,
                 visualRoot.transform,
                 Vector3.zero,
-                new Vector3(0.4f, 0.24f, 0.4f),
+                new Vector3(0.3f, 0.2f, 0.3f),
                 hub,
                 false);
             wheelHub.transform.localRotation = Quaternion.Euler(0f, 0f, 90f);

@@ -570,6 +570,7 @@ namespace Steppe.Caravan
         public float DeliveredKilowatts { get; private set; }
         public float DeficitKilowatts { get; private set; }
         public float SpilledKilowatts { get; private set; }
+        public event Action ConnectionsChanged;
 
         public void Configure(
             CaravanChassisController chassis,
@@ -821,6 +822,7 @@ namespace Steppe.Caravan
 
             cable = CreateCable(first, second);
             cables.Add(cable);
+            ConnectionsChanged?.Invoke();
             return true;
         }
 
@@ -835,6 +837,7 @@ namespace Steppe.Caravan
             cable.End?.Unregister(cable);
             cable.SetCurrent(0f);
             Destroy(cable.gameObject);
+            ConnectionsChanged?.Invoke();
             return true;
         }
 

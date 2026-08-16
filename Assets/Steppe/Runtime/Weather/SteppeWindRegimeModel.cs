@@ -183,15 +183,19 @@ namespace Steppe.Weather
                                + settings.WindDirectionVariationDegrees
                                * directionFactor
                                * (float)directionNoise;
-            var cloudSpeed = settings.PrevailingWindSpeed
-                             * speedFactor
-                             * (1f + settings.WindSpeedVariation * (float)speedNoise);
-            cloudSpeed = Mathf.Max(0.35f, cloudSpeed);
+            var baseAirMassSpeed = settings.PrevailingWindSpeed
+                                   * speedFactor
+                                   * (1f + settings.WindSpeedVariation * (float)speedNoise);
+            baseAirMassSpeed = Mathf.Max(0.35f, baseAirMassSpeed);
+            var cloudSpeed = baseAirMassSpeed
+                             * settings.CloudAdvectionSpeedMultiplier;
             var surfaceDegrees = cloudDegrees
                                  + settings.SurfaceWindDirectionVariationDegrees
                                  * directionFactor
                                  * (float)surfaceTurnNoise;
-            var surfaceSpeed = cloudSpeed
+            // Surface wind deliberately keeps its previous speed. Only the
+            // cloud-bearing flow and the weather fronts are accelerated.
+            var surfaceSpeed = baseAirMassSpeed
                                * settings.SurfaceWindSpeedRatio
                                * Mathf.Lerp(0.86f, 1.14f, (float)surfaceSpeedNoise);
             var gustiness = Mathf.Clamp01(

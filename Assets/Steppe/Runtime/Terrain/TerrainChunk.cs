@@ -9,7 +9,6 @@ namespace Steppe.Terrain
         private readonly GameObject gameObject;
         private readonly MeshFilter meshFilter;
         private readonly MeshRenderer meshRenderer;
-        private readonly MeshCollider meshCollider;
         private readonly Mesh mesh;
 
         public TerrainChunk(Transform parent, Material material)
@@ -20,8 +19,6 @@ namespace Steppe.Terrain
             meshFilter = gameObject.AddComponent<MeshFilter>();
             meshRenderer = gameObject.AddComponent<MeshRenderer>();
             meshRenderer.sharedMaterial = material;
-            meshCollider = gameObject.AddComponent<MeshCollider>();
-            meshCollider.enabled = false;
 
             mesh = new Mesh
             {
@@ -34,7 +31,6 @@ namespace Steppe.Terrain
 
         public ChunkCoordinate Coordinate { get; private set; }
         public int Lod { get; private set; }
-        public bool HasPhysicsCollider => gameObject.activeSelf && meshCollider.enabled && meshCollider.sharedMesh != null;
 
         public void Apply(
             ChunkCoordinate coordinate,
@@ -52,7 +48,6 @@ namespace Steppe.Terrain
                 0.0,
                 coordinate.Z * (double)chunkSize);
 
-            meshCollider.sharedMesh = null;
             mesh.Clear();
             mesh.indexFormat = data.Vertices.Length > ushort.MaxValue
                 ? IndexFormat.UInt32
@@ -64,25 +59,15 @@ namespace Steppe.Terrain
             mesh.triangles = data.Triangles;
             mesh.RecalculateBounds();
 
-            // Only the high-detail ring around the player participates in physics.
-            // This keeps rolling collision accurate without cooking hundreds of
-            // middle- and horizon-LOD colliders. Reactivate pooled objects before
-            // assigning sharedMesh; Unity otherwise drops the cooked mesh on some
-            // inactive-to-active reuse paths.
             gameObject.SetActive(true);
-            meshCollider.enabled = lod == 0;
-            meshCollider.sharedMesh = lod == 0 ? mesh : null;
-
-            meshRenderer.shadowCastingMode = lod == 0
-                ? ShadowCastingMode.On
-                : ShadowCastingMode.Off;
+            // Terrain skirts hide distant LOD transitions, but their vertical faces
+            // must never cast kilometre-long rectangular shadows across the steppe.
+            meshRenderer.shadowCastingMode = ShadowCastingMode.Off;
             meshRenderer.receiveShadows = true;
         }
 
         public void Deactivate()
         {
-            meshCollider.enabled = false;
-            meshCollider.sharedMesh = null;
             gameObject.SetActive(false);
         }
 
