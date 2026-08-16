@@ -1,0 +1,193 @@
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#111713">
+  <title>Steppe Observer</title>
+  <link rel="stylesheet" href="/styles.css">
+</head>
+<body>
+  <div class="shell">
+    <header class="topbar">
+      <div class="brand-block">
+        <div class="eyebrow">STEPPE / WORLD MODEL v2</div>
+        <h1>Поле живого мира</h1>
+      </div>
+      <div class="world-clock" aria-live="polite">
+        <div class="clock-primary" id="clockPrimary">Год 1 · день 001</div>
+        <div class="clock-secondary" id="clockSecondary">00:00 · зима</div>
+      </div>
+      <div class="top-actions">
+        <div class="world-badge" id="worldBadge">— × —</div>
+        <a class="icon-button" href="/api/save" title="Сохранить состояние" aria-label="Сохранить состояние">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3v12m0 0 4-4m-4 4-4-4M5 18v2h14v-2"/></svg>
+        </a>
+        <button class="icon-button" id="resetButton" title="Создать новый мир" aria-label="Создать новый мир">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M19 7v5h-5M5 17v-5h5M18 11a7 7 0 0 0-12-3l-1 1m1 4a7 7 0 0 0 12 3l1-1"/></svg>
+        </button>
+      </div>
+    </header>
+
+    <aside class="layers-panel panel">
+      <div class="panel-heading">
+        <span>Слои состояния</span>
+        <span class="live-dot" id="stateCount">—</span>
+      </div>
+      <label class="layer-search">
+        <span>Найти состояние</span>
+        <input id="layerSearch" type="search" placeholder="вода, почва, азот…" autocomplete="off">
+      </label>
+      <nav id="layerNavigation" aria-label="Слои симуляции"></nav>
+      <div class="model-note">
+        <span class="note-index">01</span>
+        <p>Биом здесь — описание результата, а не причина состояния.</p>
+      </div>
+    </aside>
+
+    <main class="map-panel panel">
+      <div class="map-toolbar">
+        <div>
+          <div class="map-kicker" id="layerGroup">ГИДРОЛОГИЯ</div>
+          <h2 id="layerTitle">Поверхностная вода</h2>
+        </div>
+        <div class="toolbar-options">
+          <button class="toolbar-button" id="checkpointButton" type="button">зафиксировать</button>
+          <button class="toolbar-button" id="mapModeButton" type="button" disabled>Δ к снимку</button>
+          <label class="check-control"><input type="checkbox" id="contourToggle" checked><span>контуры</span></label>
+          <label class="check-control"><input type="checkbox" id="vectorToggle" checked><span>векторы</span></label>
+        </div>
+      </div>
+
+      <div class="canvas-wrap" id="canvasWrap">
+        <canvas id="worldCanvas" aria-label="Карта состояния степи"></canvas>
+        <div class="orientation"><span>С</span><i></i></div>
+        <div class="loading" id="loading"><span></span>считаю потоки</div>
+        <div class="cell-coordinate" id="cellCoordinate">x — / y —</div>
+      </div>
+
+      <div class="legend-block">
+        <div class="legend-labels"><span id="legendMin">0</span><span id="legendUnit">мм</span><span id="legendMax">1</span></div>
+        <div class="legend-gradient" id="legendGradient"></div>
+        <div class="histogram" id="layerHistogram" aria-label="Распределение значений"></div>
+        <div class="distribution-line">
+          <span id="distributionSummary">распределение —</span>
+          <span id="scaleType">линейная шкала</span>
+        </div>
+        <div class="scale-warning" id="scaleWarning" hidden></div>
+        <p id="layerDescription">Вода, находящаяся на поверхности и способная перейти в почву или уйти вниз по рельефу.</p>
+      </div>
+    </main>
+
+    <aside class="inspector-panel panel">
+      <div class="panel-heading"><span>Наблюдение</span><span id="selectedCellLabel">ячейка —</span></div>
+
+      <section class="summary-card">
+        <div class="section-label">МИР СЕЙЧАС</div>
+        <div class="metric-hero"><strong id="meanTemperature">—</strong><span>°C<br>средняя поверхность</span></div>
+        <div class="metric-grid">
+          <div><span>Живая масса</span><strong id="meanBiomass">—</strong></div>
+          <div><span>Длина дня</span><strong id="dayLength">—</strong></div>
+          <div><span>Осадки</span><strong id="meanRain">—</strong></div>
+          <div><span>Солнце</span><strong id="sunElevation">—</strong></div>
+        </div>
+        <div class="history-heading">
+          <span>ИСТОРИЯ МИРА</span>
+          <span class="history-controls">
+            <select id="historyResolution" aria-label="Масштаб истории">
+              <option value="Recent">6 ч</option>
+              <option value="Daily">сутки</option>
+              <option value="Monthly">месяц</option>
+            </select>
+            <select id="worldHistoryMetric" aria-label="Показатель истории мира">
+              <option value="meanSurfaceTemperatureC">температура</option>
+              <option value="storedWaterMmPerCell">вся вода</option>
+              <option value="meanLiveBiomassGm2">живая масса</option>
+              <option value="meanSnowMm">снег</option>
+            </select>
+          </span>
+        </div>
+        <canvas class="history-chart" id="worldHistoryChart" aria-label="История среднего состояния степи"></canvas>
+        <div class="history-caption" id="worldHistoryCaption">накапливаю историю…</div>
+      </section>
+
+      <section class="events-card">
+        <div class="events-title-row">
+          <div class="section-label">ПЕРЕХОДЫ РЕЖИМА</div>
+          <span id="activeEventCount">наблюдение</span>
+        </div>
+        <div class="regime-events" id="regimeEvents">
+          <div class="events-empty">Детектору нужны первые сутки, чтобы отличить переход от суточного колебания.</div>
+        </div>
+      </section>
+
+      <section class="water-card">
+        <div class="section-label">ВОДНЫЙ БАЛАНС</div>
+        <div class="water-stock"><strong id="waterStored">—</strong><span>мм в среднем<br>на ячейку</span></div>
+        <div class="flow-row"><span class="flow-in">↘ вошло</span><strong id="waterIn">—</strong></div>
+        <div class="flow-row"><span class="flow-out">↗ вышло</span><strong id="waterOut">—</strong></div>
+        <div class="balance-line"><span>ошибка баланса</span><strong id="waterError">—</strong></div>
+      </section>
+
+      <section class="cell-card" id="cellCard">
+        <div class="section-label">СОСТОЯНИЕ МЕСТА</div>
+        <div class="empty-state" id="emptyCell">Выберите точку на карте, чтобы прочитать все состояния одной ячейки.</div>
+        <div id="cellDetails" hidden>
+          <div class="biome-line"><span>сейчас это</span><strong id="cellBiome">—</strong></div>
+          <div class="selected-state-card">
+            <div class="selected-state-heading"><span id="selectedStateTitle">—</span><span id="selectedStateStatus">—</span></div>
+            <strong id="selectedStateValue">—</strong>
+            <div class="state-position"><i id="selectedStateMarker"></i></div>
+            <p id="selectedStateContext">—</p>
+          </div>
+          <div class="cell-history-card">
+            <div class="history-heading">
+              <span>ИСТОРИЯ ТОЧКИ</span>
+              <button class="pin-button" id="pinCellButton" type="button">закрепить</button>
+            </div>
+            <canvas class="history-chart" id="cellHistoryChart" aria-label="История выбранного состояния ячейки"></canvas>
+            <div class="history-caption" id="cellHistoryCaption">Закрепите точку, чтобы состояние записывалось во времени.</div>
+          </div>
+          <div class="process-card">
+            <div class="process-heading"><span>ИЗМЕНЕНИЕ ЗА ПЕРИОД</span><span id="changePeriod">—</span></div>
+            <div class="state-delta"><span>Δ состояния</span><strong id="selectedStateDelta">—</strong></div>
+            <div class="flux-contributions" id="fluxContributions"></div>
+            <div class="unexplained-change" id="unexplainedChange" hidden></div>
+          </div>
+          <div class="drainage-line" id="drainageLine"></div>
+          <div class="cell-state-groups" id="cellStateGroups"></div>
+        </div>
+      </section>
+    </aside>
+
+    <footer class="timeline-panel panel">
+      <button class="play-button" id="playButton" aria-label="Запустить симуляцию">
+        <svg class="play-icon" viewBox="0 0 20 20"><path d="M6 4l10 6-10 6z"/></svg>
+        <svg class="pause-icon" viewBox="0 0 20 20"><path d="M5 4h4v12H5zm6 0h4v12h-4z"/></svg>
+      </button>
+      <div class="speed-control" role="group" aria-label="Скорость">
+        <button data-speed="1" class="active">×1</button>
+        <button data-speed="10">×10</button>
+        <button data-speed="100">×100</button>
+        <button data-speed="1000">×1000</button>
+      </div>
+      <div class="time-ruler">
+        <div class="season-track">
+          <span>ЗИМА</span><span>ВЕСНА</span><span>ЛЕТО</span><span>ОСЕНЬ</span>
+          <i id="yearMarker"></i>
+        </div>
+        <div class="day-track"><i id="dayProgress"></i></div>
+      </div>
+      <div class="step-buttons" role="group" aria-label="Шаг времени">
+        <button data-hours="1">+ 1 час</button>
+        <button data-hours="24">+ 1 день</button>
+        <button data-hours="720">+ 1 месяц</button>
+        <button data-hours="8760">+ 1 год</button>
+      </div>
+    </footer>
+  </div>
+
+  <div class="toast" id="toast" role="status"></div>
+  <script src="/app.js" defer></script>
+</body>
+</html>

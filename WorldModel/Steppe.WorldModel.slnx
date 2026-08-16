@@ -1,0 +1,7 @@
+<Solution>
+  <Project Path="Steppe.Simulation/Steppe.Simulation.csproj" />
+  <Project Path="Steppe.Cli/Steppe.Cli.csproj" />
+  <Project Path="Steppe.Observer/Steppe.Observer.csproj" />
+  <Project Path="Steppe.Simulation.Tests/Steppe.Simulation.Tests.csproj" />
+  <Project Path="Steppe.Stress/Steppe.Stress.csproj" />
+</Solution>
