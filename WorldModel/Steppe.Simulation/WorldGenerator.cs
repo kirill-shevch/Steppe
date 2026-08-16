@@ -367,6 +367,8 @@ internal static class WorldGenerator
                     0.34f + state.ClayFraction[index] * 0.65f - state.LiveBiomassGm2[index] / 1200f,
                     0f,
                     0.8f);
+                state.FireIntensityFraction[index] = 0f;
+                state.BurnScarFraction[index] = 0f;
             }
         }
     }

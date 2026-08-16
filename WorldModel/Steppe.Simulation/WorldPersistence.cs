@@ -30,6 +30,7 @@ internal static class WorldPersistence
         writer.Write(config.GeographyErosionPasses);
         writer.Write(config.GiantHarvesterCount);
         writer.Write(config.ClimateVariability);
+        writer.Write(config.WildfireEnabled);
         writer.Write(clock.ElapsedHours);
 
         var snapshot = budget.Snapshot(state);
@@ -79,7 +80,8 @@ internal static class WorldPersistence
             BaseStepMinutes = reader.ReadInt32(),
             GeographyErosionPasses = reader.ReadInt32(),
             GiantHarvesterCount = schemaVersion >= 4 ? reader.ReadInt32() : 0,
-            ClimateVariability = schemaVersion >= 5 ? reader.ReadSingle() : 1f
+            ClimateVariability = schemaVersion >= 5 ? reader.ReadSingle() : 1f,
+            WildfireEnabled = schemaVersion >= 6 ? reader.ReadBoolean() : true
         }.Validate();
         var clock = new WorldClock(reader.ReadDouble());
         var initialWater = reader.ReadDouble();
@@ -89,11 +91,12 @@ internal static class WorldPersistence
         var externalNitrogenInput = schemaVersion >= 4 ? reader.ReadDouble() : 0d;
         var externalNitrogenOutput = schemaVersion >= 4 ? reader.ReadDouble() : 0d;
         var state = new WorldState(config.CellCount);
-        var fields = schemaVersion >= 4
-            ? state.SerializableFloatFields().ToArray()
-            : state.SerializableFloatFields()
-                .Where(field => !ReferenceEquals(field, state.SoilCompactionFraction))
-                .ToArray();
+        var fields = state.SerializableFloatFields()
+            .Where(field => schemaVersion >= 4 || !ReferenceEquals(field, state.SoilCompactionFraction))
+            .Where(field => schemaVersion >= 6
+                || (!ReferenceEquals(field, state.FireIntensityFraction)
+                    && !ReferenceEquals(field, state.BurnScarFraction)))
+            .ToArray();
         var fieldCount = reader.ReadInt32();
         if (fieldCount != fields.Length)
         {

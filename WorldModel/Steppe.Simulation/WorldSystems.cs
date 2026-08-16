@@ -1,6 +1,6 @@
 namespace Steppe.Simulation;
 
-internal static class WorldSystems
+internal static partial class WorldSystems
 {
     private const float TwoPi = MathF.PI * 2f;
 
@@ -22,9 +22,18 @@ internal static class WorldSystems
         UpdateHydrology(config, state, waterBudget, fluxState, hours);
         RecoverSoilCompaction(config, state, fluxState, hours);
 
-        if (IsDue(clock.ElapsedHours, deltaHours, 3d))
+        var biologyHours = DueDuration(clock.ElapsedHours, deltaHours, 3d);
+        if (biologyHours > 0d)
         {
-            UpdateBiology(config, state, fluxState, 3f);
+            UpdateBiology(config, state, fluxState, (float)biologyHours);
+            UpdateWildfire(
+                config,
+                clock,
+                state,
+                fluxState,
+                climate,
+                (float)biologyHours,
+                IsDue(clock.ElapsedHours, deltaHours, 24d));
         }
 
         if (IsDue(clock.ElapsedHours, deltaHours, 6d))
@@ -38,6 +47,28 @@ internal static class WorldSystems
         var before = Math.Floor((elapsedHours + 1e-8) / intervalHours);
         var after = Math.Floor((elapsedHours + deltaHours + 1e-8) / intervalHours);
         return after > before;
+    }
+
+    private static double DueDuration(double elapsedHours, double deltaHours, double intervalHours)
+    {
+        var before = Math.Floor((elapsedHours + 1e-8) / intervalHours);
+        var after = Math.Floor((elapsedHours + deltaHours + 1e-8) / intervalHours);
+        return Math.Max(0d, after - before) * intervalHours;
+    }
+
+    private static void ForEachIndependentCell(WorldConfig config, Action<int> action)
+    {
+        if (config.CellCount < 16_384)
+        {
+            for (var index = 0; index < config.CellCount; index++)
+            {
+                action(index);
+            }
+
+            return;
+        }
+
+        Parallel.For(0, config.CellCount, action);
     }
 
     private static void UpdateEnergy(
@@ -58,30 +89,35 @@ internal static class WorldSystems
         var surfaceRelaxation = 1f - MathF.Exp(-0.22f * hours);
         var airRelaxation = 1f - MathF.Exp(-0.14f * hours);
         var soilRelaxation = 1f - MathF.Exp(-0.018f * hours);
+        var seasonalBackground = SeasonalAirBaseline(clock, climate);
+        var nightCooling = solar.TopOfAtmosphereWm2 <= 0 ? 4f : 0f;
 
-        for (var index = 0; index < config.CellCount; index++)
+        ForEachIndependentCell(config, index =>
         {
-            var slope = MathF.Atan(state.Slope[index]);
-            var aspect = state.AspectRadians[index];
-            var normalX = MathF.Sin(slope) * MathF.Cos(aspect);
-            var normalY = MathF.Sin(slope) * MathF.Sin(aspect);
-            var normalZ = MathF.Cos(slope);
-            var incidence = MathF.Max(0f, normalX * sunX + normalY * sunY + normalZ * sunZ);
+            var incidence = MathF.Max(
+                0f,
+                state.TerrainNormalX[index] * sunX
+                    + state.TerrainNormalY[index] * sunY
+                    + state.TerrainNormalZ[index] * sunZ);
             var cloudShadow = Math.Clamp(state.CloudWaterMm[index] / 8f, 0f, 0.82f);
             var snowAlbedo = Math.Clamp(state.SnowWaterEquivalentMm[index] / 18f, 0f, 1f);
-            var albedo = 0.18f + snowAlbedo * 0.55f + Math.Clamp(state.DryBiomassGm2[index] / 2500f, 0f, 0.08f);
+            var albedo = Math.Clamp(
+                0.18f + snowAlbedo * 0.55f
+                    + Math.Clamp(state.DryBiomassGm2[index] / 2500f, 0f, 0.08f)
+                    - state.BurnScarFraction[index] * 0.065f,
+                0.08f,
+                0.82f);
             var radiation = directRadiation * incidence * (1f - cloudShadow) * (1f - albedo);
             state.SolarRadiationWm2[index] = radiation;
 
-            var seasonalBackground = SeasonalAirBaseline(clock, climate);
-            var elevationCooling = Math.Max(0f, state.ElevationM[index] - 250f) * 0.0062f;
+            var elevationCooling = state.ElevationCoolingC[index];
             var wetThermalBuffer = Math.Clamp(
                 (state.SurfaceWaterMm[index] + state.RootWaterMm[index] * 0.08f) / 25f,
                 0f,
                 1f);
             var surfaceTarget = seasonalBackground - elevationCooling
                 + radiation * 0.047f
-                - (1f - wetThermalBuffer) * (solar.TopOfAtmosphereWm2 <= 0 ? 4f : 0f);
+                - (1f - wetThermalBuffer) * nightCooling;
             state.SurfaceTemperatureC[index] += (surfaceTarget - state.SurfaceTemperatureC[index])
                 * surfaceRelaxation
                 * (1f - wetThermalBuffer * 0.28f);
@@ -91,7 +127,7 @@ internal static class WorldSystems
             state.AirTemperatureC[index] += (airTarget - state.AirTemperatureC[index]) * airRelaxation;
             state.SoilTemperatureC[index] += (state.SurfaceTemperatureC[index] - state.SoilTemperatureC[index])
                 * soilRelaxation;
-        }
+        });
     }
 
     private static void UpdateWind(
@@ -106,43 +142,54 @@ internal static class WorldSystems
             * climate.WindSpeedMultiplier;
         var synopticPhase = (float)(clock.ElapsedHours / (24d * 5.5d));
         var response = 1f - MathF.Exp(-0.28f * hours);
+        var wavePhase = TwoPi * synopticPhase;
+        var wavePhaseSin = MathF.Sin(wavePhase);
+        var wavePhaseCos = MathF.Cos(wavePhase);
+        var meridionalPhase = wavePhase * 0.43f;
+        var meridionalPhaseSin = MathF.Sin(meridionalPhase);
+        var meridionalPhaseCos = MathF.Cos(meridionalPhase);
+        var diagonalPhase = wavePhase * 0.63f;
+        var diagonalPhaseSin = MathF.Sin(diagonalPhase);
+        var diagonalPhaseCos = MathF.Cos(diagonalPhase);
+        var windOscillation = MathF.Sin((float)clock.ElapsedHours * 0.018f) * 0.8f;
 
-        for (var y = 0; y < config.Height; y++)
+        ForEachIndependentCell(config, index =>
         {
-            for (var x = 0; x < config.Width; x++)
-            {
-                var index = Index(x, y, config.Width);
-                var wave = MathF.Sin(TwoPi * (x / (float)config.Width - synopticPhase));
-                var meridionalWave = MathF.Cos(TwoPi * (y / (float)config.Height + synopticPhase * 0.43f));
-                var thermalAnomaly = state.AirTemperatureC[index] - state.SoilTemperatureC[index];
-                state.AirPressureHpa[index] = 1013.25f * MathF.Exp(-state.ElevationM[index] / 8500f)
-                    + wave * 5.5f
-                    + meridionalWave * 2.2f
-                    - thermalAnomaly * 0.38f;
-            }
-        }
+            var wave = state.PressureWaveSin[index] * wavePhaseCos
+                - state.PressureWaveCos[index] * wavePhaseSin;
+            var meridionalWave = state.PressureMeridionalCos[index] * meridionalPhaseCos
+                - state.PressureMeridionalSin[index] * meridionalPhaseSin;
+            var diagonalWave = state.PressureDiagonalSin[index] * diagonalPhaseCos
+                - state.PressureDiagonalCos[index] * diagonalPhaseSin;
+            var thermalAnomaly = state.AirTemperatureC[index] - state.SoilTemperatureC[index];
+            state.AirPressureHpa[index] = state.BaseAirPressureHpa[index]
+                + wave * 5.5f
+                + meridionalWave * 2.2f
+                + diagonalWave * 3.4f
+                - thermalAnomaly * 0.38f;
+        });
 
-        for (var y = 0; y < config.Height; y++)
+        ForEachIndependentCell(config, index =>
         {
-            for (var x = 0; x < config.Width; x++)
-            {
-                var index = Index(x, y, config.Width);
-                var left = state.AirPressureHpa[Index(Math.Max(0, x - 1), y, config.Width)];
-                var right = state.AirPressureHpa[Index(Math.Min(config.Width - 1, x + 1), y, config.Width)];
-                var down = state.AirPressureHpa[Index(x, Math.Max(0, y - 1), config.Width)];
-                var up = state.AirPressureHpa[Index(x, Math.Min(config.Height - 1, y + 1), config.Width)];
-                var gradientX = right - left;
-                var gradientY = up - down;
-                var terrainDrag = 1f / (1f + state.Slope[index] * 18f + state.LiveBiomassGm2[index] / 1800f);
-                var targetX = (seasonalWestWind + climate.WindAnomalyXMs - gradientX * 0.85f) * terrainDrag;
-                var targetY = (-gradientY * 0.85f
-                        + MathF.Sin((float)clock.ElapsedHours * 0.018f) * 0.8f
-                        + climate.WindAnomalyYMs)
-                    * terrainDrag;
-                state.WindXMs[index] += (targetX - state.WindXMs[index]) * response;
-                state.WindYMs[index] += (targetY - state.WindYMs[index]) * response;
-            }
-        }
+            var x = index % config.Width;
+            var y = index / config.Width;
+            var left = state.AirPressureHpa[Index(Math.Max(0, x - 1), y, config.Width)];
+            var right = state.AirPressureHpa[Index(Math.Min(config.Width - 1, x + 1), y, config.Width)];
+            var down = state.AirPressureHpa[Index(x, Math.Max(0, y - 1), config.Width)];
+            var up = state.AirPressureHpa[Index(x, Math.Min(config.Height - 1, y + 1), config.Width)];
+            var gradientX = right - left;
+            var gradientY = up - down;
+            var terrainDrag = 1f / (1f + state.Slope[index] * 18f + state.LiveBiomassGm2[index] / 1800f);
+            var targetX = (seasonalWestWind + climate.WindAnomalyXMs
+                    - gradientX * 1.05f - gradientY * 0.28f)
+                * terrainDrag;
+            var targetY = (-gradientY * 1.05f + gradientX * 0.28f
+                    + windOscillation
+                    + climate.WindAnomalyYMs)
+                * terrainDrag;
+            state.WindXMs[index] += (targetX - state.WindXMs[index]) * response;
+            state.WindYMs[index] += (targetY - state.WindYMs[index]) * response;
+        });
     }
 
     private static void AdvectAtmosphere(
@@ -169,13 +216,13 @@ internal static class WorldSystems
             boundaryTemperature,
             fluxState,
             VectorProcess.AirTemperatureAdvection);
-        for (var index = 0; index < config.CellCount; index++)
+        ForEachIndependentCell(config, index =>
         {
             fluxState.Add(
                 SimulationFlux.AirTemperatureTransport,
                 index,
                 state.ScratchA[index] - state.AirTemperatureC[index]);
-        }
+        });
 
         Array.Copy(state.ScratchA, state.AirTemperatureC, config.CellCount);
     }
@@ -193,51 +240,68 @@ internal static class WorldSystems
         SimulationFlux transportFlux,
         ClimateForcingSnapshot climate)
     {
-        double before = 0;
-        double after = 0;
         var stormPulse = climate.SynopticStormPulse * climate.StormIntensityMultiplier;
         var shiftedDay = clock.DayOfYear - climate.SeasonPhaseShiftDays;
         var seasonWetness = 0.5f + 0.5f * MathF.Cos(TwoPi * (shiftedDay - 115f) / 365f);
+        var chunkCount = config.CellCount >= 16_384
+            ? Math.Min(Environment.ProcessorCount, config.Height)
+            : 1;
+        var beforeByChunk = new double[chunkCount];
+        var afterByChunk = new double[chunkCount];
 
-        for (var y = 0; y < config.Height; y++)
+        void ProcessChunk(int chunk)
         {
-            for (var x = 0; x < config.Width; x++)
+            var startY = chunk * config.Height / chunkCount;
+            var endY = (chunk + 1) * config.Height / chunkCount;
+            double localBefore = 0;
+            double localAfter = 0;
+            for (var y = startY; y < endY; y++)
             {
-                var index = Index(x, y, config.Width);
-                before += source[index];
-                var displacementX = state.WindXMs[index] * hours * 0.055f;
-                var displacementY = state.WindYMs[index] * hours * 0.055f;
-                var sourceX = x - displacementX;
-                var sourceY = y - displacementY;
-                float value;
-                if (sourceX < 0 || sourceY < 0 || sourceX > config.Width - 1 || sourceY > config.Height - 1)
+                for (var x = 0; x < config.Width; x++)
                 {
-                    var latitudeBand = 0.72f + 0.28f * MathF.Cos((y / (float)config.Height - 0.45f) * MathF.PI);
-                    value = cloud
-                        ? stormPulse * (0.8f + 1.4f * seasonWetness)
-                            * climate.MoistureMultiplier * latitudeBand
-                        : (3.8f + (1.2f + 4.5f * seasonWetness + stormPulse * 3.5f)
-                            * climate.MoistureMultiplier) * latitudeBand;
-                }
-                else
-                {
-                    value = Bilinear(source, config.Width, config.Height, sourceX, sourceY);
-                }
+                    var index = Index(x, y, config.Width);
+                    localBefore += source[index];
+                    var displacementX = state.WindXMs[index] * hours * 0.055f;
+                    var displacementY = state.WindYMs[index] * hours * 0.055f;
+                    var sourceX = x - displacementX;
+                    var sourceY = y - displacementY;
+                    float value;
+                    if (sourceX < 0 || sourceY < 0 || sourceX > config.Width - 1 || sourceY > config.Height - 1)
+                    {
+                        var latitudeBand = 0.72f + 0.28f * MathF.Cos((y / (float)config.Height - 0.45f) * MathF.PI);
+                        value = cloud
+                            ? stormPulse * (0.8f + 1.4f * seasonWetness)
+                                * climate.MoistureMultiplier * latitudeBand
+                            : (3.8f + (1.2f + 4.5f * seasonWetness + stormPulse * 3.5f)
+                                * climate.MoistureMultiplier) * latitudeBand;
+                    }
+                    else
+                    {
+                        value = Bilinear(source, config.Width, config.Height, sourceX, sourceY);
+                    }
 
-                destination[index] = Math.Max(0f, value);
-                fluxState.Add(transportFlux, index, destination[index] - source[index]);
-                var vectorProcess = transportFlux == SimulationFlux.CloudTransport
-                    ? VectorProcess.CloudAdvection
-                    : VectorProcess.HumidityAdvection;
-                fluxState.AddVector(
-                    vectorProcess,
-                    index,
-                    destination[index] * displacementX,
-                    destination[index] * displacementY);
-                after += destination[index];
+                    destination[index] = Math.Max(0f, value);
+                    fluxState.Add(transportFlux, index, destination[index] - source[index]);
+                    var vectorProcess = transportFlux == SimulationFlux.CloudTransport
+                        ? VectorProcess.CloudAdvection
+                        : VectorProcess.HumidityAdvection;
+                    fluxState.AddVector(
+                        vectorProcess,
+                        index,
+                        destination[index] * displacementX,
+                        destination[index] * displacementY);
+                    localAfter += destination[index];
+                }
             }
+
+            beforeByChunk[chunk] = localBefore;
+            afterByChunk[chunk] = localAfter;
         }
 
+        if (chunkCount == 1) ProcessChunk(0);
+        else Parallel.For(0, chunkCount, ProcessChunk);
+        var before = beforeByChunk.Sum();
+        var after = afterByChunk.Sum();
         waterBudget.AddExternal(after - before);
     }
 
@@ -251,24 +315,22 @@ internal static class WorldSystems
         WorldFluxState fluxState,
         VectorProcess vectorProcess)
     {
-        for (var y = 0; y < config.Height; y++)
+        ForEachIndependentCell(config, index =>
         {
-            for (var x = 0; x < config.Width; x++)
-            {
-                var index = Index(x, y, config.Width);
-                var sourceX = x - state.WindXMs[index] * hours * 0.055f;
-                var sourceY = y - state.WindYMs[index] * hours * 0.055f;
-                destination[index] = sourceX < 0 || sourceY < 0
-                    || sourceX > config.Width - 1 || sourceY > config.Height - 1
-                    ? boundaryValue
-                    : Bilinear(source, config.Width, config.Height, sourceX, sourceY);
-                fluxState.AddVector(
-                    vectorProcess,
-                    index,
-                    destination[index] * state.WindXMs[index] * hours * 0.055f,
-                    destination[index] * state.WindYMs[index] * hours * 0.055f);
-            }
-        }
+            var x = index % config.Width;
+            var y = index / config.Width;
+            var sourceX = x - state.WindXMs[index] * hours * 0.055f;
+            var sourceY = y - state.WindYMs[index] * hours * 0.055f;
+            destination[index] = sourceX < 0 || sourceY < 0
+                || sourceX > config.Width - 1 || sourceY > config.Height - 1
+                ? boundaryValue
+                : Bilinear(source, config.Width, config.Height, sourceX, sourceY);
+            fluxState.AddVector(
+                vectorProcess,
+                index,
+                destination[index] * state.WindXMs[index] * hours * 0.055f,
+                destination[index] * state.WindYMs[index] * hours * 0.055f);
+        });
     }
 
     private static void UpdateCloudsAndPrecipitation(
@@ -277,15 +339,17 @@ internal static class WorldSystems
         WorldFluxState fluxState,
         float hours)
     {
-        for (var index = 0; index < config.CellCount; index++)
+        var condensationResponse = 1f - MathF.Exp(-0.8f * hours);
+        ForEachIndependentCell(config, index =>
         {
             state.PrecipitationMmPerHour[index] = 0f;
             var saturation = Math.Clamp(5.2f * MathF.Exp(0.055f * state.AirTemperatureC[index]), 1.4f, 32f);
+            state.SaturationHumidityMm[index] = saturation;
             if (state.AirHumidityMm[index] > saturation)
             {
                 var condensed = Math.Min(
                     state.AirHumidityMm[index] - saturation,
-                    (state.AirHumidityMm[index] - saturation) * (1f - MathF.Exp(-0.8f * hours)));
+                    (state.AirHumidityMm[index] - saturation) * condensationResponse);
                 state.AirHumidityMm[index] -= condensed;
                 state.CloudWaterMm[index] += condensed;
                 fluxState.Add(SimulationFlux.Condensation, index, condensed);
@@ -315,7 +379,7 @@ internal static class WorldSystems
             state.SurfaceWaterMm[index] += rainfall;
             fluxState.Add(SimulationFlux.Snowfall, index, snowfall);
             fluxState.Add(SimulationFlux.Rainfall, index, rainfall);
-        }
+        });
     }
 
     private static void UpdateSnowAndSoilTemperature(
@@ -325,7 +389,9 @@ internal static class WorldSystems
         WorldFluxState fluxState,
         float hours)
     {
-        for (var index = 0; index < config.CellCount; index++)
+        var freezingResponse = 1f - MathF.Exp(-0.07f * hours);
+        var thawingResponse = 1f - MathF.Exp(-0.16f * hours);
+        ForEachIndependentCell(config, index =>
         {
             var meltEnergy = Math.Max(0f, state.SurfaceTemperatureC[index]) * 0.18f
                 + state.SolarRadiationWm2[index] * 0.00045f;
@@ -337,7 +403,7 @@ internal static class WorldSystems
             var wind = MathF.Sqrt(
                 state.WindXMs[index] * state.WindXMs[index]
                 + state.WindYMs[index] * state.WindYMs[index]);
-            var saturation = Math.Clamp(5.2f * MathF.Exp(0.055f * state.AirTemperatureC[index]), 1.4f, 32f);
+            var saturation = state.SaturationHumidityMm[index];
             var vaporDeficit = Math.Clamp(1f - state.AirHumidityMm[index] / saturation, 0f, 1f);
             var sublimation = Math.Min(
                 state.SnowWaterEquivalentMm[index],
@@ -347,9 +413,11 @@ internal static class WorldSystems
             fluxState.Add(SimulationFlux.SnowSublimation, index, sublimation);
 
             var freezeTarget = Math.Clamp((-state.SoilTemperatureC[index] + 1.2f) / 8f, 0f, 1f);
-            var response = 1f - MathF.Exp(-(freezeTarget > state.FrozenSoilFraction[index] ? 0.07f : 0.16f) * hours);
+            var response = freezeTarget > state.FrozenSoilFraction[index]
+                ? freezingResponse
+                : thawingResponse;
             state.FrozenSoilFraction[index] += (freezeTarget - state.FrozenSoilFraction[index]) * response;
-        }
+        });
 
         RedistributeSnow(config, state, waterBudget, fluxState, hours);
     }
@@ -452,7 +520,7 @@ internal static class WorldSystems
         WorldFluxState fluxState,
         float hours)
     {
-        for (var index = 0; index < config.CellCount; index++)
+        ForEachIndependentCell(config, index =>
         {
             var rootCapacity = RootCapacityMm(state, index);
             var poreSpace = Math.Max(0f, rootCapacity - state.RootWaterMm[index]);
@@ -468,14 +536,16 @@ internal static class WorldSystems
 
             var fieldCapacity = rootCapacity * (0.46f + state.ClayFraction[index] * 0.18f);
             var excess = Math.Max(0f, state.RootWaterMm[index] - fieldCapacity);
-            var drainageResponse = 1f - MathF.Exp(-state.PermeabilityMmPerHour[index] * 0.0012f * hours);
+            var drainageResponse = Math.Abs(hours - config.BaseStepMinutes / 60f) < 1e-6f
+                ? state.PercolationResponseAtBaseStep[index]
+                : 1f - MathF.Exp(-state.PermeabilityMmPerHour[index] * 0.0012f * hours);
             var groundwaterSpace = Math.Max(0f, GroundwaterCapacityMm(state, index) - state.GroundwaterMm[index]);
             var percolation = Math.Min(excess * drainageResponse, groundwaterSpace);
             state.RootWaterMm[index] -= percolation;
             state.GroundwaterMm[index] += percolation;
             fluxState.Add(SimulationFlux.Percolation, index, percolation);
 
-        }
+        });
     }
 
     internal static void RouteSurfaceWater(
@@ -645,22 +715,22 @@ internal static class WorldSystems
         WorldFluxState fluxState,
         float hours)
     {
-        for (var index = 0; index < config.CellCount; index++)
+        var dischargeResponse = 1f - MathF.Exp(-0.08f * hours);
+        ForEachIndependentCell(config, index =>
         {
             var groundwaterCapacity = GroundwaterCapacityMm(state, index);
             if (state.GroundwaterMm[index] <= groundwaterCapacity)
             {
-                continue;
+                return;
             }
 
             var spring = Math.Min(
                 state.GroundwaterMm[index] - groundwaterCapacity,
-                (state.GroundwaterMm[index] - groundwaterCapacity)
-                    * (1f - MathF.Exp(-0.08f * hours)));
+                (state.GroundwaterMm[index] - groundwaterCapacity) * dischargeResponse);
             state.GroundwaterMm[index] -= spring;
             state.SurfaceWaterMm[index] += spring;
             fluxState.Add(SimulationFlux.GroundwaterDischarge, index, spring);
-        }
+        });
     }
 
     private static float ExchangePair(WorldState state, int a, int b, float hours)
@@ -688,12 +758,12 @@ internal static class WorldSystems
         WorldFluxState fluxState,
         float hours)
     {
-        for (var index = 0; index < config.CellCount; index++)
+        ForEachIndependentCell(config, index =>
         {
             var energy = Math.Clamp(state.SolarRadiationWm2[index] / 720f, 0f, 1.4f);
             var vaporDeficit = Math.Clamp(
                 1f - state.AirHumidityMm[index]
-                    / Math.Clamp(5.2f * MathF.Exp(0.055f * state.AirTemperatureC[index]), 1.4f, 32f),
+                    / state.SaturationHumidityMm[index],
                 0f,
                 1f);
             var wind = MathF.Sqrt(
@@ -716,7 +786,7 @@ internal static class WorldSystems
             state.RootWaterMm[index] -= transpiration;
             state.AirHumidityMm[index] += surfaceEvaporation + transpiration;
             fluxState.Add(SimulationFlux.Transpiration, index, transpiration);
-        }
+        });
     }
 
     private static void UpdateBiology(
@@ -725,7 +795,7 @@ internal static class WorldSystems
         WorldFluxState fluxState,
         float hours)
     {
-        for (var index = 0; index < config.CellCount; index++)
+        ForEachIndependentCell(config, index =>
         {
             var rootCapacity = RootCapacityMm(state, index);
             var waterResponse = SmoothStep(0.06f, 0.38f, state.RootWaterMm[index] / Math.Max(1f, rootCapacity));
@@ -801,7 +871,7 @@ internal static class WorldSystems
                 0.05f,
                 1.2f);
             fluxState.Add(SimulationFlux.SeedBankChange, index, state.SeedBank[index] - previousSeedBank);
-        }
+        });
     }
 
     private static void UpdateSedimentAndDust(
@@ -928,10 +998,15 @@ internal static class WorldSystems
         WorldFluxState fluxState,
         float hours)
     {
-        for (var index = 0; index < config.CellCount; index++)
+        if (config.GiantHarvesterCount == 0)
+        {
+            return;
+        }
+
+        ForEachIndependentCell(config, index =>
         {
             var compaction = state.SoilCompactionFraction[index];
-            if (compaction <= 0f) continue;
+            if (compaction <= 0f) return;
             var biologicalLoosening = Math.Clamp(state.LiveBiomassGm2[index] / 360f, 0f, 1f);
             var wetting = Math.Clamp((state.RootWaterMm[index] - 35f) / 90f, 0f, 1f);
             var freezeThaw = state.FrozenSoilFraction[index] is > 0.05f and < 0.8f ? 1f : 0f;
@@ -941,7 +1016,7 @@ internal static class WorldSystems
                     + wetting * 0.00002f + freezeThaw * 0.00008f) * hours);
             state.SoilCompactionFraction[index] -= recovery;
             fluxState.Add(SimulationFlux.SoilCompactionRecovery, index, recovery);
-        }
+        });
     }
 
     private static float RootCapacityMm(WorldState state, int index) =>

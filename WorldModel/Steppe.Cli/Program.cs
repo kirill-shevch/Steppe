@@ -23,7 +23,8 @@ try
             LatitudeDegrees = options.Latitude,
             BaseStepMinutes = options.StepMinutes,
             GiantHarvesterCount = options.Harvesters,
-            ClimateVariability = options.ClimateVariability
+            ClimateVariability = options.ClimateVariability,
+            WildfireEnabled = options.WildfireEnabled
         });
 
     if (options.AdvanceHours > 0)
@@ -126,6 +127,7 @@ internal sealed record CliOptions(
     int StepMinutes,
     int Harvesters,
     float ClimateVariability,
+    bool WildfireEnabled,
     double AdvanceHours,
     string? LoadPath,
     string? SavePath,
@@ -178,6 +180,7 @@ internal sealed record CliOptions(
             ReadInt(values, "step-minutes", 180),
             ReadInt(values, "harvesters", 10),
             (float)ReadDouble(values, "climate-variability", 1),
+            ReadBool(values, "wildfire", true),
             hours,
             ReadString(values, "load"),
             ReadString(values, "save"),
@@ -204,6 +207,7 @@ internal sealed record CliOptions(
               --step-minutes N     Base simulation step dividing 1440 (default 180)
               --harvesters N       Giant harvester population (default 10)
               --climate-variability N  Interannual anomaly strength, 0..2 (default 1)
+              --wildfire true|false    Enable autonomous steppe fires (default true)
               --hours N            Hours to advance
               --days N             Days to advance
               --years N            365-day years to advance
@@ -226,5 +230,10 @@ internal sealed record CliOptions(
     private static double ReadDouble(IReadOnlyDictionary<string, string?> values, string key, double fallback) =>
         ReadString(values, key) is { } value
             ? double.Parse(value, NumberStyles.Float, CultureInfo.InvariantCulture)
+            : fallback;
+
+    private static bool ReadBool(IReadOnlyDictionary<string, string?> values, string key, bool fallback) =>
+        ReadString(values, key) is { } value
+            ? bool.Parse(value)
             : fallback;
 }

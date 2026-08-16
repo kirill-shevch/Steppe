@@ -20,6 +20,8 @@ public static class StateCatalog
     private static readonly string[] LifePalette = ["#181c14", "#334326", "#5f7936", "#9eb454", "#d9ce75"];
     private static readonly string[] DryPalette = ["#1b1913", "#4b3d24", "#896a35", "#c6a358", "#e6d59a"];
     private static readonly string[] MatterPalette = ["#171714", "#4b3b30", "#86614a", "#c39a72", "#e0ceb0"];
+    private static readonly string[] FirePalette = ["#171412", "#5b2118", "#b44622", "#ed8b32", "#fff0a6"];
+    private static readonly string[] CharPalette = ["#171614", "#292722", "#49443a", "#746b55", "#a49370"];
     private static readonly string[] CyclicPalette = ["#78a7c4", "#9bbd77", "#d9c36a", "#ce8067", "#987ab3", "#78a7c4"];
     private static readonly string[] CategoryPalette = ["#2f3c34", "#8c7eaa"];
 
@@ -67,10 +69,12 @@ public static class StateCatalog
         D(SimulationLayer.AvailableNitrogen, StateGroup.Life, "ЖИЗНЬ", 460, "Доступный азот", "Азот", "Минеральный азот, доступный для текущего роста растений.", "г/м²", StateKind.Raw, StateScale.Linear, 0, 20, 2, "#a9b96c", LifePalette),
         D(SimulationLayer.PlantNitrogen, StateGroup.Life, "ЖИЗНЬ", 470, "Азот живых растений", "Азот растений", "Азот, связанный в живой растительной массе и возвращаемый в органический пул при отмирании.", "г/м²", StateKind.Raw, StateScale.Linear, 0, 15, 2, "#8fa956", LifePalette),
         D(SimulationLayer.OrganicNitrogen, StateGroup.Life, "ЖИЗНЬ", 480, "Органический азот", "Органический N", "Азот сухостоя, подстилки и почвенной органики, доступный медленной минерализации.", "г/м²", StateKind.Raw, StateScale.Linear, 0, 40, 2, "#756f45", SoilPalette),
+        D(SimulationLayer.FireIntensity, StateGroup.Life, "ЖИЗНЬ", 490, "Интенсивность огня", "Огонь", "Активная доля горения в ячейке: распространяется по сухому топливу с ветром и гасится влагой, снегом и исчерпанием растительной массы.", "доля", StateKind.Raw, StateScale.Logarithmic, 0, 1, 3, "#ef7b2d", FirePalette),
+        D(SimulationLayer.BurnScar, StateGroup.Life, "ЖИЗНЬ", 500, "Выгоревший след", "Гарь", "Долговременная память пожара, исчезающая по мере восстановления растительности и увлажнения почвы.", "доля", StateKind.Raw, StateScale.Linear, 0, 1, 2, "#51483a", CharPalette),
 
         D(SimulationLayer.LooseSediment, StateGroup.Material, "ПЕРЕНОСИМОЕ ВЕЩЕСТВО", 510, "Рыхлый осадочный материал", "Рыхлый осадок", "Материал поверхности, доступный водной и ветровой эрозии.", "кг/м²", StateKind.Raw, StateScale.Linear, 0, 10, 2, "#b08a66", MatterPalette),
         D(SimulationLayer.SurfaceCrust, StateGroup.Material, "ПЕРЕНОСИМОЕ ВЕЩЕСТВО", 520, "Поверхностная корка", "Корка", "Доля поверхности, защищённая или запечатанная почвенной коркой.", "доля", StateKind.Raw, StateScale.Linear, 0, 1, 2, "#997961", MatterPalette),
-        D(SimulationLayer.Dust, StateGroup.Material, "ПЕРЕНОСИМОЕ ВЕЩЕСТВО", 530, "Пыль в воздухе", "Пыль", "Поднятый ветром мелкий материал над ячейкой.", "г/м²", StateKind.Raw, StateScale.Logarithmic, 0, 2, 3, "#b98b69", MatterPalette)
+        D(SimulationLayer.Dust, StateGroup.Material, "ПЕРЕНОСИМОЕ ВЕЩЕСТВО", 530, "Пыль в воздухе", "Пыль", "Поднятый ветром мелкий материал над ячейкой.", "г/м²", StateKind.Raw, StateScale.Logarithmic, 0, 5, 3, "#b98b69", MatterPalette)
     ];
 
     private static readonly IReadOnlyDictionary<SimulationLayer, StateDescriptor> ById =

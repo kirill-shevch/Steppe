@@ -43,6 +43,8 @@ public enum SimulationLayer
     LooseSediment,
     SurfaceCrust,
     Dust,
+    FireIntensity,
+    BurnScar,
 }
 
 public enum StateGroup
@@ -158,6 +160,8 @@ public sealed record CellSnapshot(
     float SoilCompactionFraction,
     float LooseSedimentKgM2,
     float DustGm2,
+    float FireIntensityFraction,
+    float BurnScarFraction,
     string BiomeDescription,
     int? DrainToX,
     int? DrainToY,
@@ -185,6 +189,11 @@ internal static class BiomeClassifier
 {
     public static string Describe(WorldState state, int index)
     {
+        if (state.BurnScarFraction[index] > 0.35f)
+        {
+            return state.FireIntensityFraction[index] > 0.02f ? "burning steppe" : "burnt steppe";
+        }
+
         if (state.SurfaceWaterMm[index] > 18f || state.GroundwaterMm[index] > 145f)
         {
             return "seasonal wetland";

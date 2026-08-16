@@ -19,13 +19,15 @@ builder.Services.AddResponseCompression(options =>
 var size = ReadArgument(args, "--size", 96);
 var seed = ReadArgument(args, "--seed", 12345);
 var harvesters = ReadArgument(args, "--harvesters", 10);
+var wildfire = ReadBoolArgument(args, "--wildfire", true);
 builder.Services.AddSingleton(new ObserverWorldHost(new WorldConfig
 {
     Width = size,
     Height = size,
     Seed = seed,
     BaseStepMinutes = 180,
-    GiantHarvesterCount = harvesters
+    GiantHarvesterCount = harvesters,
+    WildfireEnabled = wildfire
 }));
 
 var app = builder.Build();
@@ -51,6 +53,26 @@ app.MapGet("/api/events", (int? limit, ObserverWorldHost host) =>
     return requested is >= 0 and <= 256
         ? Results.Ok(host.Read(world => world.CaptureRegimeEvents(requested)))
         : Results.BadRequest(new { message = "limit must be between 0 and 256" });
+});
+app.MapGet("/api/events/mask/{kind}", (string kind, ObserverWorldHost host) =>
+{
+    return Enum.TryParse<WorldEventKind>(kind, ignoreCase: true, out var parsed)
+        ? Results.Ok(host.Read(world => world.CaptureEventMask(parsed)))
+        : Results.NotFound(new { message = $"Unknown event kind '{kind}'." });
+});
+app.MapGet("/api/regions", (int? columns, int? rows, ObserverWorldHost host) =>
+{
+    var requestedColumns = columns ?? 8;
+    var requestedRows = rows ?? 8;
+    try
+    {
+        return Results.Ok(host.Read(world =>
+            world.CaptureRegionalSnapshot(requestedColumns, requestedRows)));
+    }
+    catch (ArgumentOutOfRangeException exception)
+    {
+        return Results.BadRequest(new { message = exception.Message });
+    }
 });
 app.MapGet("/api/layers", () => Enum.GetNames<SimulationLayer>());
 app.MapGet("/api/layer/{layer}", (string layer, ObserverWorldHost host) =>
@@ -137,6 +159,22 @@ app.MapPost("/api/cell/{x:int}/{y:int}/pin", (int x, int y, ObserverWorldHost ho
         return Results.Conflict(new { message = exception.Message });
     }
 });
+app.MapPost("/api/cell/{x:int}/{y:int}/ignite", (int x, int y, float? intensity, ObserverWorldHost host) =>
+{
+    try
+    {
+        host.Read(world =>
+        {
+            world.IgniteFire(x, y, intensity ?? 1f);
+            return 0;
+        });
+        return Results.Ok(host.Read(world => world.SampleCell(x, y)));
+    }
+    catch (ArgumentOutOfRangeException exception)
+    {
+        return Results.BadRequest(new { message = exception.Message });
+    }
+});
 app.MapDelete("/api/cell/{x:int}/{y:int}/pin", (int x, int y, ObserverWorldHost host) =>
 {
     try
@@ -186,6 +224,14 @@ static int ReadArgument(string[] arguments, string name, int fallback)
 {
     var index = Array.IndexOf(arguments, name);
     return index >= 0 && index + 1 < arguments.Length && int.TryParse(arguments[index + 1], out var value)
+        ? value
+        : fallback;
+}
+
+static bool ReadBoolArgument(string[] arguments, string name, bool fallback)
+{
+    var index = Array.IndexOf(arguments, name);
+    return index >= 0 && index + 1 < arguments.Length && bool.TryParse(arguments[index + 1], out var value)
         ? value
         : fallback;
 }

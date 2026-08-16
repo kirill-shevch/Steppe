@@ -5,15 +5,19 @@ using Steppe.Simulation;
 var tests = new (string Name, Action Run)[]
 {
     ("generation is deterministic", GenerationIsDeterministic),
+    ("parallel execution remains deterministic", ParallelExecutionRemainsDeterministic),
+    ("fast raster statistics remain accurate", FastRasterStatisticsRemainAccurate),
     ("drainage spill rises match finite depression storage", DrainageSpillsMatchStorage),
     ("runoff reaches a lower neighbour", RunoffReachesLowerNeighbour),
     ("solar seasons emerge from astronomy", SolarSeasonsEmergeFromAstronomy),
     ("climate regimes are deterministic and diverse", ClimateRegimesAreDeterministicAndDiverse),
+    ("synoptic wind changes direction", SynopticWindChangesDirection),
     ("anomalous climate remains ecologically bounded", AnomalousClimateRemainsEcologicallyBounded),
     ("water ledger closes across open boundaries", WaterLedgerCloses),
     ("save and load preserve the world", SaveLoadRoundTrip),
     ("giant harvesters migrate and leave readable trails", GiantHarvestersLeaveReadableTrails),
     ("save and load preserve fauna and trails", SaveLoadPreservesFaunaAndTrails),
+    ("wildfire spreads and conserves nitrogen", WildfireSpreadsAndConservesNitrogen),
     ("schema 3 saves migrate without fauna or compaction", SchemaThreeSaveMigrates),
     ("long simulation remains finite", LongSimulationRemainsFinite),
     ("seasonal steppe remains sustainable across seeds", SeasonalSteppeRemainsSustainableAcrossSeeds),
@@ -22,7 +26,8 @@ var tests = new (string Name, Action Run)[]
     ("every vector process is observable", EveryVectorProcessIsObservable),
     ("world and pinned cells retain bounded history", WorldAndPinnedCellsRetainBoundedHistory),
     ("regime episodes use confirmation and hysteresis", RegimeEpisodesUseConfirmationAndHysteresis),
-    ("seasonal simulation emits readable regime events", SeasonalSimulationEmitsReadableRegimeEvents)
+    ("seasonal simulation emits readable regime events", SeasonalSimulationEmitsReadableRegimeEvents),
+    ("regional snapshots and event masks are readable", RegionalSnapshotsAndMasksAreReadable)
 };
 
 var failures = 0;
@@ -61,6 +66,63 @@ static void GenerationIsDeterministic()
 
     var c = new FiniteWorld(SmallConfig(918)).CaptureLayer(SimulationLayer.Elevation);
     Assert(!a.Values.SequenceEqual(c.Values), "different seeds produced identical elevations");
+}
+
+static void ParallelExecutionRemainsDeterministic()
+{
+    var config = new WorldConfig
+    {
+        Width = 128,
+        Height = 128,
+        Seed = 1907,
+        BaseStepMinutes = 180,
+        GeographyErosionPasses = 0,
+        GiantHarvesterCount = 0,
+        WildfireEnabled = true
+    };
+    var first = new FiniteWorld(config);
+    var second = new FiniteWorld(config);
+    first.AdvanceHours(72);
+    second.AdvanceHours(72);
+
+    foreach (var layer in new[]
+             {
+                 SimulationLayer.Wind,
+                 SimulationLayer.SurfaceWater,
+                 SimulationLayer.RootWater,
+                 SimulationLayer.LiveBiomass,
+                 SimulationLayer.FireIntensity
+             })
+    {
+        Assert(first.CaptureLayer(layer).Values.SequenceEqual(second.CaptureLayer(layer).Values),
+            $"parallel execution changed deterministic layer {layer}");
+    }
+
+    Assert(first.GetSummary().WaterBudget.Equals(second.GetSummary().WaterBudget),
+        "parallel execution changed the deterministic water ledger");
+}
+
+static void FastRasterStatisticsRemainAccurate()
+{
+    var world = new FiniteWorld(new WorldConfig
+    {
+        Width = 128,
+        Height = 128,
+        Seed = 2903,
+        BaseStepMinutes = 180,
+        GeographyErosionPasses = 0,
+        GiantHarvesterCount = 0
+    });
+    world.AdvanceHours(45 * 24);
+    var snapshot = world.CaptureLayer(SimulationLayer.Snow);
+    var sorted = snapshot.Values.Where(float.IsFinite).Order().ToArray();
+    var position = 0.98f * (sorted.Length - 1);
+    var lower = (int)MathF.Floor(position);
+    var upper = Math.Min(sorted.Length - 1, lower + 1);
+    var exact = sorted[lower] + (sorted[upper] - sorted[lower]) * (position - lower);
+    var tolerance = Math.Max(0.02f, (snapshot.Maximum - snapshot.Minimum) / 1024f);
+    Assert(Math.Abs(snapshot.Statistics.Percentile98 - exact) <= tolerance,
+        $"fast p98 differs from exact percentile by more than {tolerance:F4}");
 }
 
 static void DrainageSpillsMatchStorage()
@@ -211,6 +273,25 @@ static void ClimateRegimesAreDeterministicAndDiverse()
         "zero climate variability does not reproduce the deterministic seasonal baseline");
 }
 
+static void SynopticWindChangesDirection()
+{
+    var config = SmallConfig(231) with { ClimateVariability = 1f };
+    var world = new FiniteWorld(config);
+    var meanX = new List<double>();
+    var meanY = new List<double>();
+    for (var day = 0; day < 75; day++)
+    {
+        world.AdvanceHours(24);
+        var wind = world.CaptureVectorProcess(VectorProcess.Wind);
+        meanX.Add(wind.VectorX.Average(value => (double)value));
+        meanY.Add(wind.VectorY.Average(value => (double)value));
+    }
+
+    Assert(meanX.Any(value => value < -0.2), "synoptic wind never reverses against the prevailing flow");
+    Assert(meanX.Any(value => value > 2), "prevailing eastward wind disappeared");
+    Assert(meanY.Max() - meanY.Min() > 3, "meridional wind remains directionally flat");
+}
+
 static void AnomalousClimateRemainsEcologicallyBounded()
 {
     const double yearHours = 365d * 24d;
@@ -348,6 +429,49 @@ static void SaveLoadPreservesFaunaAndTrails()
         "fauna nitrogen ledger changed during save/load round trip");
 }
 
+static void WildfireSpreadsAndConservesNitrogen()
+{
+    var world = new FiniteWorld(SmallConfig(380) with
+    {
+        ClimateVariability = 1f,
+        WildfireEnabled = true
+    });
+    world.AdvanceHours(220 * 24);
+    var root = world.CaptureLayer(SimulationLayer.RootWater);
+    var driest = Array.IndexOf(root.Values, root.Values.Min());
+    var x = driest % world.Config.Width;
+    var y = driest / world.Config.Width;
+    world.IgniteFire(x, y, 1f);
+    var ignition = world.ExplainCellState(x, y, SimulationLayer.FireIntensity);
+    Assert(ignition.Contributions.Any(item => item.Flux == SimulationFlux.ExternalIgnition),
+        "external ignition has no process telemetry");
+
+    world.AdvanceHours(6);
+    var active = world.CaptureEventMask(WorldEventKind.Wildfire);
+    Assert(active.ActiveCellCount > 0, "ignited fire produced no readable spatial mask");
+    Assert(world.CaptureFlux(SimulationFlux.FireDryCombustion).PositiveTotal > 0,
+        "active fire consumed no dry fuel");
+    var fireSpread = world.CaptureVectorProcess(VectorProcess.FireSpread);
+    Assert(fireSpread.ActiveCellCount > 0 && fireSpread.TotalGrossMagnitude > 0,
+        "fire spread produced no vector telemetry");
+    world.AdvanceHours(48);
+    var scar = world.CaptureLayer(SimulationLayer.BurnScar);
+    Assert(scar.Maximum > 0.1f, "fire left no persistent burn scar");
+    Assert(scar.Values.Count(value => value > 0.01f) > 1, "fire did not spread beyond its ignition cell");
+    Assert(Math.Abs(world.GetSummary().NitrogenBudget.RelativeError) < 0.00005,
+        "fire violated the closed nitrogen ledger");
+
+    using var stream = new MemoryStream();
+    world.Save(stream);
+    stream.Position = 0;
+    var loaded = FiniteWorld.Load(stream);
+    Assert(scar.Values.SequenceEqual(loaded.CaptureLayer(SimulationLayer.BurnScar).Values),
+        "burn scars changed during save/load");
+    Assert(world.CaptureLayer(SimulationLayer.FireIntensity).Values.SequenceEqual(
+            loaded.CaptureLayer(SimulationLayer.FireIntensity).Values),
+        "active fire changed during save/load");
+}
+
 static void SchemaThreeSaveMigrates()
 {
     var config = new WorldConfig
@@ -369,6 +493,9 @@ static void SchemaThreeSaveMigrates()
         "legacy save contains giant harvesters");
     Assert(loaded.CaptureLayer(SimulationLayer.SoilCompaction).Values.All(value => value == 0f),
         "legacy save did not initialize the new compaction field to zero");
+    Assert(loaded.CaptureLayer(SimulationLayer.FireIntensity).Values.All(value => value == 0f)
+            && loaded.CaptureLayer(SimulationLayer.BurnScar).Values.All(value => value == 0f),
+        "legacy save did not initialize wildfire fields to zero");
     Assert(Math.Abs(loaded.CaptureLayer(SimulationLayer.LiveBiomass).Values[17] - 42f) < 1e-6f,
         "legacy state fields shifted during schema migration");
 }
@@ -396,6 +523,8 @@ static MemoryStream WriteSchemaThreeWorld(WorldConfig config, WorldState state)
         writer.Write(0d);
         var fields = state.SerializableFloatFields()
             .Where(field => !ReferenceEquals(field, state.SoilCompactionFraction))
+            .Where(field => !ReferenceEquals(field, state.FireIntensityFraction))
+            .Where(field => !ReferenceEquals(field, state.BurnScarFraction))
             .ToArray();
         writer.Write(fields.Length);
         foreach (var field in fields)
@@ -510,7 +639,9 @@ static void RecordedProcessFluxesExplainMaterialChanges()
         SimulationLayer.SoilDepth,
         SimulationLayer.LooseSediment,
         SimulationLayer.SurfaceCrust,
-        SimulationLayer.Dust
+        SimulationLayer.Dust,
+        SimulationLayer.FireIntensity,
+        SimulationLayer.BurnScar
     };
 
     foreach (var layer in layersWithMaterialLedgers)
@@ -661,6 +792,28 @@ static void SeasonalSimulationEmitsReadableRegimeEvents()
         "event peak time and evidence disagree");
 }
 
+static void RegionalSnapshotsAndMasksAreReadable()
+{
+    var world = new FiniteWorld(SmallConfig(775));
+    world.AdvanceHours(120 * 24);
+    var regions = world.CaptureRegionalSnapshot(4, 3);
+    Assert(regions.Regions.Length == 12, "regional snapshot has the wrong raster size");
+    Assert(regions.Regions.Sum(item => item.CellCount) == world.Config.CellCount,
+        "regional snapshot does not cover the whole world");
+    Assert(regions.Regions.All(item => float.IsFinite(item.MeanRootWaterMm)
+            && item.FloodedFraction is >= 0f and <= 1f
+            && item.WaterStressFraction is >= 0f and <= 1f),
+        "regional snapshot contains invalid state values");
+
+    foreach (var kind in Enum.GetValues<WorldEventKind>())
+    {
+        var mask = world.CaptureEventMask(kind);
+        Assert(mask.Values.Length == world.Config.CellCount, $"{kind} mask has an incomplete raster");
+        Assert(mask.Values.All(value => float.IsFinite(value) && value is >= 0f and <= 1f),
+            $"{kind} mask leaves its normalized range");
+    }
+}
+
 static WorldRegimeMetrics RisingRegime(double elapsedHours) => new(
     elapsedHours,
     1,
@@ -678,7 +831,9 @@ static WorldRegimeMetrics RisingRegime(double elapsedHours) => new(
     0.2f,
     0.02f,
     0.1f,
-    7);
+    7,
+    0.02f,
+    0.01f);
 
 static WorldRegimeMetrics StableRegime(double elapsedHours) => new(
     elapsedHours,
@@ -697,7 +852,9 @@ static WorldRegimeMetrics StableRegime(double elapsedHours) => new(
     0.2f,
     0.001f,
     0,
-    2);
+    2,
+    0,
+    0);
 
 static void SeasonalSteppeRemainsSustainableAcrossSeeds()
 {

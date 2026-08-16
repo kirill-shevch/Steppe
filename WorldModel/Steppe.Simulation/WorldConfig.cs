@@ -6,7 +6,7 @@ namespace Steppe.Simulation;
 /// </summary>
 public sealed record WorldConfig
 {
-    public const int CurrentSchemaVersion = 5;
+    public const int CurrentSchemaVersion = 6;
 
     public int Width { get; init; } = 96;
     public int Height { get; init; } = 96;
@@ -18,6 +18,7 @@ public sealed record WorldConfig
     public int GeographyErosionPasses { get; init; } = 18;
     public int GiantHarvesterCount { get; init; } = 10;
     public float ClimateVariability { get; init; } = 1f;
+    public bool WildfireEnabled { get; init; } = true;
 
     public int CellCount => checked(Width * Height);
     public float WidthKilometers => Width * CellSizeMeters / 1000f;

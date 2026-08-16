@@ -48,6 +48,7 @@ public sealed record ClimateForcingSnapshot(
 public static class ClimateRegimeModel
 {
     private const float DaysPerYear = 365f;
+    private const float TwoPi = MathF.PI * 2f;
     private static readonly System.Collections.Concurrent.ConcurrentDictionary<ClimateKey, AnnualClimateRegime>
         AnnualCache = new();
     private static readonly System.Collections.Concurrent.ConcurrentDictionary<ClimateKey, double>
@@ -243,8 +244,18 @@ public static class ClimateRegimeModel
         }
 
         var windPulse = 0f;
-        var windX = 0f;
-        var windY = 0f;
+        var absoluteDay = (year - 1d) * DaysPerYear + dayOfYear;
+        var primaryPeriod = 9.5f + DeterministicNoise.Hash01(20001, 17, config.Seed) * 5.5f;
+        var secondaryPeriod = 4.5f + DeterministicNoise.Hash01(20003, 29, config.Seed) * 3.5f;
+        var primaryPhase = TwoPi * (float)(absoluteDay / primaryPeriod)
+            + DeterministicNoise.Hash01(20005, 41, config.Seed) * TwoPi;
+        var secondaryPhase = TwoPi * (float)(absoluteDay / secondaryPeriod)
+            + DeterministicNoise.Hash01(20007, 53, config.Seed) * TwoPi;
+        var windX = (MathF.Sin(primaryPhase) * 6.2f + MathF.Sin(secondaryPhase) * 1.35f)
+            * config.ClimateVariability;
+        var windY = (MathF.Cos(primaryPhase * 0.83f + 0.7f) * 4.1f
+                + MathF.Sin(secondaryPhase * 1.17f) * 1.25f)
+            * config.ClimateVariability;
         for (var eventIndex = 0; eventIndex < 3; eventIndex++)
         {
             var channel = 20011 + eventIndex * 103;

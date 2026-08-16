@@ -19,6 +19,7 @@ public sealed partial class FiniteWorld
         Config = config.Validate();
         Clock = new WorldClock();
         state = WorldGenerator.Generate(Config);
+        state.RebuildDerivedCaches(Config);
         waterBudget = new WaterBudget();
         waterBudget.Initialize(state);
         nitrogenBudget = new NitrogenBudget();
@@ -42,6 +43,7 @@ public sealed partial class FiniteWorld
         Config = config.Validate();
         Clock = clock;
         this.state = state;
+        this.state.RebuildDerivedCaches(Config);
         this.waterBudget = waterBudget;
         this.nitrogenBudget = nitrogenBudget;
         this.fauna = fauna;
@@ -106,6 +108,27 @@ public sealed partial class FiniteWorld
             state.SurfaceWaterMm[index] += millimeters;
             waterBudget.AddExternal(millimeters);
             fluxState.Add(SimulationFlux.ExternalSurfaceWater, index, millimeters);
+            fluxState.Complete(0, SampleValue);
+        }
+    }
+
+    public void IgniteFire(int x, int y, float intensity = 1f)
+    {
+        if (!float.IsFinite(intensity) || intensity is <= 0f or > 1f)
+        {
+            throw new ArgumentOutOfRangeException(nameof(intensity));
+        }
+
+        lock (sync)
+        {
+            fluxState.Begin(SampleValue);
+            var index = CheckedIndex(x, y);
+            var before = state.FireIntensityFraction[index];
+            state.FireIntensityFraction[index] = Math.Max(before, intensity);
+            fluxState.Add(
+                SimulationFlux.ExternalIgnition,
+                index,
+                state.FireIntensityFraction[index] - before);
             fluxState.Complete(0, SampleValue);
         }
     }
@@ -186,7 +209,7 @@ public sealed partial class FiniteWorld
                 minimum,
                 maximum,
                 descriptor.Unit,
-                BuildStatistics(values, descriptor),
+                BuildStatistics(values, descriptor, minimum, maximum),
                 vectorX,
                 vectorY);
         }
@@ -360,6 +383,8 @@ public sealed partial class FiniteWorld
                 state.SoilCompactionFraction[index],
                 state.LooseSedimentKgM2[index],
                 state.DustGm2[index],
+                state.FireIntensityFraction[index],
+                state.BurnScarFraction[index],
                 BiomeClassifier.Describe(state, index),
                 drainTo >= 0 ? drainTo % Config.Width : null,
                 drainTo >= 0 ? drainTo / Config.Width : null,
@@ -579,6 +604,8 @@ public sealed partial class FiniteWorld
         SimulationLayer.LooseSediment => state.LooseSedimentKgM2,
         SimulationLayer.SurfaceCrust => state.SurfaceCrustFraction,
         SimulationLayer.Dust => state.DustGm2,
+        SimulationLayer.FireIntensity => state.FireIntensityFraction,
+        SimulationLayer.BurnScar => state.BurnScarFraction,
         _ => throw new ArgumentOutOfRangeException(nameof(layer), layer, null)
     };
 
@@ -627,6 +654,8 @@ public sealed partial class FiniteWorld
         SimulationLayer.LooseSediment => state.LooseSedimentKgM2[index],
         SimulationLayer.SurfaceCrust => state.SurfaceCrustFraction[index],
         SimulationLayer.Dust => state.DustGm2[index],
+        SimulationLayer.FireIntensity => state.FireIntensityFraction[index],
+        SimulationLayer.BurnScar => state.BurnScarFraction[index],
         _ => throw new ArgumentOutOfRangeException(nameof(layer), layer, null)
     };
 
@@ -641,48 +670,73 @@ public sealed partial class FiniteWorld
         return values;
     }
 
-    private static LayerStatistics BuildStatistics(float[] values, StateDescriptor descriptor)
+    private static LayerStatistics BuildStatistics(
+        float[] values,
+        StateDescriptor descriptor,
+        float minimum,
+        float maximum)
     {
         const int binCount = 32;
-        var finite = values.Where(float.IsFinite).ToArray();
-        var nonFiniteCount = values.Length - finite.Length;
-        if (finite.Length == 0)
+        const int quantileBinCount = 2048;
+        var finiteCount = 0;
+        var nonFiniteCount = 0;
+        double sum = 0;
+        var below = 0;
+        var above = 0;
+        foreach (var value in values)
+        {
+            if (!float.IsFinite(value))
+            {
+                nonFiniteCount++;
+                continue;
+            }
+
+            finiteCount++;
+            sum += value;
+            if (descriptor.Scale != StateScale.Categorical)
+            {
+                if (value < descriptor.ScaleMinimum) below++;
+                else if (value > descriptor.ScaleMaximum) above++;
+            }
+        }
+
+        if (finiteCount == 0)
         {
             return new LayerStatistics(0, 0, 0, 0, 0, 0, 0, 0, nonFiniteCount, new int[binCount]);
         }
 
-        Array.Sort(finite);
-        double sum = 0;
-        var below = 0;
-        var above = 0;
         var histogram = new int[binCount];
-        foreach (var value in finite)
+        Span<int> quantileCounts = stackalloc int[quantileBinCount];
+        Span<float> quantileMinimums = stackalloc float[quantileBinCount];
+        Span<float> quantileMaximums = stackalloc float[quantileBinCount];
+        quantileMinimums.Fill(float.PositiveInfinity);
+        quantileMaximums.Fill(float.NegativeInfinity);
+        var quantileSpan = Math.Max(1e-12f, maximum - minimum);
+        foreach (var value in values)
         {
-            sum += value;
-            if (descriptor.Scale != StateScale.Categorical)
+            if (!float.IsFinite(value))
             {
-                if (value < descriptor.ScaleMinimum)
-                {
-                    below++;
-                }
-                else if (value > descriptor.ScaleMaximum)
-                {
-                    above++;
-                }
+                continue;
             }
 
-            var normalized = NormalizeForScale(value, descriptor, finite[0], finite[^1]);
+            var normalized = NormalizeForScale(value, descriptor, minimum, maximum);
             var bin = Math.Min(binCount - 1, (int)(normalized * binCount));
             histogram[bin]++;
+            var quantileBin = Math.Min(
+                quantileBinCount - 1,
+                (int)Math.Clamp((value - minimum) / quantileSpan * quantileBinCount, 0f, quantileBinCount - 1));
+            quantileCounts[quantileBin]++;
+            quantileMinimums[quantileBin] = Math.Min(quantileMinimums[quantileBin], value);
+            quantileMaximums[quantileBin] = Math.Max(quantileMaximums[quantileBin], value);
         }
 
         return new LayerStatistics(
-            (float)(sum / finite.Length),
-            Percentile(finite, 0.02f),
-            Percentile(finite, 0.10f),
-            Percentile(finite, 0.50f),
-            Percentile(finite, 0.90f),
-            Percentile(finite, 0.98f),
+            (float)(sum / finiteCount),
+            ApproximatePercentile(quantileCounts, quantileMinimums, quantileMaximums, finiteCount, 0.02f),
+            ApproximatePercentile(quantileCounts, quantileMinimums, quantileMaximums, finiteCount, 0.10f),
+            ApproximatePercentile(quantileCounts, quantileMinimums, quantileMaximums, finiteCount, 0.50f),
+            ApproximatePercentile(quantileCounts, quantileMinimums, quantileMaximums, finiteCount, 0.90f),
+            ApproximatePercentile(quantileCounts, quantileMinimums, quantileMaximums, finiteCount, 0.98f),
             below,
             above,
             nonFiniteCount,
@@ -730,13 +784,31 @@ public sealed partial class FiniteWorld
             : linear;
     }
 
-    private static float Percentile(float[] sorted, float percentile)
+    private static float ApproximatePercentile(
+        ReadOnlySpan<int> counts,
+        ReadOnlySpan<float> minimums,
+        ReadOnlySpan<float> maximums,
+        int valueCount,
+        float percentile)
     {
-        var position = percentile * (sorted.Length - 1);
-        var lower = (int)MathF.Floor(position);
-        var upper = Math.Min(sorted.Length - 1, lower + 1);
-        var fraction = position - lower;
-        return sorted[lower] + (sorted[upper] - sorted[lower]) * fraction;
+        var target = percentile * (valueCount - 1);
+        var before = 0;
+        for (var bin = 0; bin < counts.Length; bin++)
+        {
+            var count = counts[bin];
+            if (count == 0) continue;
+            if (target >= before + count)
+            {
+                before += count;
+                continue;
+            }
+
+            if (count == 1 || maximums[bin] <= minimums[bin]) return minimums[bin];
+            var within = Math.Clamp((target - before) / (count - 1), 0f, 1f);
+            return minimums[bin] + (maximums[bin] - minimums[bin]) * within;
+        }
+
+        return maximums[^1];
     }
 
     private WorldHistoryPoint CaptureHistoryPoint()
@@ -769,11 +841,13 @@ public sealed partial class FiniteWorld
         double liveBiomass = 0;
         double dust = 0;
         double wind = 0;
+        double fire = 0;
         var snowCovered = 0;
         var flooded = 0;
         var waterStressed = 0;
         var green = 0;
         var dustAffected = 0;
+        var burning = 0;
 
         for (var index = 0; index < Config.CellCount; index++)
         {
@@ -784,6 +858,7 @@ public sealed partial class FiniteWorld
             rootWater += state.RootWaterMm[index];
             liveBiomass += state.LiveBiomassGm2[index];
             dust += state.DustGm2[index];
+            fire += state.FireIntensityFraction[index];
             wind += MathF.Sqrt(
                 state.WindXMs[index] * state.WindXMs[index]
                 + state.WindYMs[index] * state.WindYMs[index]);
@@ -792,6 +867,7 @@ public sealed partial class FiniteWorld
             if (state.RootWaterMm[index] < 35f) waterStressed++;
             if (state.LiveBiomassGm2[index] >= 150f) green++;
             if (state.DustGm2[index] >= 0.02f) dustAffected++;
+            if (state.FireIntensityFraction[index] >= 0.01f) burning++;
         }
 
         var scale = 1f / Config.CellCount;
@@ -812,7 +888,9 @@ public sealed partial class FiniteWorld
             green * scale,
             (float)(dust * scale),
             dustAffected * scale,
-            (float)(wind * scale));
+            (float)(wind * scale),
+            (float)(fire * scale),
+            burning * scale);
     }
 
     private float[] CaptureCellValues(int index)

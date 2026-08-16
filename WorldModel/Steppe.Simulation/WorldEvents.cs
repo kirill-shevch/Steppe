@@ -6,7 +6,8 @@ public enum WorldEventKind
     FloodPulse,
     GreenUp,
     Drought,
-    DustEpisode
+    DustEpisode,
+    Wildfire
 }
 
 public sealed record WorldEventDescriptor(
@@ -79,7 +80,18 @@ public static class WorldEventCatalog
             0.010f,
             0.003f,
             "#c78f68",
-            SimulationLayer.Dust)
+            SimulationLayer.Dust),
+        new(
+            WorldEventKind.Wildfire,
+            "Степной пожар",
+            "Пожар",
+            "Устойчивое активное горение сухостоя и подстилки с распространяющимся по ветру фронтом.",
+            "Доля горящей степи",
+            "доля",
+            0.0002f,
+            0.00005f,
+            "#ef7628",
+            SimulationLayer.FireIntensity)
     ];
 
     private static readonly IReadOnlyDictionary<WorldEventKind, WorldEventDescriptor> ByKind =
@@ -110,7 +122,9 @@ public sealed record WorldRegimeMetrics(
     float GreenFraction,
     float MeanDustGm2,
     float DustAffectedFraction,
-    float MeanWindSpeedMs);
+    float MeanWindSpeedMs,
+    float MeanFireIntensity,
+    float BurningFraction);
 
 public sealed record WorldRegimeEvent(
     long Id,
@@ -184,7 +198,8 @@ internal sealed class WorldEventLog
             [WorldEventKind.Drought] = metrics.WaterStressFraction,
             [WorldEventKind.DustEpisode] = metrics.DustAffectedFraction >= 0.005f
                 ? metrics.MeanDustGm2
-                : 0f
+                : 0f,
+            [WorldEventKind.Wildfire] = metrics.BurningFraction
         };
 
         foreach (var (kind, indicator) in signals)

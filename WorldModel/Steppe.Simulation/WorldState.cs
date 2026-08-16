@@ -53,12 +53,28 @@ internal sealed class WorldState
         LooseSedimentKgM2 = New();
         SurfaceCrustFraction = New();
         DustGm2 = New();
+        FireIntensityFraction = New();
+        BurnScarFraction = New();
 
         ScratchA = New();
         ScratchB = New();
         RunoffOutMm = New();
         RunoffVectorX = New();
         RunoffVectorY = New();
+
+        TerrainNormalX = New();
+        TerrainNormalY = New();
+        TerrainNormalZ = New();
+        ElevationCoolingC = New();
+        BaseAirPressureHpa = New();
+        PressureWaveSin = New();
+        PressureWaveCos = New();
+        PressureMeridionalSin = New();
+        PressureMeridionalCos = New();
+        PressureDiagonalSin = New();
+        PressureDiagonalCos = New();
+        SaturationHumidityMm = New();
+        PercolationResponseAtBaseStep = New();
 
         float[] New() => new float[cellCount];
     }
@@ -108,12 +124,65 @@ internal sealed class WorldState
     public float[] LooseSedimentKgM2 { get; }
     public float[] SurfaceCrustFraction { get; }
     public float[] DustGm2 { get; }
+    public float[] FireIntensityFraction { get; }
+    public float[] BurnScarFraction { get; }
 
     public float[] ScratchA { get; }
     public float[] ScratchB { get; }
     public float[] RunoffOutMm { get; }
     public float[] RunoffVectorX { get; }
     public float[] RunoffVectorY { get; }
+
+    // Rebuilt deterministic caches. They are derived from persistent terrain/configuration
+    // and therefore deliberately excluded from SerializableFloatFields().
+    public float[] TerrainNormalX { get; }
+    public float[] TerrainNormalY { get; }
+    public float[] TerrainNormalZ { get; }
+    public float[] ElevationCoolingC { get; }
+    public float[] BaseAirPressureHpa { get; }
+    public float[] PressureWaveSin { get; }
+    public float[] PressureWaveCos { get; }
+    public float[] PressureMeridionalSin { get; }
+    public float[] PressureMeridionalCos { get; }
+    public float[] PressureDiagonalSin { get; }
+    public float[] PressureDiagonalCos { get; }
+    public float[] SaturationHumidityMm { get; }
+    public float[] PercolationResponseAtBaseStep { get; }
+
+    public void RebuildDerivedCaches(WorldConfig config)
+    {
+        const float twoPi = MathF.PI * 2f;
+        var spatialScale = config.CellSizeMeters / 16_000f;
+        var baseStepHours = config.BaseStepMinutes / 60f;
+        for (var y = 0; y < config.Height; y++)
+        {
+            var py = y * spatialScale;
+            for (var x = 0; x < config.Width; x++)
+            {
+                var index = y * config.Width + x;
+                var slopeRadians = MathF.Atan(Slope[index]);
+                var sinSlope = MathF.Sin(slopeRadians);
+                TerrainNormalX[index] = sinSlope * MathF.Cos(AspectRadians[index]);
+                TerrainNormalY[index] = sinSlope * MathF.Sin(AspectRadians[index]);
+                TerrainNormalZ[index] = MathF.Cos(slopeRadians);
+                ElevationCoolingC[index] = Math.Max(0f, ElevationM[index] - 250f) * 0.0062f;
+                BaseAirPressureHpa[index] = 1013.25f * MathF.Exp(-ElevationM[index] / 8500f);
+                PercolationResponseAtBaseStep[index] = 1f
+                    - MathF.Exp(-PermeabilityMmPerHour[index] * 0.0012f * baseStepHours);
+
+                var px = x * spatialScale;
+                var waveSpatialPhase = twoPi * (px + MathF.Sin(py * twoPi) * 0.08f);
+                PressureWaveSin[index] = MathF.Sin(waveSpatialPhase);
+                PressureWaveCos[index] = MathF.Cos(waveSpatialPhase);
+                var meridionalSpatialPhase = twoPi * py * 0.72f;
+                PressureMeridionalSin[index] = MathF.Sin(meridionalSpatialPhase);
+                PressureMeridionalCos[index] = MathF.Cos(meridionalSpatialPhase);
+                var diagonalSpatialPhase = twoPi * (px * 0.55f + py * 0.70f);
+                PressureDiagonalSin[index] = MathF.Sin(diagonalSpatialPhase);
+                PressureDiagonalCos[index] = MathF.Cos(diagonalSpatialPhase);
+            }
+        }
+    }
 
     public IEnumerable<float[]> SerializableFloatFields()
     {
@@ -157,5 +226,7 @@ internal sealed class WorldState
         yield return LooseSedimentKgM2;
         yield return SurfaceCrustFraction;
         yield return DustGm2;
+        yield return FireIntensityFraction;
+        yield return BurnScarFraction;
     }
 }

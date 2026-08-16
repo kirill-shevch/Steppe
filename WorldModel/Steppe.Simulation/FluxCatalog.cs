@@ -48,7 +48,16 @@ public enum SimulationFlux
     GiantHarvesterDrinking,
     GiantHarvesterSeedDispersal,
     GiantHarvesterCrustBreakdown,
-    GiantHarvesterCompaction
+    GiantHarvesterCompaction,
+    FireActivityChange,
+    FireLiveCombustion,
+    FireDryCombustion,
+    FireLitterCombustion,
+    FirePlantNitrogenRelease,
+    FireOrganicNitrogenRelease,
+    FireSeedBankDamage,
+    BurnScarChange,
+    ExternalIgnition
 }
 
 public enum FluxGroup
@@ -133,7 +142,17 @@ public static class FluxCatalog
         D(SimulationFlux.GiantHarvesterDrinking, FluxGroup.Biology, "БИОЛОГИЯ", 385, "Водопой сенокосцев", "Водопой", "Поверхностная вода, поглощённая животными и учтённая как выход из резервуаров ландшафта.", "мм", 4, false, E(SimulationLayer.SurfaceWater, -1)),
         D(SimulationFlux.GiantHarvesterSeedDispersal, FluxGroup.Biology, "БИОЛОГИЯ", 386, "Расселение семян сенокосцами", "Семена в следе", "Пополнение банка семян вдоль миграционной трассы.", "доля", 6, false, E(SimulationLayer.SeedBank, 1)),
         D(SimulationFlux.GiantHarvesterCrustBreakdown, FluxGroup.Biology, "БИОЛОГИЯ", 387, "Разрушение корки сенокосцами", "Разбитая корка", "Механическое разрушение поверхностной корки в свежем следе.", "доля", 6, false, E(SimulationLayer.SurfaceCrust, -1)),
-        D(SimulationFlux.GiantHarvesterCompaction, FluxGroup.Biology, "БИОЛОГИЯ", 388, "Уплотнение следа сенокосцев", "Уплотнение стадом", "Долговременное уплотнение почвы тяжёлыми животными.", "доля", 6, false, E(SimulationLayer.SoilCompaction, 1))
+        D(SimulationFlux.GiantHarvesterCompaction, FluxGroup.Biology, "БИОЛОГИЯ", 388, "Уплотнение следа сенокосцев", "Уплотнение стадом", "Долговременное уплотнение почвы тяжёлыми животными.", "доля", 6, false, E(SimulationLayer.SoilCompaction, 1)),
+
+        D(SimulationFlux.FireActivityChange, FluxGroup.Biology, "БИОЛОГИЯ", 390, "Изменение активности огня", "Динамика огня", "Чистое изменение интенсивности из-за естественного возгорания, распространения, выгорания топлива и тушения влагой.", "доля", 6, true, E(SimulationLayer.FireIntensity, 1)),
+        D(SimulationFlux.FireLiveCombustion, FluxGroup.Biology, "БИОЛОГИЯ", 391, "Сгорание живой растительности", "Сгорела зелень", "Живая растительная масса, уничтоженная активным огнём.", "г/м²", 3, false, E(SimulationLayer.LiveBiomass, -1)),
+        D(SimulationFlux.FireDryCombustion, FluxGroup.Biology, "БИОЛОГИЯ", 392, "Сгорание сухостоя", "Сгорел сухостой", "Сухая стоящая растительная масса, использованная пожаром как быстрое топливо.", "г/м²", 3, false, E(SimulationLayer.DryBiomass, -1)),
+        D(SimulationFlux.FireLitterCombustion, FluxGroup.Biology, "БИОЛОГИЯ", 393, "Сгорание подстилки", "Сгорела подстилка", "Растительная подстилка, уничтоженная фронтом огня.", "г/м²", 3, false, E(SimulationLayer.LitterBiomass, -1)),
+        D(SimulationFlux.FirePlantNitrogenRelease, FluxGroup.Biology, "БИОЛОГИЯ", 394, "Высвобождение азота растений огнём", "Азот из зелени", "Азот сгоревшей живой массы возвращается в доступный и органический почвенные резервуары.", "г/м²", 5, false, E(SimulationLayer.PlantNitrogen, -1), E(SimulationLayer.AvailableNitrogen, 0.7f), E(SimulationLayer.OrganicNitrogen, 0.3f)),
+        D(SimulationFlux.FireOrganicNitrogenRelease, FluxGroup.Biology, "БИОЛОГИЯ", 395, "Минерализация органического азота огнём", "Азот из золы", "Часть органического азота сухостоя и подстилки быстро переходит в доступную минеральную форму.", "г/м²", 5, false, E(SimulationLayer.OrganicNitrogen, -1), E(SimulationLayer.AvailableNitrogen, 1)),
+        D(SimulationFlux.FireSeedBankDamage, FluxGroup.Biology, "БИОЛОГИЯ", 396, "Повреждение семенного банка огнём", "Потеря семян", "Доля жизнеспособного семенного банка, потерянная при сильном нагреве поверхности.", "доля", 6, false, E(SimulationLayer.SeedBank, -1)),
+        D(SimulationFlux.BurnScarChange, FluxGroup.Biology, "БИОЛОГИЯ", 397, "Изменение выгоревшего следа", "Динамика гари", "Формирование гари активным пожаром и её исчезновение при восстановлении растительности.", "доля", 6, true, E(SimulationLayer.BurnScar, 1)),
+        D(SimulationFlux.ExternalIgnition, FluxGroup.Intervention, "ВНЕШНЕЕ ВОЗДЕЙСТВИЕ", 520, "Внешнее возгорание", "Поджог", "Огонь, явно добавленный через внешний интерфейс симуляции.", "доля", 6, false, E(SimulationLayer.FireIntensity, 1))
     ];
 
     private static readonly IReadOnlyDictionary<SimulationFlux, FluxDescriptor> ById =

@@ -12,7 +12,8 @@ public enum VectorProcess
     SnowTransport,
     SedimentTransport,
     DustAdvection,
-    GiantHarvesterMovement
+    GiantHarvesterMovement,
+    FireSpread
 }
 
 public enum VectorProcessMeasure
@@ -45,7 +46,8 @@ public static class VectorProcessCatalog
         new(VectorProcess.SnowTransport, "Ветровой перенос снега", "Фактический снежный запас, перемещённый в соседнюю ячейку за период.", "мм SWE", VectorProcessMeasure.AccumulatedTransfer, SimulationLayer.Snow),
         new(VectorProcess.SedimentTransport, "Перенос осадка", "Рыхлый материал, отправленный вниз по поверхностному стоку за период.", "кг/м²", VectorProcessMeasure.AccumulatedTransfer, SimulationLayer.LooseSediment),
         new(VectorProcess.DustAdvection, "Адвекция пыли", "Кинематический момент переноса атмосферной пыли ветром за период.", "г/м²·ячейка", VectorProcessMeasure.TransportMoment, SimulationLayer.Dust),
-        new(VectorProcess.GiantHarvesterMovement, "Миграция гигантских сенокосцев", "Фактическое направление и длина перемещения биологических фронтов за период.", "ячейка", VectorProcessMeasure.AccumulatedTransfer, SimulationLayer.LiveBiomass)
+        new(VectorProcess.GiantHarvesterMovement, "Миграция гигантских сенокосцев", "Фактическое направление и длина перемещения биологических фронтов за период.", "ячейка", VectorProcessMeasure.AccumulatedTransfer, SimulationLayer.LiveBiomass),
+        new(VectorProcess.FireSpread, "Распространение огня", "Принятое соседними ячейками направление распространения фронта огня; ветер усиливает перенос по своей оси.", "индекс огня", VectorProcessMeasure.AccumulatedTransfer, SimulationLayer.FireIntensity)
     ];
 
     private static readonly IReadOnlyDictionary<VectorProcess, VectorProcessDescriptor> ByProcess =

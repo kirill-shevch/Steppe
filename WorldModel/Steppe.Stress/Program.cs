@@ -15,7 +15,8 @@ var world = new FiniteWorld(new WorldConfig
     BaseStepMinutes = options.StepMinutes,
     GeographyErosionPasses = options.ErosionPasses,
     GiantHarvesterCount = options.Harvesters,
-    ClimateVariability = options.ClimateVariability
+    ClimateVariability = options.ClimateVariability,
+    WildfireEnabled = options.WildfireEnabled
 });
 
 var layerAggregates = Enum.GetValues<SimulationLayer>()
@@ -27,6 +28,10 @@ var vectorAggregates = Enum.GetValues<VectorProcess>()
 var eventAggregates = Enum.GetValues<WorldEventKind>()
     .ToDictionary(kind => kind, kind => new EventAggregate(kind));
 var temporal = new List<TemporalCheckpoint>(options.Years * (365 / options.SampleDays + 1));
+var regionalColumns = Math.Min(8, options.Size);
+var regionalRows = Math.Min(8, options.Size);
+var regionalTemporal = new List<RegionalCheckpoint>(options.Years * (365 / options.SampleDays + 1));
+var flooding = new FloodAggregate(world.Config.Width, world.Config.Height);
 var seenEvents = new HashSet<long>();
 var annual = new List<AnnualCheckpoint>(options.Years);
 var initialLayers = CaptureLayers(world);
@@ -39,7 +44,7 @@ var chunkCount = 0;
 
 Console.Error.WriteLine(
     $"stress qualification: {options.Years} years, {options.Size}×{options.Size}, seed {options.Seed}, "
-    + $"climate {options.ClimateVariability:F2}, {options.StepMinutes}-minute step");
+    + $"climate {options.ClimateVariability:F2}, wildfire {options.WildfireEnabled}, {options.StepMinutes}-minute step");
 
 for (var year = 1; year <= options.Years; year++)
 {
@@ -95,6 +100,24 @@ for (var year = 1; year <= options.Years; year++)
             layers.ToDictionary(pair => pair.Key.ToString(), pair => pair.Value.Maximum),
             ClimateRegimeModel.GetForcing(world.Config, year, Math.Max(1f, 365 - daysRemaining))));
 
+        var regions = world.CaptureRegionalSnapshot(regionalColumns, regionalRows);
+        regionalTemporal.Add(new RegionalCheckpoint(
+            year,
+            365 - daysRemaining,
+            world.Clock.ElapsedHours,
+            regions.Regions.Select(item => item.MeanSurfaceTemperatureC).ToArray(),
+            regions.Regions.Select(item => item.MeanSnowMm).ToArray(),
+            regions.Regions.Select(item => item.MeanSurfaceWaterMm).ToArray(),
+            regions.Regions.Select(item => item.MaximumSurfaceWaterMm).ToArray(),
+            regions.Regions.Select(item => item.FloodedFraction).ToArray(),
+            regions.Regions.Select(item => item.MeanRootWaterMm).ToArray(),
+            regions.Regions.Select(item => item.WaterStressFraction).ToArray(),
+            regions.Regions.Select(item => item.MeanLiveBiomassGm2).ToArray(),
+            regions.Regions.Select(item => item.MeanDustGm2).ToArray(),
+            regions.Regions.Select(item => item.BurningFraction).ToArray(),
+            regions.Regions.Select(item => item.MeanBurnScar).ToArray()));
+        flooding.Observe(layers[SimulationLayer.SurfaceWater], days);
+
         var events = world.CaptureRegimeEvents(256);
         foreach (var episode in events.Active.Concat(events.Recent))
         {
@@ -139,6 +162,8 @@ for (var year = 1; year <= options.Years; year++)
 stopwatch.Stop();
 var last = world.GetSummary();
 var cycles = AnalyzeCycles(temporal);
+var regionalCycles = AnalyzeRegionalCycles(regionalTemporal, regionalColumns, regionalRows);
+var floodDiagnostics = flooding.Snapshot();
 var climate = AnalyzeClimate(world.Config, annual, temporal);
 var recovery = AnalyzeRecovery(annual);
 var failures = EvaluateFailures(
@@ -148,10 +173,13 @@ var failures = EvaluateFailures(
     vectorAggregates,
     drainage,
     cycles,
+    regionalCycles,
+    floodDiagnostics,
     climate,
     recovery,
     last,
-    world.Config.CellCount);
+    world.Config.CellCount,
+    world.Config.WildfireEnabled);
 var lastTwenty = annual.TakeLast(Math.Min(20, annual.Count)).ToArray();
 var postSpinup = annual.Skip(Math.Min(20, annual.Count)).ToArray();
 var report = new
@@ -167,6 +195,9 @@ var report = new
         options.ErosionPasses,
         options.Harvesters,
         options.ClimateVariability,
+        options.WildfireEnabled,
+        regionalColumns,
+        regionalRows,
         cellSizeMeters = world.Config.CellSizeMeters,
         simulatedHours = world.Clock.ElapsedHours,
         internalSteps = world.Clock.ElapsedHours / (options.StepMinutes / 60d)
@@ -207,6 +238,8 @@ var report = new
     },
     drainage,
     cycles,
+    regionalCycles,
+    flooding = floodDiagnostics,
     climate,
     recovery,
     layers = layerAggregates.Values.OrderBy(item => (int)item.Layer).Select(item => item.Snapshot()).ToArray(),
@@ -214,7 +247,8 @@ var report = new
     vectors = vectorAggregates.Values.OrderBy(item => (int)item.Process).Select(item => item.Snapshot()).ToArray(),
     events = eventAggregates.Values.OrderBy(item => (int)item.Kind).Select(item => item.Snapshot()).ToArray(),
     annual,
-    temporal
+    temporal,
+    regionalTemporal
 };
 
 var jsonOptions = new JsonSerializerOptions
@@ -225,19 +259,23 @@ var jsonOptions = new JsonSerializerOptions
 };
 var faunaSuffix = options.Harvesters > 0 ? $"-harvesters{options.Harvesters}" : "";
 var climateSuffix = $"-climate{options.ClimateVariability.ToString("0.##", CultureInfo.InvariantCulture)}";
-var stem = $"stress-{options.Years}y-{options.Size}x{options.Size}-seed{options.Seed}{faunaSuffix}{climateSuffix}";
+var fireSuffix = options.WildfireEnabled ? "-fire" : "-nofire";
+var stem = $"stress-{options.Years}y-{options.Size}x{options.Size}-seed{options.Seed}{faunaSuffix}{climateSuffix}{fireSuffix}";
 var jsonPath = Path.Combine(options.OutputDirectory, stem + ".json");
 var csvPath = Path.Combine(options.OutputDirectory, stem + "-annual.csv");
 var temporalCsvPath = Path.Combine(options.OutputDirectory, stem + "-temporal.csv");
+var regionalCsvPath = Path.Combine(options.OutputDirectory, stem + "-regional.csv");
 await File.WriteAllTextAsync(jsonPath, JsonSerializer.Serialize(report, jsonOptions));
 await WriteAnnualCsv(csvPath, annual);
 await WriteTemporalCsv(temporalCsvPath, temporal);
+await WriteRegionalCsv(regionalCsvPath, regionalTemporal, regionalColumns);
 
 Console.WriteLine(failures.Count == 0 ? "PASS" : "FAIL");
 Console.WriteLine($"Runtime: {stopwatch.Elapsed}");
 Console.WriteLine($"JSON: {Path.GetFullPath(jsonPath)}");
 Console.WriteLine($"CSV:  {Path.GetFullPath(csvPath)}");
 Console.WriteLine($"Temporal CSV: {Path.GetFullPath(temporalCsvPath)}");
+Console.WriteLine($"Regional CSV: {Path.GetFullPath(regionalCsvPath)}");
 if (failures.Count > 0)
 {
     foreach (var failure in failures)
@@ -259,7 +297,8 @@ static (float[] X, float[] Y) ReferenceVectors(
     int width)
 {
     if (process is VectorProcess.HumidityAdvection or VectorProcess.CloudAdvection
-        or VectorProcess.AirTemperatureAdvection or VectorProcess.SnowTransport or VectorProcess.DustAdvection)
+        or VectorProcess.AirTemperatureAdvection or VectorProcess.SnowTransport or VectorProcess.DustAdvection
+        or VectorProcess.FireSpread)
     {
         return (wind.VectorX, wind.VectorY);
     }
@@ -369,10 +408,13 @@ static List<string> EvaluateFailures(
     IReadOnlyDictionary<VectorProcess, VectorAggregate> vectors,
     DrainageDiagnostics drainage,
     CycleDiagnostics cycles,
+    RegionalCycleDiagnostics regionalCycles,
+    FloodDiagnostics flooding,
     ClimateDiagnostics climate,
     EcologicalRecoveryDiagnostics recovery,
     WorldSummary summary,
-    int cellCount)
+    int cellCount,
+    bool wildfireEnabled)
 {
     var failures = new List<string>();
     if (layers.Values.Any(item => item.MaximumNonFinite > 0)) failures.Add("non-finite state values observed");
@@ -380,7 +422,14 @@ static List<string> EvaluateFailures(
     if (vectors.Values.Any(item => item.NonFinite > 0)) failures.Add("non-finite vector processes observed");
     if (Math.Abs(summary.WaterBudget.RelativeError) >= 0.00005) failures.Add("water ledger exceeds 0.005%");
     if (Math.Abs(summary.NitrogenBudget.RelativeError) >= 0.00005) failures.Add("nitrogen ledger exceeds 0.005%");
-    if (layers[SimulationLayer.SurfaceWater].ObservedMaximum >= 320) failures.Add("surface water exceeds 320 mm");
+    if (flooding.MaximumDepthMm >= 1000f)
+        failures.Add($"surface-water depth exceeds the 1000 mm hard envelope ({flooding.MaximumDepthMm:F1} mm)");
+    var maximumDeepCells = flooding.MaximumFractionOver320Mm * cellCount;
+    var widespreadDeepCells = Math.Max(16, (int)Math.Ceiling(cellCount * 0.001));
+    if (maximumDeepCells >= widespreadDeepCells)
+        failures.Add($"surface water deeper than 320 mm covers {maximumDeepCells:F0} cells ({flooding.MaximumFractionOver320Mm:P3})");
+    if (flooding.MaximumContinuousDaysOver320Mm > 45)
+        failures.Add($"a cell remains deeper than 320 mm for {flooding.MaximumContinuousDaysOver320Mm} sampled days");
     if (layers[SimulationLayer.Groundwater].ObservedMaximum >= 225) failures.Add("groundwater exceeds 225 mm");
     if (layers[SimulationLayer.Snow].ObservedMaximum >= 900) failures.Add("snow exceeds 900 mm SWE");
     if (layers[SimulationLayer.Precipitation].ObservedMaximum >= 60) failures.Add("precipitation exceeds 60 mm/hour");
@@ -392,6 +441,20 @@ static List<string> EvaluateFailures(
     if (layers[SimulationLayer.SoilDepth].ObservedMinimum < 0.079f) failures.Add("soil depth fell below hard floor");
     if (layers[SimulationLayer.SoilCompaction].ObservedMaximum >= 0.95f)
         failures.Add("soil compaction saturates above 95%, erasing readable trail gradients");
+    if (layers[SimulationLayer.FireIntensity].ObservedMaximum > 1.0001f)
+        failures.Add("fire intensity exceeds its normalized physical envelope");
+    if (layers[SimulationLayer.BurnScar].ObservedMaximum > 1.0001f)
+        failures.Add("burn scar exceeds its normalized physical envelope");
+    var simulatedCellDays = (long)annual.Count * 365L * cellCount;
+    if (wildfireEnabled && simulatedCellDays >= 10_000_000L
+        && layers[SimulationLayer.FireIntensity].ObservedMaximum <= 0f)
+        failures.Add("no natural wildfire occurred despite at least ten million simulated cell-days");
+    if (layers[SimulationLayer.FireIntensity].ObservedMaximum >= 0.05f
+        && layers[SimulationLayer.BurnScar].ObservedMaximum < 0.01f)
+        failures.Add("wildfire produced no persistent burn scar");
+    if (layers[SimulationLayer.FireIntensity].ObservedMaximum >= 0.05f
+        && vectors[VectorProcess.FireSpread].TotalGrossMagnitude <= 0d)
+        failures.Add("wildfire produced no vector spread telemetry");
     if (annual.Any(item => Math.Abs(item.WaterRelativeError) >= 0.00005)) failures.Add("annual water ledger excursion exceeds 0.005%");
     if (annual.Any(item => Math.Abs(item.NitrogenRelativeError) >= 0.00005)) failures.Add("annual nitrogen ledger excursion exceeds 0.005%");
     if (drainage.LoopCells > 0) failures.Add("dry-terrain drainage contains a loop");
@@ -401,6 +464,9 @@ static List<string> EvaluateFailures(
     if (layers[SimulationLayer.Precipitation].MaximumPercentile98
         > StateCatalog.Get(SimulationLayer.Precipitation).ScaleMaximum)
         failures.Add("precipitation p98 exceeds its readable scale");
+    if (layers[SimulationLayer.Dust].MaximumPercentile98
+        > StateCatalog.Get(SimulationLayer.Dust).ScaleMaximum)
+        failures.Add("dust p98 exceeds its readable scale");
     if (layers[SimulationLayer.LooseSediment].MaximumPercentile98
         > StateCatalog.Get(SimulationLayer.LooseSediment).ScaleMaximum * 1.25f)
         failures.Add("loose-sediment p98 exceeds 125% of its readable scale");
@@ -418,6 +484,13 @@ static List<string> EvaluateFailures(
     }
     if (annual.Count >= 20)
     {
+        if (regionalCycles.CompleteRegionYears > 0 && regionalCycles.HydrologyCycleFraction < 0.35)
+            failures.Add($"regional hydrology cycles occur in only {regionalCycles.HydrologyCycleFraction:P0} of region-years");
+        if (climate.WindMultiplierRange > 0.1f
+            && vectors[VectorProcess.Wind].WestwardFraction < 0.03)
+            failures.Add($"synoptic wind reverses in only {vectors[VectorProcess.Wind].WestwardFraction:P2} of sampled cells");
+        if (vectors[VectorProcess.Wind].PressureGradientAlignment < 0.15)
+            failures.Add($"wind weakly follows pressure gradients ({vectors[VectorProcess.Wind].PressureGradientAlignment:F3})");
         var stabilityWindow = annual.TakeLast(20).ToArray();
         var waterTrend = LinearSlope(stabilityWindow.Select(item => item.StoredWaterMmPerCell).ToArray());
         var biomassTrend = LinearSlope(stabilityWindow
@@ -554,6 +627,65 @@ static CycleDiagnostics AnalyzeCycles(IReadOnlyList<TemporalCheckpoint> checkpoi
         consecutiveTemperatureCorrelations.Count > 0 ? consecutiveTemperatureCorrelations.Average() : 0,
         checkpoints.Count(item => item.LayerMeans[nameof(SimulationLayer.Precipitation)] > 0.01f),
         checkpoints.Count(item => item.LayerMeans[nameof(SimulationLayer.Dust)] > 0.02f));
+}
+
+static RegionalCycleDiagnostics AnalyzeRegionalCycles(
+    IReadOnlyList<RegionalCheckpoint> checkpoints,
+    int columns,
+    int rows)
+{
+    var regionCount = columns * rows;
+    var years = checkpoints.GroupBy(item => item.Year).OrderBy(group => group.Key).ToArray();
+    var hydrologyCycles = 0;
+    var regionYears = 0;
+    var regionalCycleCounts = new int[regionCount];
+    var rootAmplitudes = new List<double>(regionCount * Math.Max(1, years.Length));
+    var biomassAmplitudes = new List<double>(regionCount * Math.Max(1, years.Length));
+
+    foreach (var year in years)
+    {
+        var ordered = year.OrderBy(item => item.DayOfYear).ToArray();
+        if (ordered.Length < 2)
+        {
+            continue;
+        }
+
+        for (var region = 0; region < regionCount; region++)
+        {
+            var root = ordered.Select(item => (double)item.MeanRootWaterMm[region]).ToArray();
+            var biomass = ordered.Select(item => (double)item.MeanLiveBiomassGm2[region]).ToArray();
+            var rootAmplitude = root.Max() - root.Min();
+            var biomassAmplitude = biomass.Max() - biomass.Min();
+            rootAmplitudes.Add(rootAmplitude);
+            biomassAmplitudes.Add(biomassAmplitude);
+            regionYears++;
+            if (rootAmplitude >= 8d)
+            {
+                hydrologyCycles++;
+                regionalCycleCounts[region]++;
+            }
+        }
+    }
+
+    var requiredYears = Math.Max(1, (int)Math.Ceiling(years.Length * 0.60));
+    return new RegionalCycleDiagnostics(
+        columns,
+        rows,
+        regionYears,
+        hydrologyCycles,
+        regionYears > 0 ? hydrologyCycles / (double)regionYears : 0d,
+        regionalCycleCounts.Count(count => count >= requiredYears),
+        Median(rootAmplitudes),
+        Median(biomassAmplitudes),
+        checkpoints.Sum(item => item.WaterStressFraction.Count(value => value >= 0.25f)),
+        checkpoints.Sum(item => item.FloodedFraction.Count(value => value >= 0.01f)),
+        checkpoints.Sum(item => item.BurningFraction.Count(value => value >= 0.001f)),
+        checkpoints.Count > 0
+            ? checkpoints.Max(item => item.FloodedFraction.Max())
+            : 0f,
+        checkpoints.Count > 0
+            ? checkpoints.Max(item => item.BurningFraction.Max())
+            : 0f);
 }
 
 static double PearsonSeries(double[] a, double[] b)
@@ -710,7 +842,7 @@ static EcologicalRecoveryDiagnostics AnalyzeRecovery(IReadOnlyList<AnnualCheckpo
 static async Task WriteTemporalCsv(string path, IReadOnlyList<TemporalCheckpoint> checkpoints)
 {
     await using var writer = new StreamWriter(path);
-    await writer.WriteLineAsync("year,day,elapsed_hours,temperature_c,precipitation_mm_h,surface_water_mm,root_water_mm,groundwater_mm,snow_mm,live_biomass_gm2,dry_biomass_gm2,soil_compaction,dust_gm2,climate_temperature_offset_c,climate_moisture_multiplier,climate_wind_multiplier,climate_storm_frequency,climate_storm_intensity,climate_phase_shift_days,heatwave,cold_snap,rain_burst,wind_storm");
+    await writer.WriteLineAsync("year,day,elapsed_hours,temperature_c,precipitation_mm_h,surface_water_mm,root_water_mm,groundwater_mm,snow_mm,live_biomass_gm2,dry_biomass_gm2,soil_compaction,dust_gm2,fire_intensity,burn_scar,climate_temperature_offset_c,climate_moisture_multiplier,climate_wind_multiplier,climate_storm_frequency,climate_storm_intensity,climate_phase_shift_days,heatwave,cold_snap,rain_burst,wind_storm");
     foreach (var item in checkpoints)
     {
         string F(double value) => value.ToString("G17", CultureInfo.InvariantCulture);
@@ -728,6 +860,8 @@ static async Task WriteTemporalCsv(string path, IReadOnlyList<TemporalCheckpoint
             F(item.LayerMeans[nameof(SimulationLayer.DryBiomass)]),
             F(item.LayerMeans[nameof(SimulationLayer.SoilCompaction)]),
             F(item.LayerMeans[nameof(SimulationLayer.Dust)]),
+            F(item.LayerMeans[nameof(SimulationLayer.FireIntensity)]),
+            F(item.LayerMeans[nameof(SimulationLayer.BurnScar)]),
             F(item.Climate.TemperatureOffsetC),
             F(item.Climate.MoistureMultiplier),
             F(item.Climate.WindSpeedMultiplier),
@@ -741,10 +875,43 @@ static async Task WriteTemporalCsv(string path, IReadOnlyList<TemporalCheckpoint
     }
 }
 
+static async Task WriteRegionalCsv(
+    string path,
+    IReadOnlyList<RegionalCheckpoint> checkpoints,
+    int columns)
+{
+    await using var writer = new StreamWriter(path);
+    await writer.WriteLineAsync("year,day,elapsed_hours,region_x,region_y,temperature_c,snow_mm,surface_water_mean_mm,surface_water_max_mm,flooded_fraction,root_water_mm,water_stress_fraction,live_biomass_gm2,dust_gm2,burning_fraction,burn_scar");
+    foreach (var item in checkpoints)
+    {
+        string F(double value) => value.ToString("G17", CultureInfo.InvariantCulture);
+        for (var region = 0; region < item.MeanRootWaterMm.Length; region++)
+        {
+            await writer.WriteLineAsync(string.Join(',',
+                item.Year,
+                item.DayOfYear,
+                F(item.ElapsedHours),
+                region % columns,
+                region / columns,
+                F(item.MeanSurfaceTemperatureC[region]),
+                F(item.MeanSnowMm[region]),
+                F(item.MeanSurfaceWaterMm[region]),
+                F(item.MaximumSurfaceWaterMm[region]),
+                F(item.FloodedFraction[region]),
+                F(item.MeanRootWaterMm[region]),
+                F(item.WaterStressFraction[region]),
+                F(item.MeanLiveBiomassGm2[region]),
+                F(item.MeanDustGm2[region]),
+                F(item.BurningFraction[region]),
+                F(item.MeanBurnScar[region])));
+        }
+    }
+}
+
 static async Task WriteAnnualCsv(string path, IReadOnlyList<AnnualCheckpoint> annual)
 {
     await using var writer = new StreamWriter(path);
-    await writer.WriteLineAsync("year,stored_water_mm_per_cell,input_mm_per_cell,output_mm_per_cell,water_error,nitrogen_gm2_per_cell,nitrogen_error,climate_temperature_anomaly_c,climate_moisture_multiplier,climate_wind_multiplier,climate_storm_frequency,climate_storm_intensity,climate_phase_shift_days,severe_heat,severe_cold,severe_drought,extreme_wet,severe_wind,temperature_c,surface_water_mm,root_water_mm,groundwater_mm,snow_mm,live_biomass_gm2,dry_biomass_gm2,available_nitrogen_gm2,plant_nitrogen_gm2,organic_nitrogen_gm2,soil_compaction,soil_depth_m,dust_gm2,non_finite");
+    await writer.WriteLineAsync("year,stored_water_mm_per_cell,input_mm_per_cell,output_mm_per_cell,water_error,nitrogen_gm2_per_cell,nitrogen_error,climate_temperature_anomaly_c,climate_moisture_multiplier,climate_wind_multiplier,climate_storm_frequency,climate_storm_intensity,climate_phase_shift_days,severe_heat,severe_cold,severe_drought,extreme_wet,severe_wind,temperature_c,surface_water_mm,root_water_mm,groundwater_mm,snow_mm,live_biomass_gm2,dry_biomass_gm2,available_nitrogen_gm2,plant_nitrogen_gm2,organic_nitrogen_gm2,soil_compaction,soil_depth_m,dust_gm2,fire_intensity,burn_scar,non_finite");
     foreach (var item in annual)
     {
         string F(double value) => value.ToString("G17", CultureInfo.InvariantCulture);
@@ -776,6 +943,8 @@ static async Task WriteAnnualCsv(string path, IReadOnlyList<AnnualCheckpoint> an
             F(item.LayerMeans[nameof(SimulationLayer.SoilCompaction)]),
             F(item.LayerMeans[nameof(SimulationLayer.SoilDepth)]),
             F(item.LayerMeans[nameof(SimulationLayer.Dust)]),
+            F(item.LayerMeans[nameof(SimulationLayer.FireIntensity)]),
+            F(item.LayerMeans[nameof(SimulationLayer.BurnScar)]),
             item.NonFiniteCount));
     }
 }
@@ -822,6 +991,70 @@ internal sealed class LayerAggregate(SimulationLayer layer)
         maximumAboveScale = MaximumAboveScale,
         maximumNonFinite = MaximumNonFinite
     };
+}
+
+internal sealed class FloodAggregate(int width, int height)
+{
+    private readonly int[] consecutiveDeepDays = new int[checked(width * height)];
+    private int observations;
+    private float maximumDepth;
+    private double maximumFractionOver100;
+    private double maximumFractionOver200;
+    private double maximumFractionOver320;
+    private int maximumContinuousDeepDays;
+    private long deepCellObservations;
+
+    public void Observe(LayerSnapshot surfaceWater, int representedDays)
+    {
+        if (surfaceWater.Width != width || surfaceWater.Height != height)
+        {
+            throw new InvalidOperationException("Flood aggregate received a mismatched raster.");
+        }
+
+        observations++;
+        var over100 = 0;
+        var over200 = 0;
+        var over320 = 0;
+        for (var index = 0; index < surfaceWater.Values.Length; index++)
+        {
+            var value = surfaceWater.Values[index];
+            if (!float.IsFinite(value))
+            {
+                continue;
+            }
+
+            maximumDepth = Math.Max(maximumDepth, value);
+            if (value >= 100f) over100++;
+            if (value >= 200f) over200++;
+            if (value >= 320f)
+            {
+                over320++;
+                deepCellObservations++;
+                consecutiveDeepDays[index] += representedDays;
+                maximumContinuousDeepDays = Math.Max(
+                    maximumContinuousDeepDays,
+                    consecutiveDeepDays[index]);
+            }
+            else
+            {
+                consecutiveDeepDays[index] = 0;
+            }
+        }
+
+        var scale = 1d / surfaceWater.Values.Length;
+        maximumFractionOver100 = Math.Max(maximumFractionOver100, over100 * scale);
+        maximumFractionOver200 = Math.Max(maximumFractionOver200, over200 * scale);
+        maximumFractionOver320 = Math.Max(maximumFractionOver320, over320 * scale);
+    }
+
+    public FloodDiagnostics Snapshot() => new(
+        observations,
+        maximumDepth,
+        maximumFractionOver100,
+        maximumFractionOver200,
+        maximumFractionOver320,
+        maximumContinuousDeepDays,
+        deepCellObservations);
 }
 
 internal sealed class FluxAggregate(SimulationFlux flux)
@@ -887,6 +1120,13 @@ internal sealed class VectorAggregate(VectorProcess process)
     public VectorProcess Process { get; } = process;
     public float MaximumMagnitude { get; private set; }
     public long NonFinite { get; private set; }
+    public double TotalGrossMagnitude => totalGrossMagnitude;
+    public double WestwardFraction => windVectorSamples > 0
+        ? westwardSamples / (double)windVectorSamples
+        : 0d;
+    public double PressureGradientAlignment => pressureAlignmentSamples > 0
+        ? pressureAlignmentSum / pressureAlignmentSamples
+        : 0d;
 
     public void Observe(VectorProcessSnapshot snapshot, float[] referenceX, float[] referenceY, bool axisOnly)
     {
@@ -961,9 +1201,9 @@ internal sealed class VectorAggregate(VectorProcess process)
         {
             meanX = windVectorSamples > 0 ? meanWindX / windVectorSamples : 0,
             meanY = windVectorSamples > 0 ? meanWindY / windVectorSamples : 0,
-            westwardFraction = windVectorSamples > 0 ? westwardSamples / (double)windVectorSamples : 0,
+            westwardFraction = WestwardFraction,
             above20MsFraction = windVectorSamples > 0 ? extremeWindSamples / (double)windVectorSamples : 0,
-            pressureGradientAlignment = pressureAlignmentSamples > 0 ? pressureAlignmentSum / pressureAlignmentSamples : 0,
+            pressureGradientAlignment = PressureGradientAlignment,
             slopeSpeedCorrelation = slopeCorrelationSamples > 0 ? slopeCorrelationSum / slopeCorrelationSamples : 0
         } : null
     };
@@ -1034,6 +1274,22 @@ internal sealed record TemporalCheckpoint(
     Dictionary<string, float> LayerMaxima,
     ClimateForcingSnapshot Climate);
 
+internal sealed record RegionalCheckpoint(
+    int Year,
+    int DayOfYear,
+    double ElapsedHours,
+    float[] MeanSurfaceTemperatureC,
+    float[] MeanSnowMm,
+    float[] MeanSurfaceWaterMm,
+    float[] MaximumSurfaceWaterMm,
+    float[] FloodedFraction,
+    float[] MeanRootWaterMm,
+    float[] WaterStressFraction,
+    float[] MeanLiveBiomassGm2,
+    float[] MeanDustGm2,
+    float[] BurningFraction,
+    float[] MeanBurnScar);
+
 internal sealed record CycleDiagnostics(
     int CompleteAnnualCycles,
     int TemperatureCycles,
@@ -1047,6 +1303,30 @@ internal sealed record CycleDiagnostics(
     double ConsecutiveYearTemperatureCorrelation,
     int WetObservationWindows,
     int DustyObservationWindows);
+
+internal sealed record RegionalCycleDiagnostics(
+    int Columns,
+    int Rows,
+    int CompleteRegionYears,
+    int HydrologyCycles,
+    double HydrologyCycleFraction,
+    int RegionsWithReliableHydrologyCycles,
+    double MedianRootWaterAmplitudeMm,
+    double MedianBiomassAmplitudeGm2,
+    int RegionalDroughtWindows,
+    int RegionalFloodWindows,
+    int RegionalFireWindows,
+    float MaximumRegionalFloodedFraction,
+    float MaximumRegionalBurningFraction);
+
+internal sealed record FloodDiagnostics(
+    int Observations,
+    float MaximumDepthMm,
+    double MaximumFractionOver100Mm,
+    double MaximumFractionOver200Mm,
+    double MaximumFractionOver320Mm,
+    int MaximumContinuousDaysOver320Mm,
+    long DeepCellObservations);
 
 internal sealed record ClimateDiagnostics(
     int Years,
@@ -1102,6 +1382,7 @@ internal sealed record StressOptions(
     int ErosionPasses,
     int Harvesters,
     float ClimateVariability,
+    bool WildfireEnabled,
     string OutputDirectory)
 {
     public static StressOptions Parse(string[] args)
@@ -1123,6 +1404,9 @@ internal sealed record StressOptions(
         float ReadFloat(string name, float fallback) => values.TryGetValue(name, out var value)
             ? float.Parse(value, CultureInfo.InvariantCulture)
             : fallback;
+        bool ReadBool(string name, bool fallback) => values.TryGetValue(name, out var value)
+            ? bool.Parse(value)
+            : fallback;
         return new StressOptions(
             Read("years", 100),
             Read("size", 32),
@@ -1132,6 +1416,7 @@ internal sealed record StressOptions(
             Read("erosion-passes", 8),
             Read("harvesters", 10),
             ReadFloat("climate-variability", 1f),
+            ReadBool("wildfire", true),
             values.GetValueOrDefault("output", Path.Combine("WorldModel", "StressResults")));
     }
 }
