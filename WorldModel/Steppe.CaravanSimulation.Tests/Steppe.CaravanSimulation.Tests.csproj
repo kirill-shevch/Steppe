@@ -1,0 +1,10 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <RootNamespace>Steppe.CaravanSimulation.Tests</RootNamespace>
+    <AssemblyName>Steppe.CaravanSimulation.Tests</AssemblyName>
+  </PropertyGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\Steppe.CaravanSimulation\Steppe.CaravanSimulation.csproj" />
+  </ItemGroup>
+</Project>

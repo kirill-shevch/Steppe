@@ -92,9 +92,27 @@ dotnet run --project WorldModel/Steppe.Stress -c Release -- --years 100 --size 3
 
 Итоги и границы этой квалификации описаны в [CLIMATE_QUALIFICATION_REPORT.md](CLIMATE_QUALIFICATION_REPORT.md).
 
-## Караван в жизненном цикле мира
+## Физическая симуляция каравана
 
-Headless-квалификация каравана включается флагом `--caravan true` у stress-runner:
+Новая `Steppe.CaravanSimulation` моделирует сам караван через 16 непрерывно меняющихся органов и пять замкнутых контуров: электричество, воду, органику, структуру и тепло. Морфология растёт из физических запасов, неиспользуемые органы атрофируются, движение зависит от ветровой и моторной тяги. Караван не умирает: длительный дефицит переводит его в гибернацию без движения, добычи, преобразования и роста.
+
+Караван и природа исполняются одним атомарным `AdvanceWithCaravan`: изъятие воды, снега и биомассы, тканевая вода растений, колея, повреждение растительности, поднятая пыль, возврат вещества и отходящее тепло изменяют те же состояния и ledger, что природные процессы.
+
+Короткий профильный прогон:
+
+```powershell
+dotnet run --project WorldModel/Steppe.CaravanExperiments -c Release -- `
+  --years 1 --size 32 --seed 123 `
+  --morphologies Balanced --policies BalancedNomad
+```
+
+Runner записывает длительность и серии дефицитов, наблюдаемые экстремумы, частоту стратегических решений и фактических операций, активность каждого органа, сезонные диапазоны ресурсов и всех органов. Полный контракт и команды матричных прогонов описаны в [CARAVAN_SIMULATION.md](CARAVAN_SIMULATION.md).
+
+Текущая 10-летняя калибровка сезонных ресурсов, действий, гибернации и диапазонов 16 органов: [CARAVAN_SEASONAL_REPORT.md](CARAVAN_SEASONAL_REPORT.md).
+
+## Квалификационный экологический агент каравана
+
+Старый `CaravanEcologyAgent` остаётся быстрым baseline для проверки доступности занятий без внутренней морфологии. Он включается флагом `--caravan true` у stress-runner:
 
 ```powershell
 dotnet run --project WorldModel/Steppe.Stress -c Release -- `
@@ -110,6 +128,7 @@ dotnet run --project WorldModel/Steppe.Stress -c Release -- `
 ```powershell
 dotnet build WorldModel/Steppe.WorldModel.slnx
 dotnet run --project WorldModel/Steppe.Simulation.Tests
+dotnet run --project WorldModel/Steppe.CaravanSimulation.Tests
 ```
 
 Тесты не требуют сторонних пакетов. Они проверяют детерминизм, разнообразие климатических режимов, смену направления синоптического ветра, устойчивость экологии под аномалиями на нескольких seed, пространственный runoff, пожар и азотный баланс, сохранение, полноту каталогов и потоков, региональные snapshots, пространственные маски событий, ограниченную историю, подтверждение режимных эпизодов с гистерезисом, атомарные действия каравана, чтение возможностей и полный годовой цикл пяти караванных глаголов.
@@ -123,6 +142,9 @@ dotnet run --project WorldModel/Steppe.Simulation.Tests
 | `Steppe.Cli` | headless-прогоны, сохранение и CSV-экспорт |
 | `Steppe.Stress` | многолетняя квалификация состояний, потоков и трендов |
 | `Steppe.Simulation.Tests` | исполняемый набор проверок без test-framework-зависимостей |
+| `Steppe.CaravanSimulation` | физические органы, внутренние контуры, рост, атрофия и движение каравана |
+| `Steppe.CaravanExperiments` | сравнение морфологий и политик, дефициты, экстремумы и частоты |
+| `Steppe.CaravanSimulation.Tests` | проверки физического обмена, балансов, persistence и морфологии |
 
 Подробный контракт состояний и процессов: [WORLD_MODEL.md](WORLD_MODEL.md).
 

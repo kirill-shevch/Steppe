@@ -70,7 +70,14 @@ public enum SimulationFlux
     CaravanDustCapture,
     CaravanSedimentReturn,
     CaravanCompaction,
-    CaravanAtmosphericWaterWithdrawal
+    CaravanAtmosphericWaterWithdrawal,
+    CaravanPlantTissueWaterWithdrawal,
+    CaravanAtmosphericWaterReturn,
+    CaravanLiveVegetationDamage,
+    CaravanDryVegetationDamage,
+    CaravanPlantNitrogenTransfer,
+    CaravanDustLift,
+    CaravanWasteHeat
 }
 
 public enum FluxGroup
@@ -178,7 +185,14 @@ public static class FluxCatalog
         D(SimulationFlux.CaravanDustCapture, FluxGroup.Intervention, "КАРАВАН", 700, "Улавливание пыли караваном", "Уловленная пыль", "Пыль, задержанная фильтрами и поверхностями каравана до последующего возврата осадка.", "г/м²", 5, false, E(SimulationLayer.Dust, -1)),
         D(SimulationFlux.CaravanSedimentReturn, FluxGroup.Intervention, "КАРАВАН", 710, "Возврат минерального осадка", "Возврат осадка", "Уловленный минеральный материал, сброшенный караваном в рыхлый поверхностный резервуар.", "кг/м²", 6, false, E(SimulationLayer.LooseSediment, 1)),
         D(SimulationFlux.CaravanCompaction, FluxGroup.Intervention, "КАРАВАН", 720, "Уплотнение колеи каравана", "Колея каравана", "Долговременное уплотнение почвы на пройденном караваном пути.", "доля", 6, false, E(SimulationLayer.SoilCompaction, 1)),
-        D(SimulationFlux.CaravanAtmosphericWaterWithdrawal, FluxGroup.Intervention, "КАРАВАН", 730, "Конденсация атмосферной влаги караваном", "Конденсация воды", "Водяной пар, физически изъятый из воздуха конденсатором каравана с затратой сухой биомассы.", "мм", 5, false, E(SimulationLayer.Humidity, -1))
+        D(SimulationFlux.CaravanAtmosphericWaterWithdrawal, FluxGroup.Intervention, "КАРАВАН", 730, "Конденсация атмосферной влаги караваном", "Конденсация воды", "Водяной пар, физически изъятый из воздуха конденсатором каравана с затратой сухой биомассы.", "мм", 5, false, E(SimulationLayer.Humidity, -1)),
+        D(SimulationFlux.CaravanPlantTissueWaterWithdrawal, FluxGroup.Intervention, "КАРАВАН", 740, "Вынос тканевой воды растений", "Вода живой массы", "Вода корневой зоны, вынесенная только вместе с физически собранной живой растительной массой.", "мм", 6, false, E(SimulationLayer.RootWater, -1)),
+        D(SimulationFlux.CaravanAtmosphericWaterReturn, FluxGroup.Intervention, "КАРАВАН", 750, "Возврат водяного пара караваном", "Пар каравана", "Вода, потерянная внутренними контурами и сушкой каравана и возвращённая в атмосферу.", "мм", 6, false, E(SimulationLayer.Humidity, 1)),
+        D(SimulationFlux.CaravanLiveVegetationDamage, FluxGroup.Intervention, "КАРАВАН", 760, "Повреждение живой растительности", "Примятая зелень", "Живая растительность, повреждённая движением каравана и переведённая в подстилку.", "г/м²", 5, false, E(SimulationLayer.LiveBiomass, -1), E(SimulationLayer.LitterBiomass, 1)),
+        D(SimulationFlux.CaravanDryVegetationDamage, FluxGroup.Intervention, "КАРАВАН", 770, "Повреждение сухостоя", "Примятый сухостой", "Сухая стоящая масса, повреждённая движением каравана и переведённая в подстилку.", "г/м²", 5, false, E(SimulationLayer.DryBiomass, -1), E(SimulationLayer.LitterBiomass, 1)),
+        D(SimulationFlux.CaravanPlantNitrogenTransfer, FluxGroup.Intervention, "КАРАВАН", 780, "Перенос азота повреждённых растений", "Азот колеи", "Азот примятой живой массы, переведённый из растительного резервуара в органический.", "г/м²", 6, false, E(SimulationLayer.PlantNitrogen, -1), E(SimulationLayer.OrganicNitrogen, 1)),
+        D(SimulationFlux.CaravanDustLift, FluxGroup.Intervention, "КАРАВАН", 790, "Поднятая караваном пыль", "Пыль колеи", "Рыхлый минеральный материал, поднятый движением каравана в атмосферную пыль.", "г/м²", 5, false, E(SimulationLayer.LooseSediment, -0.001f), E(SimulationLayer.Dust, 1)),
+        D(SimulationFlux.CaravanWasteHeat, FluxGroup.Intervention, "КАРАВАН", 800, "Сброс тепла караваном", "Тепло каравана", "Локальное изменение температуры воздуха от сброшенного караваном тепла.", "°C", 7, false, E(SimulationLayer.AirTemperature, 1))
     ];
 
     private static readonly IReadOnlyDictionary<SimulationFlux, FluxDescriptor> ById =

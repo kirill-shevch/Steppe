@@ -1,0 +1,8 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <RootNamespace>Steppe.CaravanSimulation</RootNamespace>
+  </PropertyGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\Steppe.Simulation\Steppe.Simulation.csproj" />
+  </ItemGroup>
+</Project>
