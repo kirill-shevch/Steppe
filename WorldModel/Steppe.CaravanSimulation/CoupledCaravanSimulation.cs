@@ -84,6 +84,7 @@ public sealed class CoupledCaravanSimulation
                     internalStep.DistanceKilometers,
                     internalStep.WaterFulfillment,
                     internalStep.OrganicFulfillment,
+                    internalStep.NitrogenFulfillment,
                     internalStep.ThermalFulfillment,
                     intake,
                     returned,

@@ -75,7 +75,8 @@ static async Task<CaravanExperimentReport> RunExperiment(
     await using var writer = new StreamWriter(csvPath);
     await writer.WriteLineAsync(
         "day,year,day_of_year,x,y,distance_km,water_l,snow_l,wet_organic_kg,dry_organic_kg,"
-        + "electricity_kwh,heat_kwh,mass_kg,water_deficit_hours,organic_deficit_hours,"
+        + "organic_nitrogen_kg,structural_nitrogen_kg,electricity_kwh,heat_kwh,mass_kg,"
+        + "water_deficit_hours,organic_deficit_hours,"
         + "thermal_deficit_hours,niche_count,mode,hibernation_reason,hibernation_hours,"
         + "max_ledger_error,actions");
 
@@ -84,12 +85,15 @@ static async Task<CaravanExperimentReport> RunExperiment(
     var maximumLedgerError = 0f;
     var waterScarcityHours = 0d;
     var organicScarcityHours = 0d;
+    var nitrogenScarcityHours = 0d;
     var thermalScarcityHours = 0d;
     var currentWaterStreak = 0d;
     var currentOrganicStreak = 0d;
+    var currentNitrogenStreak = 0d;
     var currentThermalStreak = 0d;
     var maximumWaterStreak = 0d;
     var maximumOrganicStreak = 0d;
+    var maximumNitrogenStreak = 0d;
     var maximumThermalStreak = 0d;
     var extrema = new CaravanExtremaAccumulator(coupled.CaptureCaravan());
     var seasonal = new CaravanSeasonalAccumulator();
@@ -122,6 +126,13 @@ static async Task<CaravanExperimentReport> RunExperiment(
             maximumOrganicStreak = Math.Max(maximumOrganicStreak, currentOrganicStreak);
         }
         else currentOrganicStreak = 0d;
+        if (result.NitrogenFulfillment < 0.999f)
+        {
+            nitrogenScarcityHours += result.Hours;
+            currentNitrogenStreak += result.Hours;
+            maximumNitrogenStreak = Math.Max(maximumNitrogenStreak, currentNitrogenStreak);
+        }
+        else currentNitrogenStreak = 0d;
         if (result.ThermalFulfillment < 0.999f)
         {
             thermalScarcityHours += result.Hours;
@@ -152,6 +163,8 @@ static async Task<CaravanExperimentReport> RunExperiment(
                 F(snapshot.SnowWaterLiters),
                 F(snapshot.WetOrganicDryKg),
                 F(snapshot.DryOrganicKg),
+                F(snapshot.OrganicNitrogenKg),
+                F(snapshot.StructuralNitrogenKg),
                 F(snapshot.StoredElectricityKwh),
                 F(snapshot.StoredHeatKwh),
                 F(snapshot.TotalMassKg),
@@ -209,9 +222,11 @@ static async Task<CaravanExperimentReport> RunExperiment(
         firstHibernationAtHours,
         waterScarcityHours,
         organicScarcityHours,
+        nitrogenScarcityHours,
         thermalScarcityHours,
         maximumWaterStreak,
         maximumOrganicStreak,
+        maximumNitrogenStreak,
         maximumThermalStreak,
         maximumLedgerError,
         usedOrgans,
@@ -364,6 +379,8 @@ static CaravanSeasonalOscillation BuildSeasonalOscillation(
     return new CaravanSeasonalOscillation(
         Amplitude(profile.Select(item => item.WaterLiters.Mean)),
         Amplitude(profile.Select(item => item.WetOrganicDryKg.Mean + item.DryOrganicKg.Mean)),
+        Amplitude(profile.Select(item => item.OrganicNitrogenKg.Mean)),
+        Amplitude(profile.Select(item => item.StructuralNitrogenKg.Mean)),
         Amplitude(profile.Select(item => item.ElectricityKwh.Mean)),
         Amplitude(profile.Select(item => item.StoredHeatKwh.Mean)),
         Amplitude(profile.Select(item => item.BodyTemperatureC.Mean)),
@@ -381,8 +398,11 @@ static async Task WriteSeasonalCsv(
     await using var writer = new StreamWriter(path);
     await writer.WriteLineAsync(
         "year,season,hours,hibernation_hours,distance_km,water_scarcity_hours,"
-        + "organic_scarcity_hours,thermal_scarcity_hours,water_min,water_mean,water_max,"
+        + "organic_scarcity_hours,nitrogen_scarcity_hours,thermal_scarcity_hours,"
+        + "water_min,water_mean,water_max,"
         + "organic_min,organic_mean,organic_max,electricity_min,electricity_mean,electricity_max,"
+        + "organic_nitrogen_min,organic_nitrogen_mean,organic_nitrogen_max,"
+        + "structural_nitrogen_min,structural_nitrogen_mean,structural_nitrogen_max,"
         + "heat_min,heat_mean,heat_max,body_temperature_min,body_temperature_mean,"
         + "body_temperature_max,total_mass_min,total_mass_mean,total_mass_max,activities,actions");
     foreach (var season in seasons)
@@ -400,10 +420,13 @@ static async Task WriteSeasonalCsv(
             F(season.DistanceKilometers),
             F(season.WaterScarcityHours),
             F(season.OrganicScarcityHours),
+            F(season.NitrogenScarcityHours),
             F(season.ThermalScarcityHours),
             F(season.WaterLiters.Minimum), F(season.WaterLiters.Mean), F(season.WaterLiters.Maximum),
             F(organic.Minimum), F(organic.Mean), F(organic.Maximum),
             F(season.ElectricityKwh.Minimum), F(season.ElectricityKwh.Mean), F(season.ElectricityKwh.Maximum),
+            F(season.OrganicNitrogenKg.Minimum), F(season.OrganicNitrogenKg.Mean), F(season.OrganicNitrogenKg.Maximum),
+            F(season.StructuralNitrogenKg.Minimum), F(season.StructuralNitrogenKg.Mean), F(season.StructuralNitrogenKg.Maximum),
             F(season.StoredHeatKwh.Minimum), F(season.StoredHeatKwh.Mean), F(season.StoredHeatKwh.Maximum),
             F(season.BodyTemperatureC.Minimum), F(season.BodyTemperatureC.Mean), F(season.BodyTemperatureC.Maximum),
             F(season.TotalMassKg.Minimum), F(season.TotalMassKg.Mean), F(season.TotalMassKg.Maximum),
@@ -466,9 +489,11 @@ internal sealed record CaravanExperimentReport(
     double? FirstHibernationAtHours,
     double WaterScarcityHours,
     double OrganicScarcityHours,
+    double NitrogenScarcityHours,
     double ThermalScarcityHours,
     double MaximumWaterScarcityStreakHours,
     double MaximumOrganicScarcityStreakHours,
+    double MaximumNitrogenScarcityStreakHours,
     double MaximumThermalScarcityStreakHours,
     float MaximumInternalLedgerError,
     int UsedOrgans,
@@ -491,6 +516,10 @@ internal sealed record CaravanObservedExtremes(
     float MaximumWaterLiters,
     float MinimumOrganicDryEquivalentKg,
     float MaximumOrganicDryEquivalentKg,
+    float MinimumOrganicNitrogenKg,
+    float MaximumOrganicNitrogenKg,
+    float MinimumStructuralNitrogenKg,
+    float MaximumStructuralNitrogenKg,
     float MinimumElectricityKwh,
     float MaximumElectricityKwh,
     float MinimumStoredHeatKwh,
@@ -502,6 +531,7 @@ internal sealed record CaravanObservedExtremes(
     float MinimumOrganFunctionalFraction,
     float MinimumWaterFulfillment,
     float MinimumOrganicFulfillment,
+    float MinimumNitrogenFulfillment,
     float MinimumThermalFulfillment);
 
 internal sealed class CaravanExtremaAccumulator
@@ -510,6 +540,10 @@ internal sealed class CaravanExtremaAccumulator
     private float maximumWater;
     private float minimumOrganic;
     private float maximumOrganic;
+    private float minimumOrganicNitrogen;
+    private float maximumOrganicNitrogen;
+    private float minimumStructuralNitrogen;
+    private float maximumStructuralNitrogen;
     private float minimumElectricity;
     private float maximumElectricity;
     private float minimumHeat;
@@ -521,12 +555,15 @@ internal sealed class CaravanExtremaAccumulator
     private float minimumOrganFunction;
     private float minimumWaterFulfillment = 1f;
     private float minimumOrganicFulfillment = 1f;
+    private float minimumNitrogenFulfillment = 1f;
     private float minimumThermalFulfillment = 1f;
 
     public CaravanExtremaAccumulator(CaravanStateSnapshot initial)
     {
         minimumWater = maximumWater = initial.WaterLiters;
         minimumOrganic = maximumOrganic = OrganicDryEquivalent(initial);
+        minimumOrganicNitrogen = maximumOrganicNitrogen = initial.OrganicNitrogenKg;
+        minimumStructuralNitrogen = maximumStructuralNitrogen = initial.StructuralNitrogenKg;
         minimumElectricity = maximumElectricity = initial.StoredElectricityKwh;
         minimumHeat = maximumHeat = initial.StoredHeatKwh;
         minimumTemperature = maximumTemperature = initial.BodyTemperatureC;
@@ -542,6 +579,10 @@ internal sealed class CaravanExtremaAccumulator
         var organic = OrganicDryEquivalent(state);
         minimumOrganic = Math.Min(minimumOrganic, organic);
         maximumOrganic = Math.Max(maximumOrganic, organic);
+        minimumOrganicNitrogen = Math.Min(minimumOrganicNitrogen, state.OrganicNitrogenKg);
+        maximumOrganicNitrogen = Math.Max(maximumOrganicNitrogen, state.OrganicNitrogenKg);
+        minimumStructuralNitrogen = Math.Min(minimumStructuralNitrogen, state.StructuralNitrogenKg);
+        maximumStructuralNitrogen = Math.Max(maximumStructuralNitrogen, state.StructuralNitrogenKg);
         minimumElectricity = Math.Min(minimumElectricity, state.StoredElectricityKwh);
         maximumElectricity = Math.Max(maximumElectricity, state.StoredElectricityKwh);
         minimumHeat = Math.Min(minimumHeat, state.StoredHeatKwh);
@@ -555,6 +596,7 @@ internal sealed class CaravanExtremaAccumulator
             state.Organs.Values.Min(item => item.FunctionalFraction));
         minimumWaterFulfillment = Math.Min(minimumWaterFulfillment, result.WaterFulfillment);
         minimumOrganicFulfillment = Math.Min(minimumOrganicFulfillment, result.OrganicFulfillment);
+        minimumNitrogenFulfillment = Math.Min(minimumNitrogenFulfillment, result.NitrogenFulfillment);
         minimumThermalFulfillment = Math.Min(minimumThermalFulfillment, result.ThermalFulfillment);
     }
 
@@ -563,6 +605,10 @@ internal sealed class CaravanExtremaAccumulator
         maximumWater,
         minimumOrganic,
         maximumOrganic,
+        minimumOrganicNitrogen,
+        maximumOrganicNitrogen,
+        minimumStructuralNitrogen,
+        maximumStructuralNitrogen,
         minimumElectricity,
         maximumElectricity,
         minimumHeat,
@@ -574,6 +620,7 @@ internal sealed class CaravanExtremaAccumulator
         minimumOrganFunction,
         minimumWaterFulfillment,
         minimumOrganicFulfillment,
+        minimumNitrogenFulfillment,
         minimumThermalFulfillment);
 
     private static float OrganicDryEquivalent(CaravanStateSnapshot state) =>
@@ -607,6 +654,7 @@ internal sealed record CaravanSeasonStatistics(
     double DistanceKilometers,
     double WaterScarcityHours,
     double OrganicScarcityHours,
+    double NitrogenScarcityHours,
     double ThermalScarcityHours,
     CaravanRangeStatistics WaterLiters,
     CaravanRangeStatistics SnowWaterLiters,
@@ -614,6 +662,7 @@ internal sealed record CaravanSeasonStatistics(
     CaravanRangeStatistics WetOrganicWaterLiters,
     CaravanRangeStatistics DryOrganicKg,
     CaravanRangeStatistics OrganicNitrogenKg,
+    CaravanRangeStatistics StructuralNitrogenKg,
     CaravanRangeStatistics StructuralReserveKg,
     CaravanRangeStatistics ElectricityKwh,
     CaravanRangeStatistics StoredHeatKwh,
@@ -626,6 +675,8 @@ internal sealed record CaravanSeasonStatistics(
 internal sealed record CaravanSeasonalOscillation(
     float MeanWaterAmplitudeLiters,
     float MeanOrganicAmplitudeKg,
+    float MeanOrganicNitrogenAmplitudeKg,
+    float MeanStructuralNitrogenAmplitudeKg,
     float MeanElectricityAmplitudeKwh,
     float MeanStoredHeatAmplitudeKwh,
     float MeanBodyTemperatureAmplitudeC,
@@ -636,7 +687,7 @@ internal sealed record CaravanSeasonalOscillation(
     CaravanOrganKind[] SeasonallyVariableOrganUsage)
 {
     public static CaravanSeasonalOscillation Empty { get; } = new(
-        0f, 0f, 0f, 0f, 0f, 0f, 0f, 0f, [], []);
+        0f, 0f, 0f, 0f, 0f, 0f, 0f, 0f, 0f, 0f, [], []);
 }
 
 internal sealed class CaravanSeasonalAccumulator
@@ -681,6 +732,7 @@ internal sealed class CaravanSeasonalAccumulator
         private readonly WeightedRange wetOrganicWater = new();
         private readonly WeightedRange dryOrganic = new();
         private readonly WeightedRange organicNitrogen = new();
+        private readonly WeightedRange structuralNitrogen = new();
         private readonly WeightedRange structuralReserve = new();
         private readonly WeightedRange electricity = new();
         private readonly WeightedRange heat = new();
@@ -697,6 +749,7 @@ internal sealed class CaravanSeasonalAccumulator
         public double DistanceKilometers { get; private set; }
         public double WaterScarcityHours { get; private set; }
         public double OrganicScarcityHours { get; private set; }
+        public double NitrogenScarcityHours { get; private set; }
         public double ThermalScarcityHours { get; private set; }
 
         public void Observe(CaravanStepResult result)
@@ -709,6 +762,7 @@ internal sealed class CaravanSeasonalAccumulator
             DistanceKilometers += result.DistanceKilometers;
             if (result.WaterFulfillment < 0.999f) WaterScarcityHours += hours;
             if (result.OrganicFulfillment < 0.999f) OrganicScarcityHours += hours;
+            if (result.NitrogenFulfillment < 0.999f) NitrogenScarcityHours += hours;
             if (result.ThermalFulfillment < 0.999f) ThermalScarcityHours += hours;
             activities[hibernating ? CaravanActivity.Hibernate : result.Decision.Activity]++;
             foreach (var action in result.Actions)
@@ -720,6 +774,7 @@ internal sealed class CaravanSeasonalAccumulator
             wetOrganicWater.Add(state.WetOrganicWaterLiters, hours);
             dryOrganic.Add(state.DryOrganicKg, hours);
             organicNitrogen.Add(state.OrganicNitrogenKg, hours);
+            structuralNitrogen.Add(state.StructuralNitrogenKg, hours);
             structuralReserve.Add(state.StructuralReserveKg, hours);
             electricity.Add(state.StoredElectricityKwh, hours);
             heat.Add(state.StoredHeatKwh, hours);
@@ -736,6 +791,7 @@ internal sealed class CaravanSeasonalAccumulator
             DistanceKilometers,
             WaterScarcityHours,
             OrganicScarcityHours,
+            NitrogenScarcityHours,
             ThermalScarcityHours,
             water.Capture(),
             snow.Capture(),
@@ -743,6 +799,7 @@ internal sealed class CaravanSeasonalAccumulator
             wetOrganicWater.Capture(),
             dryOrganic.Capture(),
             organicNitrogen.Capture(),
+            structuralNitrogen.Capture(),
             structuralReserve.Capture(),
             electricity.Capture(),
             heat.Capture(),

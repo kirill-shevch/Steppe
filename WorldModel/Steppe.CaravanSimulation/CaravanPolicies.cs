@@ -228,6 +228,24 @@ internal sealed class BalancedNomadPolicy : CaravanPolicyBase
                 Reason = "balanced policy: water reserve below 32%"
             };
         }
+        var organicNitrogenFraction = caravan.OrganicNitrogenKg / Math.Max(1f, organic);
+        var nitrogenRichGrowth = Find(observation, CaravanOpportunityKind.GreenGrowth);
+        var localLiveBiomass = observation.Cell.States
+            .First(item => item.State == SimulationLayer.LiveBiomass)
+            .Value;
+        if (organicNitrogenFraction < 0.0117f
+            && (nitrogenRichGrowth is not null || localLiveBiomass > 20f))
+        {
+            return At(
+                observation,
+                CaravanActivity.HarvestLiveBiomass,
+                nitrogenRichGrowth,
+                Priorities(
+                    (CaravanOrganKind.LiveBiomassHarvester, 1f),
+                    (CaravanOrganKind.OrganicStorage, 0.65f),
+                    (CaravanOrganKind.Dryer, 0.45f)),
+                $"restoring organic nitrogen concentration from {organicNitrogenFraction:P1}");
+        }
         if (organic < organicCapacity * 0.25f)
         {
             return new FollowBiomassPolicy().Decide(observation, caravan) with

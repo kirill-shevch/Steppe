@@ -8,9 +8,21 @@ public sealed class CaravanSimulation
     private const float FurnaceElectricEfficiency = 0.12f;
     private const float FurnaceHeatEfficiency = 0.55f;
     private const float MotorEfficiency = 0.84f;
-    private const float BaseWaterLitersDay = 120f;
-    private const float BaseOrganicKgDay = 5f;
-    private const float BaseElectricityKwhDay = 4f;
+    private const float WaterIntakeKwhPerLiter = 0.0006f;
+    private const float SnowCollectionKwhPerLiter = 0.00025f;
+    private const float LiveHarvestKwhPerKg = 0.03f;
+    private const float DryHarvestKwhPerKg = 0.02f;
+    private const float DustCaptureKwhPerKg = 0.01f;
+    private const float ChitinCollectionKwhPerKg = 0.015f;
+    private const float StructuralWaterLitersPerKgDay = 0.004f;
+    private const float StructuralOrganicKgPerKgDay = 0.00016f;
+    private const float StructuralElectricityKwhPerKgDay = 0.0001f;
+    private const float MovementWaterLitersPerMechanicalKwh = 0.7f;
+    private const float MovementOrganicKgPerMechanicalKwh = 0.032f;
+    private const float HibernationMetabolicFraction = 0.025f;
+    internal const float GrowthNitrogenKgPerStructuralKg = 0.012f;
+    internal const float OrganUseThreshold = 0.03f;
+    private const float MaintenanceNitrogenKgPerOrganicKg = 0.0118f;
 
     private readonly CaravanState state;
 
@@ -42,11 +54,7 @@ public sealed class CaravanSimulation
     {
         if (state.IsHibernating)
         {
-            return new CaravanPhysicalExchangeRequest
-            {
-                X = observation.Cell.X,
-                Y = observation.Cell.Y
-            };
+            return BuildDormantIntakeRequest(observation, hours);
         }
 
         var waterRoom = Math.Max(
@@ -55,10 +63,6 @@ public sealed class CaravanSimulation
         var organicRoom = Math.Max(
             0f,
             state.OrganicCapacityKg - state.WetOrganicDryKg - state.DryOrganicKg);
-        var waterLow = state.WaterLiters < state.WaterCapacityLiters * 0.58f;
-        var organicLow = state.WetOrganicDryKg + state.DryOrganicKg
-            < state.OrganicCapacityKg * 0.58f;
-
         var surfaceWater = 0f;
         var snow = 0f;
         if (decision.Activity == CaravanActivity.CollectSnow)
@@ -67,7 +71,7 @@ public sealed class CaravanSimulation
                 waterRoom,
                 state.OrganSize(CaravanOrganKind.SnowCollector) * 0.7f * (float)hours);
         }
-        else if (decision.Activity == CaravanActivity.CollectWater || waterLow)
+        else if (decision.Activity == CaravanActivity.CollectWater)
         {
             surfaceWater = Math.Min(
                 waterRoom,
@@ -76,14 +80,13 @@ public sealed class CaravanSimulation
 
         var live = 0f;
         var dry = 0f;
-        if (decision.Activity == CaravanActivity.HarvestLiveBiomass || organicLow)
+        if (decision.Activity == CaravanActivity.HarvestLiveBiomass)
         {
             live = Math.Min(
                 organicRoom,
                 state.OrganSize(CaravanOrganKind.LiveBiomassHarvester) * (float)hours);
         }
-        if (decision.Activity == CaravanActivity.HarvestDryBiomass
-            || organicLow && live < organicRoom * 0.4f)
+        if (decision.Activity == CaravanActivity.HarvestDryBiomass)
         {
             dry = Math.Min(
                 Math.Max(0f, organicRoom - live),
@@ -94,9 +97,26 @@ public sealed class CaravanSimulation
         var dustCapture = observation.Cell.DustGm2 > 0.03f
             ? Math.Min(dustCapacity, Math.Max(0.1f, state.OrganSize(CaravanOrganKind.Radiator) * 0.01f * (float)hours))
             : 0f;
-        var collectChitin = decision.Activity == CaravanActivity.CollectChitin
-            || observation.Opportunities.Opportunities.Any(item =>
-                item.Kind == CaravanOpportunityKind.HarvesterMolt && item.DistanceCells < 2f);
+        var collectChitin = decision.Activity == CaravanActivity.CollectChitin;
+
+        // The world must never be mutated before the caravan can pay for the
+        // requested work. Reserve the current battery budget across all active
+        // intake operations; same-tick solar or furnace output is not borrowed.
+        var availableElectricity = state.StoredElectricityKwh;
+        float EnergyLimited(float requested, float kwhPerUnit)
+        {
+            if (requested <= 0f || kwhPerUnit <= 0f) return 0f;
+            var accepted = Math.Min(requested, availableElectricity / kwhPerUnit);
+            availableElectricity = Math.Max(0f, availableElectricity - accepted * kwhPerUnit);
+            return accepted;
+        }
+
+        surfaceWater = EnergyLimited(surfaceWater, WaterIntakeKwhPerLiter);
+        snow = EnergyLimited(snow, SnowCollectionKwhPerLiter);
+        live = EnergyLimited(live, LiveHarvestKwhPerKg);
+        dry = EnergyLimited(dry, DryHarvestKwhPerKg);
+        var chitin = EnergyLimited(collectChitin ? 35f : 0f, ChitinCollectionKwhPerKg);
+        dustCapture = EnergyLimited(dustCapture, DustCaptureKwhPerKg);
 
         return new CaravanPhysicalExchangeRequest
         {
@@ -107,7 +127,39 @@ public sealed class CaravanSimulation
             LiveBiomassHarvestKg = live,
             DryBiomassHarvestKg = dry,
             DustCaptureKg = dustCapture,
-            ChitinCollectionKg = collectChitin ? 35f : 0f
+            ChitinCollectionKg = chitin
+        };
+    }
+
+    private CaravanPhysicalExchangeRequest BuildDormantIntakeRequest(
+        CaravanObservation observation,
+        double hours)
+    {
+        var waterRoom = Math.Max(
+            0f,
+            state.WaterCapacityLiters - state.WaterLiters - state.SnowWaterLiters);
+        var organicRoom = Math.Max(
+            0f,
+            state.OrganicCapacityKg - state.WetOrganicDryKg - state.DryOrganicKg);
+        var stepHours = (float)hours;
+        return new CaravanPhysicalExchangeRequest
+        {
+            X = observation.Cell.X,
+            Y = observation.Cell.Y,
+            // Dormant seed tissue has no powered throughput, but tiny exposed
+            // surfaces can absorb water and loose organic material in place.
+            SurfaceWaterWithdrawalLiters = Math.Min(
+                waterRoom,
+                state.OrganSize(CaravanOrganKind.WaterIntake) * 0.025f * stepHours),
+            SnowWithdrawalLiters = Math.Min(
+                waterRoom,
+                state.OrganSize(CaravanOrganKind.SnowCollector) * 0.01f * stepHours),
+            LiveBiomassHarvestKg = Math.Min(
+                organicRoom,
+                state.OrganSize(CaravanOrganKind.LiveBiomassHarvester) * 0.006f * stepHours),
+            DryBiomassHarvestKg = Math.Min(
+                organicRoom,
+                state.OrganSize(CaravanOrganKind.DryBiomassCollector) * 0.003f * stepHours)
         };
     }
 
@@ -120,7 +172,7 @@ public sealed class CaravanSimulation
     {
         if (state.IsHibernating)
         {
-            return AdvanceHibernation(observation, hours);
+            return AdvanceHibernation(observation, intake, hours);
         }
 
         var accounting = StepAccounting.Start(state);
@@ -141,11 +193,6 @@ public sealed class CaravanSimulation
         MeltSnow(observation, accounting, actions, usages, hours);
         DryAndSpoilOrganic(observation, decision, accounting, actions, usages, hours);
 
-        var maintenance = ConsumeMaintenance(
-            observation,
-            accounting,
-            actions,
-            hours);
         var movement = Move(
             observation,
             decision,
@@ -155,16 +202,26 @@ public sealed class CaravanSimulation
             hours,
             cellSizeMeters);
         var movementNeeds = ConsumeMovementNeeds(
-            movement.DistanceKilometers,
+            movement,
             accounting,
             actions);
+        var maintenance = ConsumeMaintenance(
+            observation,
+            accounting,
+            actions,
+            usages,
+            hours);
 
         var waterDemand = maintenance.WaterDemand + movementNeeds.WaterDemand;
         var waterConsumed = maintenance.WaterConsumed + movementNeeds.WaterConsumed;
         var organicDemand = maintenance.OrganicDemand + movementNeeds.OrganicDemand;
         var organicConsumed = maintenance.OrganicConsumed + movementNeeds.OrganicConsumed;
+        var nitrogenDemand = maintenance.NitrogenDemand + movementNeeds.NitrogenDemand;
+        var nitrogenConsumed = maintenance.NitrogenConsumed + movementNeeds.NitrogenConsumed;
         var waterFulfillment = Fulfillment(waterDemand, waterConsumed);
         var organicFulfillment = Fulfillment(organicDemand, organicConsumed);
+        var nitrogenFulfillment = Fulfillment(nitrogenDemand, nitrogenConsumed);
+        organicFulfillment = Math.Min(organicFulfillment, nitrogenFulfillment);
 
         var maintenanceElectricityFulfillment = Fulfillment(
             maintenance.ElectricityDemand,
@@ -223,6 +280,7 @@ public sealed class CaravanSimulation
             movement.DistanceKilometers,
             waterFulfillment,
             organicFulfillment,
+            nitrogenFulfillment,
             thermalFulfillment);
     }
 
@@ -349,12 +407,14 @@ public sealed class CaravanSimulation
         StepAccounting accounting,
         List<CaravanActionRecord> actions,
         Dictionary<CaravanOrganKind, float> usages,
-        double hours)
+        double hours,
+        float productionScale = 1f)
     {
         var area = state.OrganSize(CaravanOrganKind.SolarLeaf);
         var dustPenalty = Math.Clamp(1f - observation.Cell.DustGm2 * 0.6f, 0.35f, 1f);
         var solarRadiation = CellValue(observation.Cell, SimulationLayer.SolarRadiation);
-        var potential = solarRadiation * area * 0.19f * dustPenalty * (float)hours / 1000f;
+        var potential = solarRadiation * area * 0.19f * dustPenalty * (float)hours / 1000f
+            * Math.Clamp(productionScale, 0f, 1f);
         var room = Math.Max(0f, state.BatteryCapacityKwh - state.StoredElectricityKwh);
         var stored = Math.Min(room, potential);
         state.StoredElectricityKwh += stored;
@@ -437,10 +497,12 @@ public sealed class CaravanSimulation
         StepAccounting accounting,
         List<CaravanActionRecord> actions)
     {
-        var demand = intake.SurfaceWaterWithdrawnLiters * 0.0006f
-            + intake.LiveBiomassHarvestedKg * 0.03f
-            + intake.DryBiomassHarvestedKg * 0.02f
-            + intake.DustCapturedKg * 0.01f;
+        var demand = intake.SurfaceWaterWithdrawnLiters * WaterIntakeKwhPerLiter
+            + intake.SnowWithdrawnLiters * SnowCollectionKwhPerLiter
+            + intake.LiveBiomassHarvestedKg * LiveHarvestKwhPerKg
+            + intake.DryBiomassHarvestedKg * DryHarvestKwhPerKg
+            + intake.DustCapturedKg * DustCaptureKwhPerKg
+            + intake.ChitinCollectedKg * ChitinCollectionKwhPerKg;
         var consumed = TakeElectricity(demand, accounting);
         AddAction(actions, "power intake and harvest", consumed, "кВт·ч");
         return Fulfillment(demand, consumed);
@@ -514,18 +576,20 @@ public sealed class CaravanSimulation
         StepAccounting accounting,
         List<CaravanActionRecord> actions,
         Dictionary<CaravanOrganKind, float> usages,
-        double hours)
+        double hours,
+        float processScale = 1f)
     {
         if (state.SnowWaterLiters <= 1e-6f) return;
         var room = Math.Max(0f, state.WaterCapacityLiters - state.WaterLiters);
         if (room <= 1e-6f) return;
 
+        processScale = Math.Clamp(processScale, 0f, 1f);
         var collectorArea = state.OrganSize(CaravanOrganKind.SnowCollector);
         var solarHeat = CellValue(observation.Cell, SimulationLayer.SolarRadiation) * collectorArea * 0.28f
-            * (float)hours / 1000f;
+            * (float)hours / 1000f * processScale;
         AddHeat(solarHeat, accounting);
         var thermalPower = state.OrganSize(CaravanOrganKind.ThermalOrgan);
-        var maximumByPower = thermalPower * (float)hours / 0.093f;
+        var maximumByPower = thermalPower * (float)hours / 0.093f * processScale;
         var amount = Math.Min(
             Math.Min(state.SnowWaterLiters, room),
             Math.Min(maximumByPower, state.StoredHeatKwh / 0.093f));
@@ -621,7 +685,9 @@ public sealed class CaravanSimulation
         CaravanObservation observation,
         StepAccounting accounting,
         List<CaravanActionRecord> actions,
-        double hours)
+        IReadOnlyDictionary<CaravanOrganKind, float> usages,
+        double hours,
+        float metabolicScale = 1f)
     {
         var days = (float)(hours / 24d);
         var wind = MathF.Sqrt(
@@ -629,29 +695,50 @@ public sealed class CaravanSimulation
             + observation.Cell.WindYMs * observation.Cell.WindYMs);
         var heatStress = Math.Clamp((observation.Cell.AirTemperatureC - 18f) / 18f, 0f, 1f);
         var coldStress = Math.Clamp((5f - observation.Cell.AirTemperatureC) / 25f, 0f, 1f);
-        var waterDemand = BaseWaterLitersDay * (1f + heatStress * 0.8f + wind / 30f) * days;
-        var organicDemand = BaseOrganicKgDay * (1f + coldStress * 0.55f) * days;
-        var electricityDemand = BaseElectricityKwhDay * days;
+        var structuralMass = state.TotalStructuralMassKg;
+        var waterDemand = structuralMass * StructuralWaterLitersPerKgDay * days;
+        var organicDemand = structuralMass * StructuralOrganicKgPerKgDay * days;
+        var electricityDemand = structuralMass * StructuralElectricityKwhPerKgDay * days;
 
         foreach (var organ in state.Organs.Values)
         {
             var definition = organ.Definition;
-            waterDemand += organ.Size * definition.MaintenanceWaterLitersPerSizeDay * days;
-            organicDemand += organ.Size * definition.MaintenanceOrganicKgPerSizeDay * days;
-            electricityDemand += organ.Size * definition.MaintenanceElectricityKwhPerSizeDay * days;
+            var activity = Math.Clamp(usages.GetValueOrDefault(definition.Kind), 0f, 1f);
+            var activityFactor = 0.18f + activity * 0.82f;
+            waterDemand += organ.Size * definition.MaintenanceWaterLitersPerSizeDay
+                * activityFactor * days;
+            organicDemand += organ.Size * definition.MaintenanceOrganicKgPerSizeDay
+                * activityFactor * days;
+            electricityDemand += organ.Size * definition.MaintenanceElectricityKwhPerSizeDay
+                * activityFactor * days;
         }
 
+        waterDemand *= 1f + heatStress * 0.9f + Math.Clamp(wind / 50f, 0f, 0.3f);
+        organicDemand *= 1f + coldStress * 0.65f;
+        metabolicScale = Math.Clamp(metabolicScale, 0f, 1f);
+        waterDemand *= metabolicScale;
+        organicDemand *= metabolicScale;
+        electricityDemand *= metabolicScale;
+
         var water = ConsumeWater(waterDemand);
+        var nitrogenDemand = organicDemand * MaintenanceNitrogenKgPerOrganicKg;
+        var nitrogenBefore = state.OrganicNitrogenKg;
         var organic = ConsumeOrganic(organicDemand, 0.28f, accounting);
+        var nitrogenConsumed = Math.Min(
+            nitrogenDemand,
+            Math.Max(0f, nitrogenBefore - state.OrganicNitrogenKg));
         var electricity = TakeElectricity(electricityDemand, accounting);
         AddAction(actions, "maintain caravan water circuit", water, "л");
         AddAction(actions, "maintain living structure", organic, "кг");
+        AddAction(actions, "circulate organic nitrogen", nitrogenConsumed, "кг N");
         AddAction(actions, "maintain electrical systems", electricity, "кВт·ч");
         return new NeedConsumption(
             waterDemand,
             water,
             organicDemand,
             organic,
+            nitrogenDemand,
+            nitrogenConsumed,
             electricityDemand,
             electricity);
     }
@@ -674,7 +761,7 @@ public sealed class CaravanSimulation
             || decision.Activity is CaravanActivity.Rest or CaravanActivity.Maintain or CaravanActivity.ReturnResidues)
         {
             usages[CaravanOrganKind.Frame] = Math.Clamp(state.TotalMassKg / Math.Max(1f, state.FrameCapacityKg), 0f, 1.5f);
-            return new MovementResult(0f, []);
+            return new MovementResult(0f, 0f, []);
         }
 
         var directionX = dxCells / distanceCells;
@@ -699,14 +786,6 @@ public sealed class CaravanSimulation
             distanceCells * cellSizeMeters / 1000f,
             maximumSpeedKmh * (float)hours);
 
-        // A sail or a charged motor cannot bypass the material cost of moving
-        // the living body. Limit the route before changing position so every
-        // completed kilometre can pay its water and organic requirements.
-        var materialLimitedKm = Math.Min(
-            state.WaterLiters / 0.75f,
-            (state.WetOrganicDryKg + state.DryOrganicKg) / 0.035f);
-        desiredKm = Math.Min(desiredKm, Math.Max(0f, materialLimitedKm));
-
         var mass = Math.Max(1000f, state.TotalMassKg);
         var frameRatio = mass / Math.Max(1f, state.FrameCapacityKg);
         var loadPenalty = frameRatio <= 1f ? 1f : 1f / (frameRatio * frameRatio);
@@ -718,6 +797,12 @@ public sealed class CaravanSimulation
         if (observation.Cell.FrozenSoilFraction > 0.65f && observation.Cell.SnowWaterEquivalentMm < 5f)
             rolling *= 0.82f;
         var energyPerKm = Math.Max(0.08f, mass * 9.81f * rolling / 3600f);
+        var materialLimitedMechanicalKwh = Math.Min(
+            state.WaterLiters / MovementWaterLitersPerMechanicalKwh,
+            (state.WetOrganicDryKg + state.DryOrganicKg) / MovementOrganicKgPerMechanicalKwh);
+        desiredKm = Math.Min(
+            desiredKm,
+            Math.Max(0f, materialLimitedMechanicalKwh) / energyPerKm);
         var desiredEnergy = desiredKm * energyPerKm;
         var sailUsed = Math.Min(sailPotential, desiredEnergy);
         var motorMechanicalDemand = Math.Max(0f, desiredEnergy - sailUsed);
@@ -732,7 +817,7 @@ public sealed class CaravanSimulation
 
         var availableEnergy = sailUsed + motorMechanical;
         var actualKm = Math.Min(desiredKm, availableEnergy / energyPerKm);
-        if (actualKm <= 1e-6f) return new MovementResult(0f, []);
+        if (actualKm <= 1e-6f) return new MovementResult(0f, 0f, []);
         var actualCells = actualKm * 1000f / cellSizeMeters;
         var fromX = state.XCells;
         var fromY = state.YCells;
@@ -752,21 +837,22 @@ public sealed class CaravanSimulation
         AddAction(actions, "move", actualKm, "км");
         return new MovementResult(
             actualKm,
+            actualKm * energyPerKm,
             BuildTrail(fromX, fromY, state.XCells, state.YCells, actualKm));
     }
 
     private NeedConsumption ConsumeMovementNeeds(
-        float distanceKilometers,
+        MovementResult movement,
         StepAccounting accounting,
         List<CaravanActionRecord> actions)
     {
-        var waterDemand = distanceKilometers * 0.75f;
-        var organicDemand = distanceKilometers * 0.035f;
+        var waterDemand = movement.MechanicalWorkKwh * MovementWaterLitersPerMechanicalKwh;
+        var organicDemand = movement.MechanicalWorkKwh * MovementOrganicKgPerMechanicalKwh;
         var water = ConsumeWater(waterDemand);
         var organic = ConsumeOrganic(organicDemand, 0.22f, accounting);
         AddAction(actions, "movement water loss", water, "л");
         AddAction(actions, "movement organic maintenance", organic, "кг");
-        return new NeedConsumption(waterDemand, water, organicDemand, organic, 0f, 0f);
+        return new NeedConsumption(waterDemand, water, organicDemand, organic, 0f, 0f, 0f, 0f);
     }
 
     private void GrowAndAtrophy(
@@ -789,10 +875,12 @@ public sealed class CaravanSimulation
             var growthCapacityKg = state.OrganSize(CaravanOrganKind.GrowthTissue)
                 * (float)(hours / 24d);
             var weighted = state.Organs.Values
-                .Where(item => item.GrowthPriority > 0f && item.Size < item.Definition.MaximumSize)
+                .Where(item => item.GrowthPriority > 0f
+                    && item.UsageEma >= OrganUseThreshold
+                    && item.Size < item.Definition.MaximumSize)
                 .Select(item => (
                     Organ: item,
-                    Weight: item.GrowthPriority * (0.35f + item.UsageEma)))
+                    Weight: item.GrowthPriority * item.UsageEma))
                 .Where(item => item.Weight > 0f)
                 .ToArray();
             var weightSum = weighted.Sum(item => item.Weight);
@@ -804,12 +892,21 @@ public sealed class CaravanSimulation
                     state.WaterLiters / Math.Max(1e-6f, desiredStructure * 0.4f),
                     Math.Min(
                         state.DryOrganicKg / Math.Max(1e-6f, desiredStructure * 0.25f),
-                        state.StoredElectricityKwh / Math.Max(1e-6f, desiredStructure * 0.8f)));
+                        Math.Min(
+                            state.StoredElectricityKwh / Math.Max(1e-6f, desiredStructure * 0.8f),
+                            state.OrganicNitrogenKg / Math.Max(
+                                1e-6f,
+                                desiredStructure * GrowthNitrogenKgPerStructuralKg))));
                 var structure = desiredStructure * Math.Clamp(resourceFactor, 0f, 1f);
                 var usedStructure = item.Organ.GrowByStructuralMass(structure);
                 if (usedStructure <= 1e-7f) continue;
                 state.StructuralReserveKg -= usedStructure;
                 ConsumeWater(usedStructure * 0.4f);
+                var structuralNitrogen = Math.Min(
+                    state.OrganicNitrogenKg,
+                    usedStructure * GrowthNitrogenKgPerStructuralKg);
+                state.OrganicNitrogenKg -= structuralNitrogen;
+                state.StructuralNitrogenKg += structuralNitrogen;
                 ConsumeOrganic(usedStructure * 0.25f, 0.12f, accounting);
                 TakeElectricity(usedStructure * 0.8f, accounting);
                 usages[CaravanOrganKind.GrowthTissue] = Math.Max(
@@ -819,13 +916,32 @@ public sealed class CaravanSimulation
             }
         }
 
+        ApplyAtrophy(accounting, actions, hours);
+    }
+
+    private void ApplyAtrophy(
+        StepAccounting accounting,
+        List<CaravanActionRecord> actions,
+        double hours)
+    {
         foreach (var organ in state.Organs.Values)
         {
             var (recovered, lost) = organ.Atrophy(hours);
-            if (recovered <= 0f && lost <= 0f) continue;
+            var atrophied = recovered + lost;
+            if (atrophied <= 0f) continue;
             state.StructuralReserveKg += recovered;
             accounting.StructuralLost += lost;
-            AddAction(actions, $"atrophy {organ.Definition.Name}", recovered + lost, "кг структуры", organ.Definition.Kind);
+            var recoveredNitrogen = Math.Min(
+                state.StructuralNitrogenKg,
+                atrophied * GrowthNitrogenKgPerStructuralKg);
+            state.StructuralNitrogenKg -= recoveredNitrogen;
+            state.OrganicNitrogenKg += recoveredNitrogen;
+            AddAction(
+                actions,
+                $"atrophy {organ.Definition.Name}",
+                atrophied,
+                "кг структуры",
+                organ.Definition.Kind);
         }
     }
 
@@ -929,38 +1045,98 @@ public sealed class CaravanSimulation
 
     private InternalStep AdvanceHibernation(
         CaravanObservation observation,
+        CaravanPhysicalExchangeResult intake,
         double hours)
     {
         var accounting = StepAccounting.Start(state);
-        var actions = new List<CaravanActionRecord>(2);
+        var actions = new List<CaravanActionRecord>(12);
+        var usages = Enum.GetValues<CaravanOrganKind>().ToDictionary(item => item, _ => 0f);
         var stepHours = (float)hours;
         state.CurrentHibernationHours += stepHours;
         state.CumulativeHibernationHours += stepHours;
 
-        // Shutdown has no material throughput. Stored deficit debt can relax
-        // while the body is inactive, but truly empty reserves leave it stuck
-        // until an external intervention changes its physical state.
-        state.WaterDeficitHours = Math.Max(0f, state.WaterDeficitHours - stepHours * 0.5f);
-        state.OrganicDeficitHours = Math.Max(0f, state.OrganicDeficitHours - stepHours * 0.5f);
-        state.ThermalDeficitHours = Math.Max(0f, state.ThermalDeficitHours - stepHours * 0.5f);
+        ApplyIntake(intake, accounting, actions, usages, hours);
+        GenerateSolar(
+            observation,
+            accounting,
+            actions,
+            usages,
+            hours,
+            productionScale: 0.08f);
+        MeltSnow(
+            observation,
+            accounting,
+            actions,
+            usages,
+            hours,
+            processScale: 0.05f);
+        var maintenance = ConsumeMaintenance(
+            observation,
+            accounting,
+            actions,
+            usages,
+            hours,
+            HibernationMetabolicFraction);
+        var waterFulfillment = Fulfillment(maintenance.WaterDemand, maintenance.WaterConsumed);
+        var organicFulfillment = Fulfillment(maintenance.OrganicDemand, maintenance.OrganicConsumed);
+        var nitrogenFulfillment = Fulfillment(
+            maintenance.NitrogenDemand,
+            maintenance.NitrogenConsumed);
+        organicFulfillment = Math.Min(organicFulfillment, nitrogenFulfillment);
+        var electricityFulfillment = Fulfillment(
+            maintenance.ElectricityDemand,
+            maintenance.ElectricityConsumed);
+
         var passiveThermalAlpha = 1f - MathF.Exp(-stepHours / (24f * 4f));
         state.BodyTemperatureC +=
             (observation.Cell.AirTemperatureC - state.BodyTemperatureC) * passiveThermalAlpha;
+        var thermalFulfillment = state.BodyTemperatureC is >= -20f and <= 38f ? 1f : 0f;
+        state.WaterDeficitHours = UpdateDormantStressDebt(
+            state.WaterDeficitHours,
+            waterFulfillment,
+            hours);
+        state.OrganicDeficitHours = UpdateDormantStressDebt(
+            state.OrganicDeficitHours,
+            organicFulfillment,
+            hours);
+        state.ThermalDeficitHours = UpdateDormantStressDebt(
+            state.ThermalDeficitHours,
+            thermalFulfillment,
+            hours);
 
-        foreach (var organ in state.Organs.Values) organ.RecordUsage(0f, hours);
+        var maintenanceFulfillment = Math.Min(
+            Math.Min(waterFulfillment, organicFulfillment),
+            electricityFulfillment);
+        ApplyMaintenanceToOrgans(0.8f + maintenanceFulfillment * 0.2f, hours);
+
+        foreach (var organ in state.Organs.Values)
+            organ.RecordUsage(usages[organ.Definition.Kind], hours);
+        ApplyAtrophy(accounting, actions, hours);
+        ClampStores(accounting);
         AddAction(actions, "hibernate", stepHours, "ч");
         state.SimulatedHours += hours;
         state.RecordActivity(CaravanActivity.Hibernate);
         state.RecordRegime(observation.Regime, hours);
 
-        var hasWater = state.WaterLiters >= BaseWaterLitersDay * 0.25f;
-        var hasOrganic = state.WetOrganicDryKg + state.DryOrganicKg >= BaseOrganicKgDay * 0.5f;
+        var structuralMass = state.TotalStructuralMassKg;
+        var hasWater = state.WaterLiters
+            >= Math.Max(5f, structuralMass * StructuralWaterLitersPerKgDay * 0.5f);
+        var hasOrganic = state.WetOrganicDryKg + state.DryOrganicKg
+            >= Math.Max(0.5f, structuralMass * StructuralOrganicKgPerKgDay * 0.5f);
+        var hasElectricity = state.StoredElectricityKwh
+            >= Math.Max(0.25f, structuralMass * StructuralElectricityKwhPerKgDay * 0.5f);
         var debtsRecovered = state.WaterDeficitHours <= 6f
             && state.OrganicDeficitHours <= 6f
             && state.ThermalDeficitHours <= 6f;
+        var thermallyWakeable = state.BodyTemperatureC is >= 4f and <= 32f;
         var structurallyStable = state.TotalMassKg <= state.FrameCapacityKg * 1.25f
             && state.StructuralOverloadHours < 30f * 24f;
-        if (hasWater && hasOrganic && debtsRecovered && structurallyStable)
+        if (hasWater
+            && hasOrganic
+            && hasElectricity
+            && debtsRecovered
+            && thermallyWakeable
+            && structurallyStable)
         {
             state.OperatingMode = CaravanOperatingMode.Active;
             state.HibernationReason = CaravanHibernationReason.None;
@@ -973,9 +1149,10 @@ public sealed class CaravanSimulation
             actions.ToArray(),
             [],
             0f,
-            hasWater ? 1f : 0f,
-            hasOrganic ? 1f : 0f,
-            debtsRecovered ? 1f : 0f);
+            waterFulfillment,
+            organicFulfillment,
+            nitrogenFulfillment,
+            thermalFulfillment);
     }
 
     private float ConsumeWater(float demand)
@@ -1081,6 +1258,13 @@ public sealed class CaravanSimulation
             ? current + (float)hours * (1f - fulfillment)
             : Math.Max(0f, current - (float)hours * 0.65f);
 
+    private static float UpdateDormantStressDebt(float current, float fulfillment, double hours) =>
+        fulfillment < 0.7f
+            ? Math.Min(
+                24f,
+                current + (float)hours * HibernationMetabolicFraction * (1f - fulfillment))
+            : Math.Max(0f, current - (float)hours * 0.65f);
+
     private static void AddAction(
         List<CaravanActionRecord> actions,
         string action,
@@ -1101,6 +1285,7 @@ public sealed class CaravanSimulation
         float DistanceKilometers,
         float WaterFulfillment,
         float OrganicFulfillment,
+        float NitrogenFulfillment,
         float ThermalFulfillment);
 
     internal sealed class StepAccounting
@@ -1244,10 +1429,13 @@ public sealed class CaravanSimulation
         float WaterConsumed,
         float OrganicDemand,
         float OrganicConsumed,
+        float NitrogenDemand,
+        float NitrogenConsumed,
         float ElectricityDemand,
         float ElectricityConsumed);
 
     private sealed record MovementResult(
         float DistanceKilometers,
+        float MechanicalWorkKwh,
         CaravanTrailCell[] Trail);
 }

@@ -11,8 +11,11 @@ var tests = new (string Name, Action Run)[]
     ("coupled caravan remains deterministic", CoupledCaravanRemainsDeterministic),
     ("caravan checkpoint preserves morphology and circulation state", CaravanCheckpointPreservesState),
     ("policies produce distinct mobility", PoliciesProduceDistinctMobility),
-    ("surplus grows used organs and idleness atrophies unused organs", GrowthAndAtrophyChangeMorphology),
-    ("resource exhaustion hibernates without death or work", ResourceExhaustionHibernatesWithoutDeathOrWork)
+    ("extraction cannot borrow same-tick energy", ExtractionCannotBorrowSameTickEnergy),
+    ("specialized policies receive no hidden intake", SpecializedPoliciesReceiveNoHiddenIntake),
+    ("surplus grows used organs and priority cannot prevent atrophy", GrowthAndAtrophyChangeMorphology),
+    ("nitrogen depletion prevents organ growth", NitrogenDepletionPreventsOrganGrowth),
+    ("hibernation passively absorbs resources and can wake", HibernationPassivelyAbsorbsAndWakes)
 };
 
 var failures = 0;
@@ -142,6 +145,54 @@ static void PoliciesProduceDistinctMobility()
     Assert(moved.DistanceKilometers > 2f, "FollowWind did not produce a distinct route");
 }
 
+static void ExtractionCannotBorrowSameTickEnergy()
+{
+    var blueprint = CaravanBlueprint.Create(CaravanMorphology.Balanced);
+    var snapshot = new CaravanSimulation(blueprint, 8f, 8f).Capture() with
+    {
+        StoredElectricityKwh = 0f
+    };
+    var coupled = new CoupledCaravanSimulation(
+        CreateWorld(16, 119),
+        Restore(blueprint, snapshot),
+        new FixedActivityPolicy(CaravanActivity.HarvestDryBiomass),
+        tickHours: 3d,
+        scoutRadiusCells: 8);
+    var result = coupled.Advance();
+    AssertNear(result.Intake.DryBiomassHarvestedKg, 0f, 1e-7f,
+        "an empty battery harvested biomass using later solar generation");
+    AssertNear(coupled.CaptureCaravan().CumulativeDryBiomassKg, 0f, 1e-7f,
+        "energy-free harvest reached the caravan store");
+}
+
+static void SpecializedPoliciesReceiveNoHiddenIntake()
+{
+    var blueprint = CaravanBlueprint.Create(CaravanMorphology.Balanced);
+    var snapshot = new CaravanSimulation(blueprint, 8f, 8f).Capture() with
+    {
+        WaterLiters = 1f,
+        WetOrganicDryKg = 0f,
+        WetOrganicWaterLiters = 0f,
+        DryOrganicKg = 1f,
+        StoredElectricityKwh = 100f
+    };
+    var coupled = new CoupledCaravanSimulation(
+        CreateWorld(16, 120),
+        Restore(blueprint, snapshot),
+        new FixedActivityPolicy(CaravanActivity.Maintain),
+        tickHours: 3d,
+        scoutRadiusCells: 8);
+    var result = coupled.Advance();
+    AssertNear(result.Intake.SurfaceWaterWithdrawnLiters, 0f, 1e-7f,
+        "a non-collection policy received hidden water");
+    AssertNear(result.Intake.SnowWithdrawnLiters, 0f, 1e-7f,
+        "a non-collection policy received hidden snow");
+    AssertNear(result.Intake.LiveBiomassHarvestedKg, 0f, 1e-7f,
+        "a non-harvest policy received hidden live biomass");
+    AssertNear(result.Intake.DryBiomassHarvestedKg, 0f, 1e-7f,
+        "a non-harvest policy received hidden dry biomass");
+}
+
 static void CaravanCheckpointPreservesState()
 {
     var original = new CaravanSimulation(
@@ -189,6 +240,7 @@ static void GrowthAndAtrophyChangeMorphology()
         Name = "long-lived-growth-test",
         InitialWaterLiters = 25_000f,
         InitialDryOrganicKg = 15_000f,
+        InitialOrganicNitrogenKg = 500f,
         InitialStructuralReserveKg = 5000f,
         InitialElectricityKwh = 800f,
         InitialHeatKwh = 120f,
@@ -209,29 +261,106 @@ static void GrowthAndAtrophyChangeMorphology()
         "surplus and high growth priority did not grow the solar organ");
     Assert(after.Organs[CaravanOrganKind.WaterIntake].Size
            < before.Organs[CaravanOrganKind.WaterIntake].Size,
-        $"an unused, unprioritized organ did not atrophy after a season "
+        $"growth priority protected an unused organ from atrophy "
         + $"(mode {after.OperatingMode}, idle {after.Organs[CaravanOrganKind.WaterIntake].IdleDays}, "
         + $"size {after.Organs[CaravanOrganKind.WaterIntake].Size})");
 }
 
-static void ResourceExhaustionHibernatesWithoutDeathOrWork()
+static void NitrogenDepletionPreventsOrganGrowth()
+{
+    var baseBlueprint = CaravanBlueprint.Create(CaravanMorphology.SolarElectric);
+    var sizes = new Dictionary<CaravanOrganKind, float>(baseBlueprint.OrganSizes)
+    {
+        [CaravanOrganKind.WaterReservoir] = 50_000f,
+        [CaravanOrganKind.OrganicStorage] = 30_000f,
+        [CaravanOrganKind.Frame] = 100_000f,
+        [CaravanOrganKind.GrowthTissue] = 8f,
+        [CaravanOrganKind.Battery] = 1000f
+    };
+    var blueprint = baseBlueprint with
+    {
+        Name = "nitrogen-depleted-growth-test",
+        InitialWaterLiters = 25_000f,
+        InitialDryOrganicKg = 15_000f,
+        InitialOrganicNitrogenKg = 0f,
+        InitialStructuralReserveKg = 5000f,
+        InitialElectricityKwh = 800f,
+        OrganSizes = sizes
+    };
+    var coupled = new CoupledCaravanSimulation(
+        CreateWorld(16, 502),
+        new CaravanSimulation(blueprint, 8f, 8f),
+        new GrowthTestPolicy(),
+        tickHours: 6d,
+        scoutRadiusCells: 8);
+    var before = coupled.CaptureCaravan();
+    var minimumNitrogenFulfillment = 1f;
+    for (var step = 0; step < 30 * 4; step++)
+        minimumNitrogenFulfillment = Math.Min(minimumNitrogenFulfillment, coupled.Advance().NitrogenFulfillment);
+    var after = coupled.CaptureCaravan();
+    AssertNear(
+        after.Organs[CaravanOrganKind.SolarLeaf].Size,
+        before.Organs[CaravanOrganKind.SolarLeaf].Size,
+        1e-5f,
+        "an organ grew without organic nitrogen");
+    Assert(minimumNitrogenFulfillment < 0.01f,
+        "nitrogen depletion was not exposed as an internal deficit");
+}
+
+static void HibernationPassivelyAbsorbsAndWakes()
 {
     var blueprint = CaravanBlueprint.Create(CaravanMorphology.Balanced);
     var initial = new CaravanSimulation(blueprint, 8f, 8f).Capture();
     var dormant = initial with
     {
         WaterLiters = 0f,
+        StoredElectricityKwh = 0f,
         OperatingMode = CaravanOperatingMode.Hibernating,
         HibernationReason = CaravanHibernationReason.WaterShortage,
         CurrentHibernationHours = 24f,
         CumulativeHibernationHours = 24f,
         HibernationEpisodes = 1,
-        WaterDeficitHours = 30f * 24f
+        WaterDeficitHours = 6f
     };
+    var world = CreateWorld(16, 809);
+    world.AdvanceHours(180d * 24d);
+    world.AddSurfaceWater(8, 8, 100f);
+    var coupled = new CoupledCaravanSimulation(
+        world,
+        Restore(blueprint, dormant),
+        CaravanPolicyCatalog.Create(CaravanPolicyKind.StayPut),
+        tickHours: 3d,
+        scoutRadiusCells: 8);
+    var before = coupled.CaptureCaravan();
+    for (var step = 0; step < 16 * 8 && coupled.CaptureCaravan().OperatingMode == CaravanOperatingMode.Hibernating; step++)
+    {
+        world.AddSurfaceWater(8, 8, 5f);
+        coupled.Advance();
+    }
+    var after = coupled.CaptureCaravan();
+    Assert(after.OperatingMode == CaravanOperatingMode.Active,
+        $"passive external input could not wake a dormant caravan "
+        + $"(water {after.WaterLiters:F2}, organic {after.WetOrganicDryKg + after.DryOrganicKg:F2}, "
+        + $"electricity {after.StoredElectricityKwh:F2}, body {after.BodyTemperatureC:F2}, "
+        + $"debts {after.WaterDeficitHours:F2}/{after.OrganicDeficitHours:F2}/{after.ThermalDeficitHours:F2})");
+    AssertNear(after.DistanceKilometers, before.DistanceKilometers, 1e-6f,
+        "hibernating caravan moved");
+    Assert(after.CumulativeSurfaceWaterLiters > before.CumulativeSurfaceWaterLiters,
+        "dormant intake did not absorb available surface water");
+    Assert(after.CumulativeSolarElectricityKwh > before.CumulativeSolarElectricityKwh,
+        "rudimentary dormant solar tissue produced no electricity");
+    Assert(after.CumulativeHibernationHours > before.CumulativeHibernationHours,
+        "hibernation time was not accumulated before waking");
+    Assert(after.ActivitySteps[CaravanActivity.Hibernate] > 0,
+        "dormancy was not recorded as the effective activity");
+}
+
+static CaravanSimulation Restore(CaravanBlueprint blueprint, CaravanStateSnapshot snapshot)
+{
     var checkpoint = new CaravanCheckpoint(
         CaravanPersistence.CurrentSchemaVersion,
         blueprint,
-        dormant);
+        snapshot);
     var jsonOptions = new JsonSerializerOptions
     {
         PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
@@ -240,28 +369,7 @@ static void ResourceExhaustionHibernatesWithoutDeathOrWork()
     using var stream = new MemoryStream();
     JsonSerializer.Serialize(stream, checkpoint, jsonOptions);
     stream.Position = 0;
-    var caravan = CaravanPersistence.Load(stream);
-    var coupled = new CoupledCaravanSimulation(
-        CreateWorld(16, 809),
-        caravan,
-        CaravanPolicyCatalog.Create(CaravanPolicyKind.FollowWind),
-        tickHours: 3d,
-        scoutRadiusCells: 8);
-    var before = coupled.CaptureCaravan();
-    for (var step = 0; step < 40; step++) coupled.Advance();
-    var after = coupled.CaptureCaravan();
-    Assert(after.OperatingMode == CaravanOperatingMode.Hibernating,
-        "an empty caravan left hibernation without a physical reserve");
-    Assert(after.HibernationReason == CaravanHibernationReason.WaterShortage,
-        "hibernation lost its physical cause");
-    AssertNear(after.DistanceKilometers, before.DistanceKilometers, 1e-6f,
-        "hibernating caravan moved");
-    AssertNear(after.CumulativeSolarElectricityKwh, before.CumulativeSolarElectricityKwh, 1e-6f,
-        "hibernating caravan produced electricity");
-    Assert(after.CumulativeHibernationHours >= before.CumulativeHibernationHours + 120f,
-        "hibernation time was not accumulated");
-    Assert(after.ActivitySteps[CaravanActivity.Hibernate] == 40,
-        "hibernation was not recorded as the effective activity");
+    return CaravanPersistence.Load(stream);
 }
 
 static FiniteWorld CreateWorld(int size, int seed) => new(new WorldConfig
@@ -307,7 +415,7 @@ sealed class GrowthTestPolicy : ICaravanPolicy
     private static readonly IReadOnlyDictionary<CaravanOrganKind, float> Growth =
         Enum.GetValues<CaravanOrganKind>().ToDictionary(
             item => item,
-            item => item == CaravanOrganKind.SolarLeaf ? 1f : 0f);
+            item => item is CaravanOrganKind.SolarLeaf or CaravanOrganKind.WaterIntake ? 1f : 0f);
 
     public string Name => "growth-test";
 
@@ -318,4 +426,15 @@ sealed class GrowthTestPolicy : ICaravanPolicy
             observation.YCells,
             Growth,
             "controlled growth and atrophy test");
+}
+
+sealed class FixedActivityPolicy(CaravanActivity activity) : ICaravanPolicy
+{
+    private static readonly IReadOnlyDictionary<CaravanOrganKind, float> NoGrowth =
+        Enum.GetValues<CaravanOrganKind>().ToDictionary(item => item, _ => 0f);
+
+    public string Name => $"fixed-{activity}";
+
+    public CaravanDecision Decide(CaravanObservation observation, CaravanStateSnapshot caravan) =>
+        new(activity, observation.XCells, observation.YCells, NoGrowth, "controlled activity test");
 }

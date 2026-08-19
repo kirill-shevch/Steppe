@@ -117,6 +117,7 @@ public sealed record CaravanOrganSnapshot(
     float GrowthPriority,
     float IdleDays,
     double ActiveHours,
+    double ObservedHours,
     float StructuralMassKg);
 
 public sealed record CaravanStateSnapshot(
@@ -133,6 +134,7 @@ public sealed record CaravanStateSnapshot(
     float WetOrganicWaterLiters,
     float DryOrganicKg,
     float OrganicNitrogenKg,
+    float StructuralNitrogenKg,
     float StructuralReserveKg,
     float StoredElectricityKwh,
     float StoredHeatKwh,
@@ -231,6 +233,7 @@ public sealed record CaravanStepResult(
     float DistanceKilometers,
     float WaterFulfillment,
     float OrganicFulfillment,
+    float NitrogenFulfillment,
     float ThermalFulfillment,
     CaravanPhysicalExchangeResult Intake,
     CaravanPhysicalExchangeResult? Return,

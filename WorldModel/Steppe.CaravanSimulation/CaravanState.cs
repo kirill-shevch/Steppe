@@ -18,6 +18,7 @@ internal sealed class CaravanOrganState
         GrowthPriority = snapshot.GrowthPriority;
         IdleDays = snapshot.IdleDays;
         ActiveHours = snapshot.ActiveHours;
+        ObservedHours = snapshot.ObservedHours;
     }
 
     public CaravanOrganDefinition Definition { get; }
@@ -28,6 +29,7 @@ internal sealed class CaravanOrganState
     public float GrowthPriority { get; set; }
     public float IdleDays { get; private set; }
     public double ActiveHours { get; private set; }
+    public double ObservedHours { get; private set; }
 
     public float FunctionalSize => Size * FunctionalFraction;
     public float StructuralMassKg => Size * Definition.StructuralKgPerSize;
@@ -35,6 +37,7 @@ internal sealed class CaravanOrganState
     public void RecordUsage(float normalizedUsage, double hours)
     {
         Usage = Math.Clamp(normalizedUsage, 0f, 1.5f);
+        ObservedHours += hours;
         if (Usage > 0.01f) ActiveHours += hours;
         var days = (float)(hours / 24d);
         var alpha = 1f - MathF.Exp(-days / 30f);
@@ -64,11 +67,19 @@ internal sealed class CaravanOrganState
 
     public (float RecoveredKg, float LostKg) Atrophy(double hours)
     {
-        if (IdleDays < 90f || GrowthPriority > 0.05f || Size <= Definition.MinimumSize) return (0f, 0f);
+        if (ObservedHours < 45d * 24d
+            || UsageEma >= CaravanSimulation.OrganUseThreshold
+            || Size <= Definition.MinimumSize)
+            return (0f, 0f);
         var days = (float)(hours / 24d);
+        var underuse = Math.Clamp(
+            (CaravanSimulation.OrganUseThreshold - UsageEma)
+            / CaravanSimulation.OrganUseThreshold,
+            0f,
+            1f);
         var atrophiedSize = Math.Min(
             Size - Definition.MinimumSize,
-            Size * 0.00055f * days);
+            Size * 0.00045f * underuse * days);
         if (atrophiedSize <= 0f) return (0f, 0f);
         Size -= atrophiedSize;
         var mass = atrophiedSize * Definition.StructuralKgPerSize;
@@ -86,6 +97,7 @@ internal sealed class CaravanOrganState
         GrowthPriority,
         IdleDays,
         ActiveHours,
+        ObservedHours,
         StructuralMassKg);
 }
 
@@ -114,6 +126,8 @@ internal sealed class CaravanState
         Organs = blueprint.OrganSizes.ToDictionary(
             item => item.Key,
             item => new CaravanOrganState(CaravanOrganCatalog.Get(item.Key), item.Value));
+        StructuralNitrogenKg = Organs.Values.Sum(item => item.StructuralMassKg)
+            * CaravanSimulation.GrowthNitrogenKgPerStructuralKg;
     }
 
     public CaravanState(CaravanBlueprint blueprint, CaravanStateSnapshot snapshot)
@@ -129,6 +143,7 @@ internal sealed class CaravanState
         WetOrganicWaterLiters = snapshot.WetOrganicWaterLiters;
         DryOrganicKg = snapshot.DryOrganicKg;
         OrganicNitrogenKg = snapshot.OrganicNitrogenKg;
+        StructuralNitrogenKg = snapshot.StructuralNitrogenKg;
         StructuralReserveKg = snapshot.StructuralReserveKg;
         StoredElectricityKwh = snapshot.StoredElectricityKwh;
         StoredHeatKwh = snapshot.StoredHeatKwh;
@@ -179,6 +194,7 @@ internal sealed class CaravanState
     public float WetOrganicWaterLiters { get; set; }
     public float DryOrganicKg { get; set; }
     public float OrganicNitrogenKg { get; set; }
+    public float StructuralNitrogenKg { get; set; }
     public float StructuralReserveKg { get; set; }
     public float StoredElectricityKwh { get; set; }
     public float StoredHeatKwh { get; set; }
@@ -257,6 +273,7 @@ internal sealed class CaravanState
         WetOrganicWaterLiters,
         DryOrganicKg,
         OrganicNitrogenKg,
+        StructuralNitrogenKg,
         StructuralReserveKg,
         StoredElectricityKwh,
         StoredHeatKwh,

@@ -10,7 +10,7 @@ public sealed record CaravanCheckpoint(
 
 public static class CaravanPersistence
 {
-    public const int CurrentSchemaVersion = 2;
+    public const int CurrentSchemaVersion = 3;
 
     private static readonly JsonSerializerOptions Options = new()
     {
