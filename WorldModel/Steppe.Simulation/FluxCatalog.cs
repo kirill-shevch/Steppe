@@ -57,7 +57,27 @@ public enum SimulationFlux
     FireOrganicNitrogenRelease,
     FireSeedBankDamage,
     BurnScarChange,
-    ExternalIgnition
+    ExternalIgnition,
+    CaravanSurfaceWaterWithdrawal,
+    CaravanSurfaceWaterReturn,
+    CaravanSnowWithdrawal,
+    CaravanLiveHarvest,
+    CaravanDryHarvest,
+    CaravanPlantNitrogenWithdrawal,
+    CaravanOrganicNitrogenWithdrawal,
+    CaravanOrganicMatterReturn,
+    CaravanOrganicNitrogenReturn,
+    CaravanDustCapture,
+    CaravanSedimentReturn,
+    CaravanCompaction,
+    CaravanAtmosphericWaterWithdrawal,
+    CaravanPlantTissueWaterWithdrawal,
+    CaravanAtmosphericWaterReturn,
+    CaravanLiveVegetationDamage,
+    CaravanDryVegetationDamage,
+    CaravanPlantNitrogenTransfer,
+    CaravanDustLift,
+    CaravanWasteHeat
 }
 
 public enum FluxGroup
@@ -152,7 +172,27 @@ public static class FluxCatalog
         D(SimulationFlux.FireOrganicNitrogenRelease, FluxGroup.Biology, "БИОЛОГИЯ", 395, "Минерализация органического азота огнём", "Азот из золы", "Часть органического азота сухостоя и подстилки быстро переходит в доступную минеральную форму.", "г/м²", 5, false, E(SimulationLayer.OrganicNitrogen, -1), E(SimulationLayer.AvailableNitrogen, 1)),
         D(SimulationFlux.FireSeedBankDamage, FluxGroup.Biology, "БИОЛОГИЯ", 396, "Повреждение семенного банка огнём", "Потеря семян", "Доля жизнеспособного семенного банка, потерянная при сильном нагреве поверхности.", "доля", 6, false, E(SimulationLayer.SeedBank, -1)),
         D(SimulationFlux.BurnScarChange, FluxGroup.Biology, "БИОЛОГИЯ", 397, "Изменение выгоревшего следа", "Динамика гари", "Формирование гари активным пожаром и её исчезновение при восстановлении растительности.", "доля", 6, true, E(SimulationLayer.BurnScar, 1)),
-        D(SimulationFlux.ExternalIgnition, FluxGroup.Intervention, "ВНЕШНЕЕ ВОЗДЕЙСТВИЕ", 520, "Внешнее возгорание", "Поджог", "Огонь, явно добавленный через внешний интерфейс симуляции.", "доля", 6, false, E(SimulationLayer.FireIntensity, 1))
+        D(SimulationFlux.ExternalIgnition, FluxGroup.Intervention, "ВНЕШНЕЕ ВОЗДЕЙСТВИЕ", 520, "Внешнее возгорание", "Поджог", "Огонь, явно добавленный через внешний интерфейс симуляции.", "доля", 6, false, E(SimulationLayer.FireIntensity, 1)),
+        D(SimulationFlux.CaravanSurfaceWaterWithdrawal, FluxGroup.Intervention, "КАРАВАН", 610, "Забор поверхностной воды караваном", "Забор воды", "Вода, физически изъятая караваном из доступного поверхностного резервуара.", "мм", 4, false, E(SimulationLayer.SurfaceWater, -1)),
+        D(SimulationFlux.CaravanSurfaceWaterReturn, FluxGroup.Intervention, "КАРАВАН", 620, "Возврат воды караваном", "Возврат воды", "Запасённая караваном вода, возвращённая на поверхность клетки.", "мм", 4, false, E(SimulationLayer.SurfaceWater, 1)),
+        D(SimulationFlux.CaravanSnowWithdrawal, FluxGroup.Intervention, "КАРАВАН", 630, "Сбор и плавление снега", "Сбор снега", "Снежный водный эквивалент, изъятый караваном для плавления.", "мм SWE", 4, false, E(SimulationLayer.Snow, -1)),
+        D(SimulationFlux.CaravanLiveHarvest, FluxGroup.Intervention, "КАРАВАН", 640, "Сбор живой биомассы", "Сбор зелени", "Живая растительная масса, физически снятая караваном.", "г/м²", 4, false, E(SimulationLayer.LiveBiomass, -1)),
+        D(SimulationFlux.CaravanDryHarvest, FluxGroup.Intervention, "КАРАВАН", 650, "Сбор сухостоя", "Сбор сухостоя", "Сухая стоящая масса, физически снятая караваном.", "г/м²", 4, false, E(SimulationLayer.DryBiomass, -1)),
+        D(SimulationFlux.CaravanPlantNitrogenWithdrawal, FluxGroup.Intervention, "КАРАВАН", 660, "Вынос растительного азота", "Вынос N растений", "Азот, вынесенный вместе с собранной живой биомассой.", "г/м²", 5, false, E(SimulationLayer.PlantNitrogen, -1)),
+        D(SimulationFlux.CaravanOrganicNitrogenWithdrawal, FluxGroup.Intervention, "КАРАВАН", 670, "Вынос органического азота", "Вынос органического N", "Доля органического азота, вынесенная вместе с собранным сухостоем.", "г/м²", 5, false, E(SimulationLayer.OrganicNitrogen, -1)),
+        D(SimulationFlux.CaravanOrganicMatterReturn, FluxGroup.Intervention, "КАРАВАН", 680, "Возврат органических остатков", "Возврат органики", "Органические остатки караванного цикла, возвращённые в растительную подстилку.", "г/м²", 4, false, E(SimulationLayer.LitterBiomass, 1)),
+        D(SimulationFlux.CaravanOrganicNitrogenReturn, FluxGroup.Intervention, "КАРАВАН", 690, "Возврат органического азота", "Возврат N", "Азот органических остатков каравана, возвращённый в почвенный цикл.", "г/м²", 5, false, E(SimulationLayer.OrganicNitrogen, 1)),
+        D(SimulationFlux.CaravanDustCapture, FluxGroup.Intervention, "КАРАВАН", 700, "Улавливание пыли караваном", "Уловленная пыль", "Пыль, задержанная фильтрами и поверхностями каравана до последующего возврата осадка.", "г/м²", 5, false, E(SimulationLayer.Dust, -1)),
+        D(SimulationFlux.CaravanSedimentReturn, FluxGroup.Intervention, "КАРАВАН", 710, "Возврат минерального осадка", "Возврат осадка", "Уловленный минеральный материал, сброшенный караваном в рыхлый поверхностный резервуар.", "кг/м²", 6, false, E(SimulationLayer.LooseSediment, 1)),
+        D(SimulationFlux.CaravanCompaction, FluxGroup.Intervention, "КАРАВАН", 720, "Уплотнение колеи каравана", "Колея каравана", "Долговременное уплотнение почвы на пройденном караваном пути.", "доля", 6, false, E(SimulationLayer.SoilCompaction, 1)),
+        D(SimulationFlux.CaravanAtmosphericWaterWithdrawal, FluxGroup.Intervention, "КАРАВАН", 730, "Конденсация атмосферной влаги караваном", "Конденсация воды", "Водяной пар, физически изъятый из воздуха конденсатором каравана с затратой сухой биомассы.", "мм", 5, false, E(SimulationLayer.Humidity, -1)),
+        D(SimulationFlux.CaravanPlantTissueWaterWithdrawal, FluxGroup.Intervention, "КАРАВАН", 740, "Вынос тканевой воды растений", "Вода живой массы", "Вода корневой зоны, вынесенная только вместе с физически собранной живой растительной массой.", "мм", 6, false, E(SimulationLayer.RootWater, -1)),
+        D(SimulationFlux.CaravanAtmosphericWaterReturn, FluxGroup.Intervention, "КАРАВАН", 750, "Возврат водяного пара караваном", "Пар каравана", "Вода, потерянная внутренними контурами и сушкой каравана и возвращённая в атмосферу.", "мм", 6, false, E(SimulationLayer.Humidity, 1)),
+        D(SimulationFlux.CaravanLiveVegetationDamage, FluxGroup.Intervention, "КАРАВАН", 760, "Повреждение живой растительности", "Примятая зелень", "Живая растительность, повреждённая движением каравана и переведённая в подстилку.", "г/м²", 5, false, E(SimulationLayer.LiveBiomass, -1), E(SimulationLayer.LitterBiomass, 1)),
+        D(SimulationFlux.CaravanDryVegetationDamage, FluxGroup.Intervention, "КАРАВАН", 770, "Повреждение сухостоя", "Примятый сухостой", "Сухая стоящая масса, повреждённая движением каравана и переведённая в подстилку.", "г/м²", 5, false, E(SimulationLayer.DryBiomass, -1), E(SimulationLayer.LitterBiomass, 1)),
+        D(SimulationFlux.CaravanPlantNitrogenTransfer, FluxGroup.Intervention, "КАРАВАН", 780, "Перенос азота повреждённых растений", "Азот колеи", "Азот примятой живой массы, переведённый из растительного резервуара в органический.", "г/м²", 6, false, E(SimulationLayer.PlantNitrogen, -1), E(SimulationLayer.OrganicNitrogen, 1)),
+        D(SimulationFlux.CaravanDustLift, FluxGroup.Intervention, "КАРАВАН", 790, "Поднятая караваном пыль", "Пыль колеи", "Рыхлый минеральный материал, поднятый движением каравана в атмосферную пыль.", "г/м²", 5, false, E(SimulationLayer.LooseSediment, -0.001f), E(SimulationLayer.Dust, 1)),
+        D(SimulationFlux.CaravanWasteHeat, FluxGroup.Intervention, "КАРАВАН", 800, "Сброс тепла караваном", "Тепло каравана", "Локальное изменение температуры воздуха от сброшенного караваном тепла.", "°C", 7, false, E(SimulationLayer.AirTemperature, 1))
     ];
 
     private static readonly IReadOnlyDictionary<SimulationFlux, FluxDescriptor> ById =

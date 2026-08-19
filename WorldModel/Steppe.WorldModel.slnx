@@ -1,5 +1,8 @@
 <Solution>
   <Project Path="Steppe.Simulation/Steppe.Simulation.csproj" />
+  <Project Path="Steppe.CaravanSimulation/Steppe.CaravanSimulation.csproj" />
+  <Project Path="Steppe.CaravanSimulation.Tests/Steppe.CaravanSimulation.Tests.csproj" />
+  <Project Path="Steppe.CaravanExperiments/Steppe.CaravanExperiments.csproj" />
   <Project Path="Steppe.Cli/Steppe.Cli.csproj" />
   <Project Path="Steppe.Observer/Steppe.Observer.csproj" />
   <Project Path="Steppe.Simulation.Tests/Steppe.Simulation.Tests.csproj" />

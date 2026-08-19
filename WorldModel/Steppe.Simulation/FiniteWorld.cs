@@ -67,31 +67,39 @@ public sealed partial class FiniteWorld
         lock (sync)
         {
             fluxState.Begin(SampleValue);
-            var remaining = hours;
             var advanced = 0d;
-            var baseStepHours = Config.BaseStepMinutes / 60d;
             try
             {
-                while (remaining > 1e-9)
-                {
-                    cancellationToken.ThrowIfCancellationRequested();
-                    var step = Math.Min(baseStepHours, remaining);
-                    WorldSystems.Step(Config, Clock, state, waterBudget, fluxState, step);
-                    fauna.Step(Config, Clock, state, waterBudget, fluxState, (float)step);
-                    Clock.Advance(step);
-                    if (history.RecordIfDue(Clock.ElapsedHours, CaptureHistoryPoint, CaptureCellValues))
-                    {
-                        events.Observe(CaptureRegimeMetrics());
-                    }
-                    advanced += step;
-                    remaining -= step;
-                }
+                advanced = AdvanceCore(hours, cancellationToken);
             }
             finally
             {
                 fluxState.Complete(advanced, SampleValue);
             }
         }
+    }
+
+    private double AdvanceCore(double hours, CancellationToken cancellationToken)
+    {
+        var remaining = hours;
+        var advanced = 0d;
+        var baseStepHours = Config.BaseStepMinutes / 60d;
+        while (remaining > 1e-9)
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            var step = Math.Min(baseStepHours, remaining);
+            WorldSystems.Step(Config, Clock, state, waterBudget, fluxState, step);
+            fauna.Step(Config, Clock, state, waterBudget, fluxState, (float)step);
+            Clock.Advance(step);
+            if (history.RecordIfDue(Clock.ElapsedHours, CaptureHistoryPoint, CaptureCellValues))
+            {
+                events.Observe(CaptureRegimeMetrics());
+            }
+            advanced += step;
+            remaining -= step;
+        }
+
+        return advanced;
     }
 
     public void AddSurfaceWater(int x, int y, float millimeters)

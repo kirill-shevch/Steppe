@@ -95,6 +95,9 @@ internal sealed class WorldFluxState
 
     public float[] CopyVectorGross(VectorProcess process) => (float[])vectorGross[(int)process].Clone();
 
+    public (float X, float Y, float Gross) VectorValue(VectorProcess process, int index) =>
+        (vectorX[(int)process][index], vectorY[(int)process][index], vectorGross[(int)process][index]);
+
     private static float[][] NewFields(int fieldCount, int cellCount)
     {
         var fields = new float[fieldCount][];

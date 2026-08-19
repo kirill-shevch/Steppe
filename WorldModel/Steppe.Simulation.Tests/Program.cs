@@ -16,6 +16,10 @@ var tests = new (string Name, Action Run)[]
     ("water ledger closes across open boundaries", WaterLedgerCloses),
     ("save and load preserve the world", SaveLoadRoundTrip),
     ("giant harvesters migrate and leave readable trails", GiantHarvestersLeaveReadableTrails),
+    ("caravan interventions preserve material ledgers", CaravanInterventionsPreserveLedgers),
+    ("caravan detector reads states and process directions", CaravanDetectorReadsStatesAndFlows),
+    ("ecology caravan exercises the complete steppe lifecycle", EcologyCaravanExercisesLifecycle),
+    ("ecology caravan remains deterministic", EcologyCaravanRemainsDeterministic),
     ("save and load preserve fauna and trails", SaveLoadPreservesFaunaAndTrails),
     ("wildfire spreads and conserves nitrogen", WildfireSpreadsAndConservesNitrogen),
     ("schema 3 saves migrate without fauna or compaction", SchemaThreeSaveMigrates),
@@ -404,6 +408,174 @@ static void GiantHarvestersLeaveReadableTrails()
         2f,
         molt.ChitinKg);
     Assert(collected > 1f, "a nearby giant-harvester molt could not be collected");
+}
+
+static void CaravanInterventionsPreserveLedgers()
+{
+    var world = new FiniteWorld(SmallConfig(355));
+    const int x = 11;
+    const int y = 12;
+    world.AddSurfaceWater(x, y, 30f);
+
+    var water = world.WithdrawSurfaceWater(x, y, 4f);
+    Assert(Math.Abs(water.SurfaceWaterMm - 4f) < 0.0001f,
+        "caravan did not withdraw requested available surface water");
+    var withdrawal = world.ExplainCellState(x, y, SimulationLayer.SurfaceWater);
+    Assert(withdrawal.Contributions.Any(item => item.Flux == SimulationFlux.CaravanSurfaceWaterWithdrawal),
+        "caravan water withdrawal is not explainable");
+
+    var condensed = world.CondenseAtmosphericWater(x, y, 0.05f);
+    Assert(condensed.AtmosphericWaterMm > 0f,
+        "caravan could not condense available atmospheric humidity");
+    var humidityWithdrawal = world.ExplainCellState(x, y, SimulationLayer.Humidity);
+    Assert(humidityWithdrawal.Contributions.Any(
+            item => item.Flux == SimulationFlux.CaravanAtmosphericWaterWithdrawal),
+        "caravan atmospheric-water withdrawal is not explainable");
+
+    var returnedWater = world.ReturnSurfaceWater(x, y, 1.25f);
+    Assert(Math.Abs(returnedWater.SurfaceWaterMm - 1.25f) < 0.0001f,
+        "caravan did not return stored water");
+    var waterReturn = world.ExplainCellState(x, y, SimulationLayer.SurfaceWater);
+    Assert(waterReturn.Contributions.Any(item => item.Flux == SimulationFlux.CaravanSurfaceWaterReturn),
+        "caravan water return is not explainable");
+
+    var harvest = world.HarvestBiomass(x, y, 5f, 3f);
+    Assert(harvest.LiveBiomassGm2 + harvest.DryBiomassGm2 > 0,
+        "caravan could not harvest generated biomass");
+    world.ReturnOrganicMatter(x, y, 2f, harvest.NitrogenGm2);
+    var organicReturn = world.ExplainCellState(x, y, SimulationLayer.OrganicNitrogen);
+    Assert(organicReturn.Contributions.Any(item => item.Flux == SimulationFlux.CaravanOrganicNitrogenReturn),
+        "returned caravan nitrogen is not explainable");
+
+    world.ReturnSediment(x, y, 0.15f);
+    var compacted = world.CompactTrail(x, y, 0.08f);
+    Assert(compacted.CompactionDelta > 0.079f, "caravan trail did not compact the soil");
+    var compaction = world.ExplainCellState(x, y, SimulationLayer.SoilCompaction);
+    Assert(compaction.Contributions.Any(item => item.Flux == SimulationFlux.CaravanCompaction),
+        "caravan compaction is not explainable");
+
+    var summary = world.GetSummary();
+    Assert(Math.Abs(summary.WaterBudget.RelativeError) < 0.00005,
+        $"caravan water handling violates its ledger ({summary.WaterBudget.RelativeError})");
+    Assert(Math.Abs(summary.NitrogenBudget.RelativeError) < 0.00005,
+        $"caravan biomass handling violates its nitrogen ledger ({summary.NitrogenBudget.RelativeError})");
+}
+
+static void CaravanDetectorReadsStatesAndFlows()
+{
+    var world = new FiniteWorld(SmallConfig(481) with { GiantHarvesterCount = 3 });
+    const int x = 9;
+    const int y = 10;
+    world.AddSurfaceWater(x, y, 12f);
+    var scan = world.ScanCaravanOpportunities(x, y, 12);
+
+    Assert(scan.LocalFlows.Length == Enum.GetValues<VectorProcess>().Length,
+        "caravan did not read every public vector process");
+    Assert(scan.LocalFlows.Any(item => item.Process == VectorProcess.DrainageDirection
+                                       && float.IsFinite(item.Magnitude)),
+        "caravan cannot read the persistent drainage direction");
+    Assert(scan.Opportunities.Any(item => item.Kind == CaravanOpportunityKind.SurfaceWater
+                                          && item.X == x
+                                          && item.Y == y),
+        "available surface water did not become a readable opportunity");
+
+    world.AdvanceHours(30 * 24);
+    scan = world.ScanCaravanOpportunities(x, y, 18);
+    Assert(scan.Opportunities.Select(item => item.Kind).Distinct().Count() >= 5,
+        "the detector exposes too few distinct steppe situations");
+    Assert(scan.Opportunities.All(item => float.IsFinite(item.Score)
+                                          && float.IsFinite(item.FlowMagnitude)),
+        "opportunity detector emitted a non-finite signal");
+}
+
+static void EcologyCaravanExercisesLifecycle()
+{
+    var world = new FiniteWorld(SmallConfig(733) with
+    {
+        GiantHarvesterCount = 10,
+        WildfireEnabled = true
+    });
+    var caravan = new CaravanEcologyAgent(new CaravanEcologyConfig
+    {
+        InitialWaterMmCells = 0.004f,
+        InitialFreshBiomassGm2Cells = 0.02f,
+        InitialDryBiomassGm2Cells = 0.08f
+    });
+    for (var day = 0; day < 365; day++)
+    {
+        world.AdvanceDayWithCaravan(caravan, startObservationWindow: day % 15 == 0);
+    }
+
+    var snapshot = caravan.Capture();
+    Assert(snapshot.SimulatedDays == 365, "ecology caravan lost daily decisions");
+    Assert(snapshot.DistanceCells > 20f, "ecology caravan never migrated between processes");
+    Assert(snapshot.GoalDays.Values.Sum() == 365, "caravan did not select exactly one daily goal");
+    foreach (var verb in Enum.GetValues<CaravanActionVerb>())
+    {
+        Assert(snapshot.VerbActions[verb] > 0, $"caravan never exercised verb {verb}");
+    }
+
+    Assert(snapshot.ActionCounts[CaravanActionKind.HarvestLiveBiomass]
+           + snapshot.ActionCounts[CaravanActionKind.HarvestDryBiomass] > 0,
+        "caravan never absorbed steppe biomass");
+    Assert(snapshot.ActionCounts[CaravanActionKind.CureFreshBiomass]
+           + snapshot.ActionCounts[CaravanActionKind.MeltSnow]
+           + snapshot.ActionCounts[CaravanActionKind.ConsumeBiomass] > 0,
+        "caravan never transformed a resource");
+    Assert(snapshot.ActionCounts[CaravanActionKind.CureFreshBiomass] > 0,
+        "caravan never used a real solar-wind drying window");
+    Assert(snapshot.ActionCounts[CaravanActionKind.ReturnOrganicMatter] > 0,
+        "caravan never returned matter to the steppe");
+    Assert(snapshot.ActionCounts[CaravanActionKind.CaptureDust] > 0
+           && snapshot.ActionCounts[CaravanActionKind.ReturnSediment] > 0,
+        "caravan never closed its captured-dust loop");
+    Assert(snapshot.OpportunityDays.Values.Count(value => value > 0) >= 8,
+        "annual caravan run did not expose enough distinct activities");
+    Assert(snapshot.MeaningfulExchangeDays > 180,
+        "caravan spends too many days outside material and energy exchanges");
+    Assert(snapshot.WorldExchangeDays > 100,
+        "caravan rarely exchanges matter with the simulated world");
+    Assert(snapshot.UnmetWaterDays + snapshot.UnmetBiomassDays > 0,
+        "caravan survival has no resource scarcity");
+    Assert(snapshot.MaximumUnmetWaterStreakDays > 0
+           || snapshot.MaximumUnmetBiomassStreakDays > 0,
+        "caravan does not retain continuous scarcity episodes");
+    Assert(snapshot.MinimumCondition < 0.999f,
+        "resource scarcity has no consequence for caravan condition");
+
+    var summary = world.GetSummary();
+    Assert(Math.Abs(summary.WaterBudget.RelativeError) < 0.00005,
+        $"ecology caravan violates the water ledger ({summary.WaterBudget.RelativeError})");
+    Assert(Math.Abs(summary.NitrogenBudget.RelativeError) < 0.00005,
+        $"ecology caravan violates the nitrogen ledger ({summary.NitrogenBudget.RelativeError})");
+}
+
+static void EcologyCaravanRemainsDeterministic()
+{
+    var config = SmallConfig(912) with { GiantHarvesterCount = 5 };
+    var firstWorld = new FiniteWorld(config);
+    var secondWorld = new FiniteWorld(config);
+    var first = new CaravanEcologyAgent();
+    var second = new CaravanEcologyAgent();
+    for (var day = 0; day < 90; day++)
+    {
+        firstWorld.AdvanceDayWithCaravan(first, startObservationWindow: day % 15 == 0);
+        secondWorld.AdvanceDayWithCaravan(second, startObservationWindow: day % 15 == 0);
+    }
+
+    var a = first.Capture();
+    var b = second.Capture();
+    Assert(a.X == b.X && a.Y == b.Y && a.Goal == b.Goal,
+        "fixed-seed caravan chose a different route");
+    Assert(Math.Abs(a.DistanceCells - b.DistanceCells) < 1e-6f
+           && Math.Abs(a.WaterMmCells - b.WaterMmCells) < 1e-6f
+           && Math.Abs(a.DryBiomassGm2Cells - b.DryBiomassGm2Cells) < 1e-6f,
+        "fixed-seed caravan inventory diverged");
+    Assert(a.ActionCounts.All(item => b.ActionCounts[item.Key] == item.Value),
+        "fixed-seed caravan action mix diverged");
+    Assert(firstWorld.CaptureLayer(SimulationLayer.LiveBiomass).Values.SequenceEqual(
+            secondWorld.CaptureLayer(SimulationLayer.LiveBiomass).Values),
+        "caravan decisions made the fixed-seed worlds diverge");
 }
 
 static void SaveLoadPreservesFaunaAndTrails()
