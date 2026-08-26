@@ -154,7 +154,7 @@ internal static class CaravanOpportunityDetector
         }
 
         var originIndex = originY * config.Width + originX;
-        var localFlows = Enum.GetValues<VectorProcess>()
+        var localFlows = RuntimeCompatibility.GetEnumValues<VectorProcess>()
             .Select(process => ReadFlow(config, state, flux, process, originIndex))
             .ToArray();
         return new CaravanOpportunityScan(
@@ -313,7 +313,7 @@ internal static class CaravanOpportunityDetector
         float distance,
         VectorProcess flow)
     {
-        if (!float.IsFinite(signal) || signal <= 0f) return;
+        if (!RuntimeCompatibility.IsFinite(signal) || signal <= 0f) return;
         var score = signal - distance * 0.018f;
         Consider(best, Create(config, state, flux, kind, x, y, signal, score, distance, flow));
     }
@@ -348,7 +348,7 @@ internal static class CaravanOpportunityDetector
         Dictionary<CaravanOpportunityKind, CaravanOpportunity> best,
         CaravanOpportunity candidate)
     {
-        if (!float.IsFinite(candidate.Score) || candidate.Score <= 0.01f) return;
+        if (!RuntimeCompatibility.IsFinite(candidate.Score) || candidate.Score <= 0.01f) return;
         if (!best.TryGetValue(candidate.Kind, out var current)
             || candidate.Score > current.Score
             || candidate.Score == current.Score && candidate.DistanceCells < current.DistanceCells)

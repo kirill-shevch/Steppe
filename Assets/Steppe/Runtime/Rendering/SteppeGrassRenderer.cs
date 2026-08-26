@@ -48,6 +48,7 @@ namespace Steppe.Rendering
         private bool ownsMesh;
         private bool ownsMaterial;
         private bool hasCenter;
+        private bool subscribedToCameraRendering;
         private ChunkCoordinate center;
 
         public static bool HardwareSupported =>
@@ -62,6 +63,13 @@ namespace Steppe.Rendering
         public bool UsesAuthoredMesh { get; private set; }
         public int TuftVertexCount => tuftMesh != null ? tuftMesh.vertexCount : 0;
         public int TuftTriangleCount => tuftMesh != null ? (int)tuftMesh.GetIndexCount(0) / 3 : 0;
+        public float TuftAssetScale { get; private set; } = 1f;
+        public float EffectiveTuftAssetHeight =>
+            tuftMesh != null ? tuftMesh.bounds.size.y * TuftAssetScale : 0f;
+        public float EffectiveTuftAssetWidth =>
+            tuftMesh != null
+                ? Mathf.Max(tuftMesh.bounds.size.x, tuftMesh.bounds.size.z) * TuftAssetScale
+                : 0f;
         public bool HasPendingWorldWork => IsRendering && pending.Count > 0;
 
         public void Configure(
@@ -122,12 +130,14 @@ namespace Steppe.Rendering
             grassMaterial.SetFloat(FullDensityRadiusId, settings.GrassFullDensityRadius);
             grassMaterial.SetFloat(DrawRadiusId, settings.GrassDrawRadius);
             grassMaterial.SetTexture(BaseMapId, authoredTexture);
-            grassMaterial.SetFloat(AssetScaleId, UsesAuthoredMesh ? AuthoredModelScale : 1f);
+            TuftAssetScale = UsesAuthoredMesh ? AuthoredModelScale : 1f;
+            grassMaterial.SetFloat(AssetScaleId, TuftAssetScale);
             grassMaterial.SetFloat(AlphaCutoffId, UsesAuthoredMesh ? 0.36f : 0f);
             grassMaterial.SetFloat(WindBendStrengthId, settings.GrassWindBend);
             hasCenter = false;
             IsRendering = true;
             workScheduler.Register(this);
+            SubscribeToCameraRendering();
         }
 
         private static Texture2D LoadAuthoredGrass(out Mesh mesh)
@@ -165,9 +175,23 @@ namespace Steppe.Rendering
             }
         }
 
-        private void LateUpdate()
+        private void SubscribeToCameraRendering()
         {
-            if (!IsRendering || grassMaterial == null || tuftMesh == null)
+            if (subscribedToCameraRendering)
+            {
+                return;
+            }
+
+            RenderPipelineManager.beginCameraRendering += RenderForCamera;
+            subscribedToCameraRendering = true;
+        }
+
+        private void RenderForCamera(ScriptableRenderContext context, Camera renderCamera)
+        {
+            if (!IsRendering
+                || renderCamera == null
+                || grassMaterial == null
+                || tuftMesh == null)
             {
                 return;
             }
@@ -210,7 +234,8 @@ namespace Steppe.Rendering
                     matProps = propertyBlock,
                     receiveShadows = true,
                     shadowCastingMode = ShadowCastingMode.Off,
-                    layer = gameObject.layer
+                    layer = gameObject.layer,
+                    camera = renderCamera
                 };
                 Graphics.RenderMeshIndirect(renderParams, tuftMesh, cell.Arguments);
             }
@@ -306,6 +331,12 @@ namespace Steppe.Rendering
 
         private void OnDestroy()
         {
+            if (subscribedToCameraRendering)
+            {
+                RenderPipelineManager.beginCameraRendering -= RenderForCamera;
+                subscribedToCameraRendering = false;
+            }
+
             if (workScheduler != null)
             {
                 workScheduler.Unregister(this);

@@ -1,8 +1,14 @@
 <Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
     <RootNamespace>Steppe.CaravanSimulation</RootNamespace>
+    <TargetFramework />
+    <TargetFrameworks>net10.0;netstandard2.1</TargetFrameworks>
   </PropertyGroup>
   <ItemGroup>
+    <Compile Include="..\Compatibility\NetStandardPolyfills.cs" Link="Compatibility\NetStandardPolyfills.cs" />
     <ProjectReference Include="..\Steppe.Simulation\Steppe.Simulation.csproj" />
+  </ItemGroup>
+  <ItemGroup Condition="'$(TargetFramework)' == 'netstandard2.1'">
+    <Compile Remove="CaravanPersistence.cs" />
   </ItemGroup>
 </Project>

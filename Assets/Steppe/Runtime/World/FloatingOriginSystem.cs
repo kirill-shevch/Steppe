@@ -82,6 +82,14 @@ namespace Steppe.World
                 0f,
                 PositiveModulo(OriginZ, ShaderCoordinatePeriod),
                 0f));
+            // Periodic local fields deliberately use the wrapped origin above.
+            // Finite simulation atlases must retain sign or a negative origin shift
+            // would jump tens of kilometres outside their real map bounds.
+            Shader.SetGlobalVector("_SteppeFiniteWorldOriginXZ", new Vector4(
+                (float)OriginX,
+                0f,
+                (float)OriginZ,
+                0f));
         }
 
         private static float PositiveModulo(double value, double modulus)

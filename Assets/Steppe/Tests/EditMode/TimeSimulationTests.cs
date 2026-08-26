@@ -3,6 +3,7 @@ using Steppe.Settings;
 using Steppe.Surface;
 using Steppe.Terrain;
 using Steppe.Time;
+using Steppe.UnitySimulation;
 using UnityEngine;
 
 namespace Steppe.Tests
@@ -64,6 +65,37 @@ namespace Steppe.Tests
             Assert.That(clock.DebugMultiplier, Is.EqualTo(1f));
             Assert.That(clock.CurrentSimulationRate, Is.EqualTo(settings.SimulationSecondsPerRealSecond));
             Object.DestroyImmediate(gameObject);
+        }
+
+        [Test]
+        public void CanonicalClockUsesCoreCalendarAndSeason()
+        {
+            var canonical = new SteppeSimulationTimeSample(
+                (172d * 24d + 15d) * 3600d,
+                2,
+                173,
+                15d,
+                "summer");
+
+            var snapshot = SteppeTimeSystem.CreateCanonicalSnapshot(canonical);
+
+            Assert.That(snapshot.Year, Is.EqualTo(1));
+            Assert.That(snapshot.DayOfYear, Is.EqualTo(173.625d).Within(0.000001d));
+            Assert.That(snapshot.Hour, Is.EqualTo(15d).Within(0.000001d));
+            Assert.That(snapshot.YearFraction, Is.EqualTo(172.625d / 365d).Within(0.000001d));
+            Assert.That(snapshot.Season, Is.EqualTo(SteppeSeason.Summer));
+        }
+
+        [Test]
+        public void CanonicalRuntimeClockPreservesSubHourTime()
+        {
+            var first = SteppeTimeSystem.CreateCanonicalSnapshot(90d);
+            var second = SteppeTimeSystem.CreateCanonicalSnapshot(91d);
+
+            Assert.That(first.Hour, Is.EqualTo(0.025d).Within(0.000001d));
+            Assert.That(second.Hour - first.Hour, Is.EqualTo(1d / 3600d).Within(0.000001d));
+            Assert.That(first.DayOfYear, Is.EqualTo(1.0010416667d).Within(0.000001d));
+            Assert.That(first.Season, Is.EqualTo(SteppeSeason.Winter));
         }
 
         [Test]

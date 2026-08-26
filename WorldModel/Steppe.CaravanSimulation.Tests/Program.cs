@@ -15,7 +15,8 @@ var tests = new (string Name, Action Run)[]
     ("specialized policies receive no hidden intake", SpecializedPoliciesReceiveNoHiddenIntake),
     ("surplus grows used organs and priority cannot prevent atrophy", GrowthAndAtrophyChangeMorphology),
     ("nitrogen depletion prevents organ growth", NitrogenDepletionPreventsOrganGrowth),
-    ("hibernation passively absorbs resources and can wake", HibernationPassivelyAbsorbsAndWakes)
+    ("hibernation passively absorbs resources and can wake", HibernationPassivelyAbsorbsAndWakes),
+    ("embedded physiology preserves external movement authority", EmbeddedPhysiologyPreservesExternalMovementAuthority)
 };
 
 var failures = 0;
@@ -128,6 +129,68 @@ static void CoupledCaravanRemainsDeterministic()
     AssertNear(a.WaterLiters, b.WaterLiters, 1e-4f, "deterministic water state diverged");
     AssertNear(a.DryOrganicKg, b.DryOrganicKg, 1e-4f, "deterministic organic state diverged");
     AssertNear(a.TotalMassKg, b.TotalMassKg, 1e-3f, "deterministic morphology diverged");
+}
+
+static void EmbeddedPhysiologyPreservesExternalMovementAuthority()
+{
+    var caravan = new CaravanSimulation(
+        CaravanBlueprint.Create(CaravanMorphology.SolarElectric),
+        3f,
+        4f);
+    var input = new CaravanEmbeddedStepInput(
+        3d,
+        1,
+        180,
+        12d,
+        7.25f,
+        9.5f,
+        24,
+        24,
+        250f,
+        18f,
+        22f,
+        6f,
+        -2f,
+        8f,
+        0f,
+        1f,
+        0f,
+        260f,
+        90f,
+        0.02f,
+        0f,
+        800f,
+        1.25f,
+        500f,
+        0f,
+        0f,
+        200f,
+        50f,
+        18f,
+        new Dictionary<CaravanOrganKind, float>
+        {
+            [CaravanOrganKind.SolarLeaf] = 0.8f,
+            [CaravanOrganKind.Battery] = 0.4f,
+            [CaravanOrganKind.Frame] = 0.3f
+        },
+        new Dictionary<CaravanOrganKind, float>());
+
+    var result = caravan.AdvanceEmbedded(input);
+
+    AssertNear(result.State.XCells, input.XCells, 1e-6f, "embedded core moved X independently");
+    AssertNear(result.State.YCells, input.YCells, 1e-6f, "embedded core moved Y independently");
+    AssertNear(result.State.DistanceKilometers, 1.25f, 1e-6f, "external distance was not recorded");
+    AssertNear((float)result.State.SimulatedHours, 3f, 1e-6f, "embedded hours were not recorded");
+    Assert(result.State.WaterLiters < input.ExternalWaterLiters!.Value,
+        "embedded maintenance did not consume synchronized water");
+    Assert(result.State.StoredElectricityKwh < input.ExternalElectricityKwh!.Value,
+        "embedded maintenance did not consume synchronized electricity");
+    AssertNear(result.State.CumulativeSolarElectricityKwh, 0f, 1e-7f,
+        "embedded physiology generated electricity already owned by Unity");
+    AssertNear(result.State.CumulativeSurfaceWaterLiters, 0f, 1e-7f,
+        "embedded physiology performed a second world exchange");
+    Assert(result.Ledger.MaximumAbsoluteError < 0.01f,
+        $"embedded circuit ledger leaked by {result.Ledger.MaximumAbsoluteError}");
 }
 
 static void PoliciesProduceDistinctMobility()

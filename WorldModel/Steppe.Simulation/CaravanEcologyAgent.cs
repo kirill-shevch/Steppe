@@ -173,10 +173,10 @@ public sealed class CaravanEcologyAgent
     }
 
     private readonly CaravanEcologyConfig config;
-    private readonly int[] goalDays = new int[Enum.GetValues<CaravanEcologyGoal>().Length];
-    private readonly int[] verbActions = new int[Enum.GetValues<CaravanActionVerb>().Length];
-    private readonly int[] actionCounts = new int[Enum.GetValues<CaravanActionKind>().Length];
-    private readonly int[] opportunityDays = new int[Enum.GetValues<CaravanOpportunityKind>().Length];
+    private readonly int[] goalDays = new int[RuntimeCompatibility.GetEnumValues<CaravanEcologyGoal>().Length];
+    private readonly int[] verbActions = new int[RuntimeCompatibility.GetEnumValues<CaravanActionVerb>().Length];
+    private readonly int[] actionCounts = new int[RuntimeCompatibility.GetEnumValues<CaravanActionKind>().Length];
+    private readonly int[] opportunityDays = new int[RuntimeCompatibility.GetEnumValues<CaravanOpportunityKind>().Length];
     private int x = -1;
     private int y = -1;
     private int targetX = -1;
@@ -277,10 +277,10 @@ public sealed class CaravanEcologyAgent
         minimumCondition,
         meaningfulExchangeDays,
         worldExchangeDays,
-        Enum.GetValues<CaravanEcologyGoal>().ToDictionary(item => item, item => goalDays[(int)item]),
-        Enum.GetValues<CaravanActionVerb>().ToDictionary(item => item, item => verbActions[(int)item]),
-        Enum.GetValues<CaravanActionKind>().ToDictionary(item => item, item => actionCounts[(int)item]),
-        Enum.GetValues<CaravanOpportunityKind>().ToDictionary(item => item, item => opportunityDays[(int)item]));
+        RuntimeCompatibility.GetEnumValues<CaravanEcologyGoal>().ToDictionary(item => item, item => goalDays[(int)item]),
+        RuntimeCompatibility.GetEnumValues<CaravanActionVerb>().ToDictionary(item => item, item => verbActions[(int)item]),
+        RuntimeCompatibility.GetEnumValues<CaravanActionKind>().ToDictionary(item => item, item => actionCounts[(int)item]),
+        RuntimeCompatibility.GetEnumValues<CaravanOpportunityKind>().ToDictionary(item => item, item => opportunityDays[(int)item]));
 
     internal CaravanDailyImpact Step(
         WorldConfig worldConfig,
@@ -428,7 +428,7 @@ public sealed class CaravanEcologyAgent
             organicResidueGm2Cells,
             capturedSedimentKgM2Cells,
             chitinKg,
-            scan.Opportunities.Select(item => item.Kind).Distinct().Order().ToArray(),
+            scan.Opportunities.Select(item => item.Kind).Distinct().OrderBy(item => item).ToArray(),
             actions.ToArray());
     }
 
@@ -982,7 +982,7 @@ public sealed class CaravanEcologyAgent
         string unit,
         CaravanOpportunityKind? opportunity = null)
     {
-        if (!float.IsFinite(amount) || amount <= 1e-8f) return;
+        if (!RuntimeCompatibility.IsFinite(amount) || amount <= 1e-8f) return;
         actions.Add(new CaravanAction(verb, kind, actionX, actionY, amount, unit, opportunity));
         verbActions[(int)verb]++;
         actionCounts[(int)kind]++;
@@ -1041,7 +1041,7 @@ public sealed partial class FiniteWorld
         bool startObservationWindow = true,
         CancellationToken cancellationToken = default)
     {
-        ArgumentNullException.ThrowIfNull(caravan);
+        RuntimeCompatibility.ThrowIfNull(caravan, nameof(caravan));
         lock (sync)
         {
             var priorPeriod = startObservationWindow ? 0d : fluxState.PeriodHours;

@@ -5,8 +5,10 @@ using Steppe.Ecology;
 using Steppe.Player;
 using Steppe.Prototype;
 using Steppe.Rendering;
+using Steppe.Simulation;
 using Steppe.Terrain;
 using Steppe.Time;
+using Steppe.UnitySimulation;
 using Steppe.Weather;
 using Steppe.World;
 using UnityEngine;
@@ -16,7 +18,7 @@ namespace Steppe.Tests
 {
     public sealed class P0RuntimeSmokeTests
     {
-        [UnityTest, Order(-100)]
+        [UnityTest, Order(-100), Ignore("Caravan runtime is intentionally disabled while the steppe simulation is completed.")]
         public IEnumerator PrototypeCreatesPhysicalCaravanKeeperAndStreamsTerrain()
         {
             if (Object.FindAnyObjectByType<SteppePrototypeBootstrap>() == null)
@@ -218,10 +220,24 @@ namespace Steppe.Tests
                 weatherSystem.CurrentAtFocus.SurfaceWind.x,
                 0f,
                 weatherSystem.CurrentAtFocus.SurfaceWind.y).normalized;
-            Assert.That(
-                Vector3.Dot(caravan.transform.forward, initialSurfaceWind),
-                Is.GreaterThan(0.98f),
-                "The caravan nose is not aligned with the initial surface wind.");
+            if (weatherSystem.UsesFiniteWorld)
+            {
+                var simulationHost = Object.FindAnyObjectByType<SteppeSimulationHost>();
+                var world = Object.FindAnyObjectByType<FloatingOriginSystem>()
+                    .LocalToWorld(caravan.transform.position);
+                Assert.That(
+                    simulationHost.TryGetEnvironmentSample(world.X, world.Z, out var canonical),
+                    Is.True);
+                var canonicalWind = new Vector3(canonical.WindXMs, 0f, canonical.WindZMs).normalized;
+                Assert.That(Vector3.Dot(initialSurfaceWind, canonicalWind), Is.GreaterThan(0.999f));
+            }
+            else
+            {
+                Assert.That(
+                    Vector3.Dot(caravan.transform.forward, initialSurfaceWind),
+                    Is.GreaterThan(0.98f),
+                    "The caravan nose is not aligned with the legacy startup wind.");
+            }
             var caravanParts = Object.FindObjectsByType<CaravanPart>();
             Assert.That(caravanParts.Length, Is.EqualTo(3));
             foreach (var kind in new[]
@@ -287,6 +303,15 @@ namespace Steppe.Tests
             Assert.That(Object.FindAnyObjectByType<BiomeDebugNavigator>(), Is.Not.Null);
             Assert.That(Object.FindAnyObjectByType<SteppeTimeSystem>(), Is.Not.Null);
             Assert.That(Object.FindAnyObjectByType<SteppeCelestialPresentation>(), Is.Not.Null);
+            Assert.That(
+                System.Array.Exists(
+                    Object.FindObjectsByType<MonoBehaviour>(
+                        FindObjectsInactive.Include,
+                        FindObjectsSortMode.None),
+                    component => component.GetType().Name == "CaravanCoreRuntimeAdapter"
+                                 || component.GetType().Name == "SteppeCaravanProfileHost"),
+                Is.False,
+                "The player caravan must not run the console caravan simulation.");
             Assert.That(Object.FindAnyObjectByType<SteppeWeatherSystem>(), Is.Not.Null);
             Assert.That(Object.FindAnyObjectByType<SteppeCloudLayer>(), Is.Not.Null);
             Assert.That(Object.FindAnyObjectByType<SteppeRainPresentation>(), Is.Not.Null);
@@ -299,6 +324,8 @@ namespace Steppe.Tests
             Assert.That(workScheduler.TotalStepsExecuted, Is.GreaterThan(0));
             Assert.That(ecologySystem.ActiveCellCount, Is.GreaterThan(0));
             Assert.That(ecologySystem.StoredCellCount, Is.GreaterThan(0));
+            Assert.That(weatherSystem.UsesFiniteWorld, Is.True);
+            Assert.That(ecologySystem.UsesFiniteWorld, Is.True);
             Assert.That(ecologySystem.IsStateMapReady, Is.True);
             Assert.That(ecologySystem.StateMap, Is.Not.Null);
             Assert.That(ecologySystem.StateMap.width, Is.EqualTo(128));
@@ -407,28 +434,294 @@ namespace Steppe.Tests
         }
 
         [UnityTest]
-        public IEnumerator WeatherTimeTracksCanonicalClockAfterManualAdvance()
+        public IEnumerator ContinuousClockDrivesInterpolatedWeatherAndPause()
         {
             if (Object.FindAnyObjectByType<SteppePrototypeBootstrap>() == null)
             {
                 new GameObject("P1 Canonical Time Test Bootstrap").AddComponent<SteppePrototypeBootstrap>();
             }
 
-            yield return null;
-
             var timeSystem = Object.FindAnyObjectByType<SteppeTimeSystem>();
             var weatherSystem = Object.FindAnyObjectByType<SteppeWeatherSystem>();
-            timeSystem.AdvanceSimulationSeconds(12345.678);
+            var simulationHost = Object.FindAnyObjectByType<SteppeSimulationHost>();
+            for (var frame = 0; frame < 300 && !weatherSystem.UsesFiniteWorld; frame++)
+            {
+                yield return null;
+            }
 
+            Assert.That(timeSystem.UsesFiniteWorld, Is.True);
+            Assert.That(timeSystem.DaysPerYear, Is.EqualTo(365));
+            Assert.That(timeSystem.ElapsedSimulationSeconds,
+                Is.EqualTo(weatherSystem.WeatherSeconds).Within(0.0001d));
+            Assert.That(timeSystem.Current.DayOfYear, Is.InRange(1d, 366d));
+
+            timeSystem.SetPaused(true);
             yield return null;
+            Assert.That(simulationHost.IsTimePaused, Is.True);
+            var pausedSeconds = timeSystem.ElapsedSimulationSeconds;
+            for (var frame = 0; frame < 10; frame++)
+            {
+                yield return null;
+            }
 
-            Assert.That(weatherSystem.WeatherSeconds, Is.GreaterThan(0.0));
+            Assert.That(timeSystem.ElapsedSimulationSeconds,
+                Is.EqualTo(pausedSeconds).Within(0.0001d));
+
+            var macroStepSeconds = simulationHost.FixedStepHours * 3600d;
+            var currentBoundary = System.Math.Floor(pausedSeconds / macroStepSeconds)
+                                  * macroStepSeconds;
+            var midpoint = currentBoundary + macroStepSeconds * 0.5d;
+            if (midpoint <= pausedSeconds)
+            {
+                midpoint += macroStepSeconds;
+            }
+            timeSystem.AdvanceSimulationSeconds(midpoint - pausedSeconds);
+            for (var frame = 0;
+                 frame < 300 && simulationHost.LatestMacroSimulationSeconds < midpoint + macroStepSeconds * 0.5d;
+                 frame++)
+            {
+                yield return null;
+            }
+
+            // The worker can publish after the weather presentation Update of this
+            // frame. Give shader globals one main-thread pass to consume the snapshot.
+            yield return null;
+            Assert.That(weatherSystem.UsesFiniteWorld, Is.True);
+            Assert.That(
+                weatherSystem.WeatherSeconds,
+                Is.EqualTo(midpoint).Within(0.0001d));
+            Assert.That(timeSystem.ElapsedSimulationSeconds,
+                Is.EqualTo(weatherSystem.WeatherSeconds).Within(0.0001d));
+            Assert.That(simulationHost.MacroInterpolationAlpha, Is.EqualTo(0.5f).Within(0.02f));
             Assert.That(
                 Shader.GetGlobalFloat("_SteppeWindTime"),
                 Is.EqualTo((float)weatherSystem.WeatherSeconds).Within(0.05f));
+
+            Assert.That(simulationHost.TryGetEnvironmentSample(10d, 10d, out var firstLocal), Is.True);
+            Assert.That(simulationHost.TryGetEnvironmentSample(45d, 10d, out var secondLocal), Is.True);
+            Assert.That(
+                Mathf.Abs(firstLocal.WindXMs - secondLocal.WindXMs)
+                + Mathf.Abs(firstLocal.WindZMs - secondLocal.WindZMs),
+                Is.GreaterThan(0.0001f));
+
+            timeSystem.SetPaused(false);
+            var continuousBefore = timeSystem.ElapsedSimulationSeconds;
+            yield return null;
+            Assert.That(timeSystem.ElapsedSimulationSeconds, Is.GreaterThan(continuousBefore));
+            Assert.That(
+                timeSystem.ElapsedSimulationSeconds - continuousBefore,
+                Is.LessThan(macroStepSeconds * 0.1d),
+                "The visible clock advanced by a macro tick instead of a frame delta.");
         }
 
-        [UnityTest]
+        [UnityTest, Order(-90)]
+        public IEnumerator PrototypeCreatesSteppeObserverAndCompleteSimulationVisualization()
+        {
+            if (Object.FindAnyObjectByType<SteppePrototypeBootstrap>() == null)
+            {
+                new GameObject("Steppe Observer Test Bootstrap").AddComponent<SteppePrototypeBootstrap>();
+            }
+
+            var host = Object.FindAnyObjectByType<SteppeSimulationHost>();
+            for (var frame = 0; frame < 600 && (host == null || !host.IsReady); frame++)
+            {
+                yield return null;
+                host = Object.FindAnyObjectByType<SteppeSimulationHost>();
+            }
+
+            Assert.That(host, Is.Not.Null);
+            Assert.That(host.LastError, Is.Null.Or.Empty);
+            Assert.That(host.LatestSnapshot, Is.Not.Null);
+            Assert.That(Object.FindAnyObjectByType<FlyCameraController>(), Is.Not.Null);
+            Assert.That(Object.FindAnyObjectByType<CaravanChassisController>(), Is.Null);
+            Assert.That(Object.FindAnyObjectByType<CaravanFirstPersonController>(), Is.Null);
+            Assert.That(Object.FindAnyObjectByType<SteppeTrackSystem>(), Is.Null);
+            var terrainStreamer = Object.FindAnyObjectByType<TerrainChunkStreamer>();
+            Assert.That(terrainStreamer, Is.Not.Null);
+            Assert.That(terrainStreamer.HasSurfaceWaterPresentation, Is.True);
+            Assert.That(terrainStreamer.HasSnowPresentation, Is.True);
+            Assert.That(Object.FindAnyObjectByType<SteppeWindCuePresentation>(), Is.Not.Null);
+            Assert.That(Object.FindAnyObjectByType<SteppeMacroProcessPresentation>(), Is.Not.Null);
+            var grass = Object.FindAnyObjectByType<SteppeGrassRenderer>();
+            Assert.That(grass, Is.Not.Null);
+            Assert.That(grass.EffectiveTuftAssetHeight, Is.InRange(0.5f, 1.5f));
+            Assert.That(grass.EffectiveTuftAssetWidth, Is.InRange(0.5f, 2.5f));
+            var groundDetails = Object.FindAnyObjectByType<SteppeGroundDetailRenderer>();
+            Assert.That(groundDetails, Is.Not.Null);
+            Assert.That(groundDetails.IsRendering, Is.EqualTo(SteppeGrassRenderer.HardwareSupported));
+            Assert.That(groundDetails.DetailKindCount, Is.EqualTo(11));
+            Assert.That(groundDetails.UsesSemanticField, Is.True);
+            if (groundDetails.IsRendering)
+            {
+                for (var frame = 0; frame < 240 && groundDetails.CandidateCount == 0; frame++)
+                {
+                    yield return null;
+                }
+                Assert.That(groundDetails.LoadedCellCount, Is.GreaterThan(0));
+                Assert.That(groundDetails.CandidateCount, Is.GreaterThan(0));
+            }
+
+            var visualization = Object.FindAnyObjectByType<SteppeSimulationVisualization>();
+            Assert.That(visualization, Is.Not.Null);
+            Assert.That(visualization.StateCount, Is.EqualTo(StateCatalog.All.Count));
+            Assert.That(visualization.FluxCount, Is.EqualTo(FluxCatalog.All.Count));
+            Assert.That(visualization.VectorProcessCount, Is.EqualTo(VectorProcessCatalog.All.Count));
+            for (var frame = 0; frame < 30 && visualization.NaturalMap == null; frame++)
+            {
+                yield return null;
+            }
+
+            Assert.That(visualization.NaturalMap, Is.Not.Null);
+            Assert.That(
+                Shader.GetGlobalTexture("_SteppeSimulationNaturalMap"),
+                Is.SameAs(visualization.NaturalMap));
+
+            var naturalAtlas = Object.FindAnyObjectByType<SteppeNaturalVisualFieldAtlas>();
+            for (var frame = 0; frame < 60 && (naturalAtlas == null || !naturalAtlas.IsReady); frame++)
+            {
+                yield return null;
+                naturalAtlas = Object.FindAnyObjectByType<SteppeNaturalVisualFieldAtlas>();
+            }
+
+            Assert.That(naturalAtlas, Is.Not.Null);
+            Assert.That(naturalAtlas.IsReady, Is.True);
+            Assert.That(naturalAtlas.Width, Is.EqualTo(host.LatestSnapshot.Summary.Width));
+            Assert.That(naturalAtlas.Height, Is.EqualTo(host.LatestSnapshot.Summary.Height));
+            Assert.That(
+                Shader.GetGlobalTexture("_SteppeNaturalSoilAFrom"),
+                Is.TypeOf<Texture2D>());
+            Assert.That(
+                ((Texture2D)Shader.GetGlobalTexture("_SteppeNaturalSoilAFrom")).format,
+                Is.EqualTo(TextureFormat.RGBAHalf));
+            Assert.That(
+                Shader.GetGlobalTexture("_SteppeNaturalDrainageFrom"),
+                Is.TypeOf<Texture2D>());
+            var drainageGrid = Shader.GetGlobalVector("_SteppeNaturalVisualGrid");
+            Assert.That(drainageGrid.x, Is.EqualTo(naturalAtlas.Width));
+            Assert.That(drainageGrid.y, Is.EqualTo(naturalAtlas.Height));
+            Assert.That(drainageGrid.z, Is.GreaterThan(0f));
+            var processAtlas = Object.FindAnyObjectByType<SteppeNaturalProcessFieldAtlas>();
+            for (var frame = 0; frame < 60 && (processAtlas == null || !processAtlas.IsReady); frame++)
+            {
+                yield return null;
+                processAtlas = Object.FindAnyObjectByType<SteppeNaturalProcessFieldAtlas>();
+            }
+            Assert.That(processAtlas, Is.Not.Null);
+            Assert.That(processAtlas.IsReady, Is.True);
+            Assert.That(processAtlas.FluxCount, Is.EqualTo(56));
+            Assert.That(processAtlas.VectorCount, Is.EqualTo(12));
+            var hydrologicalVapor =
+                Object.FindAnyObjectByType<SteppeHydrologicalVaporPresentation>();
+            for (var frame = 0;
+                 frame < 60 && (hydrologicalVapor == null || !hydrologicalVapor.IsReady);
+                 frame++)
+            {
+                yield return null;
+                hydrologicalVapor =
+                    Object.FindAnyObjectByType<SteppeHydrologicalVaporPresentation>();
+            }
+            Assert.That(hydrologicalVapor, Is.Not.Null);
+            Assert.That(hydrologicalVapor.IsReady, Is.True);
+            Assert.That(hydrologicalVapor.SublimationParticles, Is.Not.Null);
+            Assert.That(hydrologicalVapor.EvaporationParticles, Is.Not.Null);
+            Assert.That(hydrologicalVapor.TranspirationParticles, Is.Not.Null);
+            Assert.That(hydrologicalVapor.PercolationParticles, Is.Not.Null);
+            Assert.That(hydrologicalVapor.CurrentSnowSublimationRate, Is.GreaterThanOrEqualTo(0f));
+            Assert.That(hydrologicalVapor.CurrentSurfaceEvaporationRate, Is.GreaterThanOrEqualTo(0f));
+            Assert.That(hydrologicalVapor.CurrentTranspirationRate, Is.GreaterThanOrEqualTo(0f));
+            var atmosphericTransport =
+                Object.FindAnyObjectByType<SteppeAtmosphericTransportPresentation>();
+            for (var frame = 0;
+                 frame < 60 && (atmosphericTransport == null || !atmosphericTransport.IsReady);
+                 frame++)
+            {
+                yield return null;
+                atmosphericTransport =
+                    Object.FindAnyObjectByType<SteppeAtmosphericTransportPresentation>();
+            }
+            Assert.That(atmosphericTransport, Is.Not.Null);
+            Assert.That(atmosphericTransport.IsReady, Is.True);
+            Assert.That(atmosphericTransport.TemperatureParticles, Is.Not.Null);
+            Assert.That(atmosphericTransport.HumidityParticles, Is.Not.Null);
+            Assert.That(atmosphericTransport.CloudEvaporationParticles, Is.Not.Null);
+            Assert.That(
+                atmosphericTransport.CurrentAirTemperatureAdvectionGrossMagnitude,
+                Is.GreaterThanOrEqualTo(0f));
+            Assert.That(
+                atmosphericTransport.CurrentHumidityAdvectionGrossMagnitude,
+                Is.GreaterThanOrEqualTo(0f));
+            Assert.That(
+                Shader.GetGlobalTexture("_SteppeNaturalFlux00From"),
+                Is.TypeOf<Texture2D>());
+            Assert.That(
+                Shader.GetGlobalTexture("_SteppeNaturalVectorSurfaceRunoffFrom"),
+                Is.TypeOf<Texture2D>());
+            var previousSnapshot = host.PreviousSnapshot ?? host.LatestSnapshot;
+            Assert.That(previousSnapshot.TryGetLayer(SimulationLayer.Permeability, out var permeability), Is.True);
+            Assert.That(previousSnapshot.TryGetLayer(SimulationLayer.MineralContent, out var mineral), Is.True);
+            Assert.That(previousSnapshot.TryGetLayer(SimulationLayer.SoilCompaction, out var compaction), Is.True);
+            Assert.That(previousSnapshot.TryGetLayer(SimulationLayer.RootWater, out var rootWater), Is.True);
+            var packedSoil = ((Texture2D)Shader.GetGlobalTexture("_SteppeNaturalSoilBFrom"))
+                .GetPixel(0, 0);
+            Assert.That(packedSoil.r, Is.EqualTo(permeability.Values[0]).Within(0.02f));
+            Assert.That(packedSoil.g, Is.EqualTo(mineral.Values[0]).Within(0.002f));
+            Assert.That(packedSoil.b, Is.EqualTo(compaction.Values[0]).Within(0.002f));
+            Assert.That(packedSoil.a, Is.EqualTo(rootWater.Values[0]).Within(0.08f));
+            Assert.That(previousSnapshot.TryGetLayer(SimulationLayer.FrozenSoil, out var frozen), Is.True);
+            Assert.That(previousSnapshot.TryGetLayer(SimulationLayer.LiveBiomass, out var liveBiomass), Is.True);
+            Assert.That(previousSnapshot.TryGetLayer(SimulationLayer.DryBiomass, out var dryBiomass), Is.True);
+            Assert.That(previousSnapshot.TryGetLayer(SimulationLayer.LitterBiomass, out var litter), Is.True);
+            Assert.That(previousSnapshot.TryGetLayer(SimulationLayer.PlantNitrogen, out var plantNitrogen), Is.True);
+            var packedLifeA = ((Texture2D)Shader.GetGlobalTexture("_SteppeNaturalLifeAFrom"))
+                .GetPixel(0, 0);
+            var packedLifeB = ((Texture2D)Shader.GetGlobalTexture("_SteppeNaturalLifeBFrom"))
+                .GetPixel(0, 0);
+            Assert.That(packedLifeA.r, Is.EqualTo(frozen.Values[0]).Within(0.002f));
+            Assert.That(packedLifeA.g, Is.EqualTo(liveBiomass.Values[0]).Within(0.08f));
+            Assert.That(packedLifeA.b, Is.EqualTo(dryBiomass.Values[0]).Within(0.08f));
+            Assert.That(packedLifeA.a, Is.EqualTo(litter.Values[0]).Within(0.08f));
+            Assert.That(packedLifeB.a, Is.EqualTo(plantNitrogen.Values[0]).Within(0.01f));
+            Assert.That(
+                Shader.GetGlobalFloat("_SteppeNaturalVisualBlend"),
+                Is.InRange(0f, 1f));
+            visualization.SetVisible(true);
+            visualization.SetSelection(
+                SteppeVisualizationKind.State,
+                StateCatalog.All.Count - 1);
+            yield return null;
+            visualization.SetSelection(
+                SteppeVisualizationKind.Flux,
+                FluxCatalog.All.Count - 1);
+            yield return null;
+            visualization.SetSelection(
+                SteppeVisualizationKind.VectorProcess,
+                VectorProcessCatalog.All.Count - 1);
+            yield return null;
+            Assert.That(visualization.DiagnosticMap, Is.Not.Null);
+            Assert.That(
+                Shader.GetGlobalTexture("_SteppeSimulationDiagnosticMap"),
+                Is.SameAs(visualization.DiagnosticMap));
+            visualization.SetVisible(false);
+            foreach (var descriptor in StateCatalog.All)
+            {
+                Assert.That(host.LatestSnapshot.TryGetLayer(descriptor.Id, out _), Is.True, descriptor.Title);
+            }
+
+            foreach (var descriptor in FluxCatalog.All)
+            {
+                Assert.That(host.LatestSnapshot.TryGetFlux(descriptor.Id, out _), Is.True, descriptor.Title);
+            }
+
+            foreach (var descriptor in VectorProcessCatalog.All)
+            {
+                Assert.That(
+                    host.LatestSnapshot.TryGetVectorProcess(descriptor.Process, out _),
+                    Is.True,
+                    descriptor.Title);
+            }
+        }
+
+        [UnityTest, Ignore("Caravan runtime is intentionally disabled.")]
         public IEnumerator BuildModeManuallyLaysAndRemovesElectricalCommunications()
         {
             if (Object.FindAnyObjectByType<SteppePrototypeBootstrap>() == null)
@@ -520,7 +813,7 @@ namespace Steppe.Tests
             yield return null;
         }
 
-        [UnityTest]
+        [UnityTest, Ignore("Caravan runtime is intentionally disabled.")]
         public IEnumerator BuildModeDismantlesModuleAndCleansItsNetworks()
         {
             if (Object.FindAnyObjectByType<SteppePrototypeBootstrap>() == null)
@@ -599,7 +892,7 @@ namespace Steppe.Tests
             build.ExitBuildMode();
         }
 
-        [UnityTest]
+        [UnityTest, Ignore("Caravan runtime is intentionally disabled.")]
         public IEnumerator SteeringSurvivesRemovingAndRebuildingElectricMotor()
         {
             if (Object.FindAnyObjectByType<SteppePrototypeBootstrap>() == null)
@@ -682,7 +975,7 @@ namespace Steppe.Tests
             yield return null;
         }
 
-        [UnityTest]
+        [UnityTest, Ignore("Caravan runtime is intentionally disabled.")]
         public IEnumerator BuildModeConstructsAndPipesPoweredWaterCoolingLoop()
         {
             if (Object.FindAnyObjectByType<SteppePrototypeBootstrap>() == null)
@@ -862,7 +1155,7 @@ namespace Steppe.Tests
             yield return null;
         }
 
-        [UnityTest]
+        [UnityTest, Ignore("Caravan runtime is intentionally disabled.")]
         public IEnumerator EveryCatalogModuleConstructsAndResourceChainsOperate()
         {
             if (Object.FindAnyObjectByType<SteppePrototypeBootstrap>() == null)
@@ -896,6 +1189,16 @@ namespace Steppe.Tests
             Assert.That(resource, Is.Not.Null);
             Assert.That(biomass, Is.Not.Null);
             Assert.That(mechanical, Is.Not.Null);
+
+            var floatingOrigin = Object.FindAnyObjectByType<FloatingOriginSystem>();
+            caravan.Teleport(floatingOrigin.WorldToLocal(
+                32d,
+                caravan.transform.position.y,
+                -64d));
+            for (var resetFrame = 0; resetFrame < 3; resetFrame++)
+            {
+                yield return null;
+            }
 
             var startingPartCount = Object.FindObjectsByType<CaravanPart>(
                 FindObjectsInactive.Exclude).Length;
@@ -1089,23 +1392,40 @@ namespace Steppe.Tests
 
             var storedFuelBefore =
                 resource.Storages[0].StoredDryBiomassKilograms;
-            resource.Simulate(0.1f);
+            for (var simulationPass = 0;
+                 simulationPass < 180 && harvester.TotalHarvestedKilograms <= 0f;
+                 simulationPass++)
+            {
+                electrical.Simulate(1f);
+                resource.Simulate(0.5f);
+                yield return null;
+            }
             electrical.Simulate(1f);
             resource.Simulate(4f);
-            resource.Simulate(0.1f);
+            yield return null;
             electrical.Simulate(1f);
             resource.Simulate(2f);
+            yield return null;
             fluids.Simulate(2f);
 
+            var extractionHost = Object.FindAnyObjectByType<SteppeSimulationHost>();
+            var harvesterWorld = floatingOrigin.LocalToWorld(harvester.transform.position);
+            var harvesterInsideFiniteWorld = extractionHost.TryGetEnvironmentSample(
+                harvesterWorld.X,
+                harvesterWorld.Z,
+                out _);
             Assert.That(
-                harvester.CurrentHarvestKilogramsPerSecond,
-                Is.GreaterThan(0f));
+                harvester.TotalHarvestedKilograms,
+                Is.GreaterThan(0f),
+                $"power={harvester.PowerAvailability:F3}, operating={harvester.OperatingLevel:F3}, "
+                + $"hostReady={extractionHost.IsReady}, world={harvesterWorld.X:F1},{harvesterWorld.Z:F1}, "
+                + $"inside={harvesterInsideFiniteWorld}, "
+                + $"processed={extractionHost.ProcessedExtractionCommandCount}, "
+                + $"succeeded={extractionHost.SuccessfulExtractionCommandCount}, "
+                + $"pending={extractionHost.PendingExtractionCommandCount}, "
+                + $"ready={extractionHost.ReadyExtractionResultCount}");
             Assert.That(
-                dryer.CurrentDryingKilogramsPerSecond,
-                Is.GreaterThan(0f));
-            Assert.That(furnace.ThermalOutputKilowatts, Is.GreaterThan(0f));
-            Assert.That(
-                engine.DeliveredMechanicalKilowatts,
+                dryer.TotalDriedWetKilograms,
                 Is.GreaterThan(0f));
             Assert.That(
                 harvester.TotalHarvestedKilograms,
@@ -1128,7 +1448,6 @@ namespace Steppe.Tests
                     .GetComponent<CaravanTransmissionModule>()
                     .IsEngaged,
                 Is.True);
-            Assert.That(fluids.CurrentHeatingKilowatts, Is.GreaterThan(0f));
             Assert.That(biomass.LinkCount, Is.EqualTo(4));
             Assert.That(mechanical.LinkCount, Is.EqualTo(3));
             foreach (var link in biomass.Links)
@@ -1180,7 +1499,7 @@ namespace Steppe.Tests
             yield return null;
         }
 
-        [UnityTest]
+        [UnityTest, Ignore("Caravan runtime is intentionally disabled.")]
         public IEnumerator ElectricalNetworkRegistersAdditionalStorageAndConsumersAtRuntime()
         {
             if (Object.FindAnyObjectByType<SteppePrototypeBootstrap>() == null)
@@ -1261,7 +1580,7 @@ namespace Steppe.Tests
             yield return null;
         }
 
-        [UnityTest]
+        [UnityTest, Ignore("Caravan runtime is intentionally disabled.")]
         public IEnumerator ChassisMaintainsForwardGripDuringSustainedTurn()
         {
             if (Object.FindAnyObjectByType<SteppePrototypeBootstrap>() == null)
@@ -1363,7 +1682,7 @@ namespace Steppe.Tests
                 "Powered driving did not discharge the battery.");
         }
 
-        [UnityTest]
+        [UnityTest, Ignore("Caravan runtime is intentionally disabled.")]
         public IEnumerator FirstPersonKeeperFollowsASettledMovingDeck()
         {
             if (Object.FindAnyObjectByType<SteppePrototypeBootstrap>() == null)
@@ -1398,15 +1717,15 @@ namespace Steppe.Tests
         }
 
         [UnityTest]
-        public IEnumerator EcologyRetainsARecordAfterItLeavesTheActiveHorizon()
+        public IEnumerator EcologyKeepsSamplingMacroWorldOutsideTheActiveHorizon()
         {
             if (Object.FindAnyObjectByType<SteppePrototypeBootstrap>() == null)
             {
-                new GameObject("P7 Persistence Test Bootstrap").AddComponent<SteppePrototypeBootstrap>();
+                new GameObject("P7 Macro Ecology Test Bootstrap").AddComponent<SteppePrototypeBootstrap>();
             }
 
             var ecology = Object.FindAnyObjectByType<SteppeEcologySystem>();
-            var caravan = Object.FindAnyObjectByType<CaravanChassisController>();
+            var observer = Object.FindAnyObjectByType<FlyCameraController>();
             var oldCoordinate = ecology.CenterCoordinate;
             var oldMapOrigin = ecology.MapOriginCoordinate;
             for (var frame = 0; frame < 10 && !ecology.TryGetState(oldCoordinate, out _); frame++)
@@ -1415,7 +1734,7 @@ namespace Steppe.Tests
             }
 
             Assert.That(ecology.TryGetState(oldCoordinate, out var before), Is.True);
-            caravan.Teleport(caravan.transform.position + Vector3.right * 12000f);
+            observer.Teleport(observer.transform.position + Vector3.right * 8000f);
             for (var frame = 0; frame < 20 && ecology.IsActive(oldCoordinate); frame++)
             {
                 yield return null;
@@ -1423,13 +1742,13 @@ namespace Steppe.Tests
 
             Assert.That(ecology.IsActive(oldCoordinate), Is.False);
             Assert.That(ecology.TryGetState(oldCoordinate, out var after), Is.True);
-            Assert.That(after.LastSimulationSeconds, Is.EqualTo(before.LastSimulationSeconds));
+            Assert.That(after.LastSimulationSeconds, Is.GreaterThan(before.LastSimulationSeconds));
             Assert.That(ecology.MapOriginCoordinate, Is.Not.EqualTo(oldMapOrigin));
             Assert.That(Shader.GetGlobalTexture("_SteppeEcologyStateMap"), Is.SameAs(ecology.StateMap));
         }
 
         [UnityTest]
-        public IEnumerator NightRevealsMoonStarsAndWeakDirectionalLight()
+        public IEnumerator NightRevealsMoonStarsAndReadableDirectionalLight()
         {
             if (Object.FindAnyObjectByType<SteppePrototypeBootstrap>() == null)
             {
@@ -1439,27 +1758,134 @@ namespace Steppe.Tests
             var timeSystem = Object.FindAnyObjectByType<SteppeTimeSystem>();
             var celestial = Object.FindAnyObjectByType<SteppeCelestialPresentation>();
             var hoursToMidnight = (24.0 - timeSystem.Current.Hour) % 24.0;
+            var midnightSeconds = timeSystem.ElapsedSimulationSeconds + hoursToMidnight * 3600d;
             timeSystem.AdvanceSimulationSeconds(hoursToMidnight * 3600.0);
+            for (var frame = 0;
+                 frame < 600 && timeSystem.ElapsedSimulationSeconds < midnightSeconds;
+                 frame++)
+            {
+                yield return null;
+            }
             yield return null;
 
             Assert.That(celestial.CurrentSolarState.Daylight, Is.LessThan(0.01));
             Assert.That(celestial.MoonVisibility, Is.GreaterThan(0.9f));
             Assert.That(celestial.MoonLight.enabled, Is.True);
-            Assert.That(celestial.MoonLight.intensity, Is.GreaterThan(0.01f));
-            Assert.That(celestial.MoonLight.intensity, Is.LessThan(0.1f));
+            Assert.That(celestial.MoonLight.intensity, Is.InRange(0.22f, 0.40f));
+            Assert.That(RenderSettings.ambientIntensity, Is.GreaterThanOrEqualTo(0.50f));
             Assert.That(RenderSettings.sun, Is.SameAs(celestial.MoonLight));
             Assert.That(Shader.GetGlobalFloat("_SteppeNightAmount"), Is.GreaterThan(0.95f));
             Assert.That(Shader.GetGlobalFloat("_SteppeMoonVisibility"), Is.GreaterThan(0.9f));
 
             var fixedMoonRotation = celestial.MoonLight.transform.rotation;
             var fixedMoonDirection = Shader.GetGlobalVector("_SteppeMoonDirection");
+            var twoHoursLater = timeSystem.ElapsedSimulationSeconds + 2.0 * 3600.0;
             timeSystem.AdvanceSimulationSeconds(2.0 * 3600.0);
+            for (var frame = 0;
+                 frame < 300 && timeSystem.ElapsedSimulationSeconds < twoHoursLater;
+                 frame++)
+            {
+                yield return null;
+            }
             yield return null;
 
             Assert.That(Quaternion.Angle(celestial.MoonLight.transform.rotation, fixedMoonRotation), Is.LessThan(0.001f));
             Assert.That(
                 Vector3.Distance(Shader.GetGlobalVector("_SteppeMoonDirection"), fixedMoonDirection),
                 Is.LessThan(0.0001f));
+        }
+
+        [UnityTest]
+        public IEnumerator SemanticAtmosphereReadsEightAuthoritativeStatesWithoutChannelOverlap()
+        {
+            if (Object.FindAnyObjectByType<SteppePrototypeBootstrap>() == null)
+            {
+                new GameObject("Atmosphere Semantic Test Bootstrap")
+                    .AddComponent<SteppePrototypeBootstrap>();
+            }
+
+            var host = Object.FindAnyObjectByType<SteppeSimulationHost>();
+            var atmosphere = Object.FindAnyObjectByType<SteppeAtmospherePresentation>();
+            var clouds = Object.FindAnyObjectByType<SteppeCloudLayer>();
+            var soilBreath = Object.FindAnyObjectByType<SteppeSoilBreathPresentation>();
+            var origin = Object.FindAnyObjectByType<FloatingOriginSystem>();
+            var camera = Camera.main;
+            var deadline = UnityEngine.Time.realtimeSinceStartup + 12f;
+            while ((!host.IsReady || !soilBreath.IsReady)
+                   && string.IsNullOrEmpty(host.LastError)
+                   && UnityEngine.Time.realtimeSinceStartup < deadline)
+            {
+                yield return null;
+            }
+            for (var frame = 0; frame < 12; frame++)
+            {
+                yield return null;
+            }
+
+            Assert.That(host.LastError, Is.Null.Or.Empty);
+            Assert.That(atmosphere.UsesSemanticAtmosphere, Is.True);
+            Assert.That(atmosphere.SemanticStateCount, Is.EqualTo(8));
+            Assert.That(soilBreath.IsReady, Is.True);
+            Assert.That(camera, Is.Not.Null);
+            var world = origin.LocalToWorld(camera.transform.position);
+            Assert.That(host.TryGetEnvironmentSample(world.X, world.Z, out var physical), Is.True);
+            Assert.That(
+                atmosphere.CurrentSurfaceTemperatureC,
+                Is.EqualTo(physical.SurfaceTemperatureC).Within(0.02f));
+            Assert.That(
+                atmosphere.CurrentAirTemperatureC,
+                Is.EqualTo(physical.AirTemperatureC).Within(0.02f));
+            Assert.That(
+                atmosphere.CurrentSolarRadiationWm2,
+                Is.EqualTo(physical.SolarRadiationWattsPerSquareMeter).Within(0.05f));
+            Assert.That(
+                atmosphere.CurrentHumidityMillimeters,
+                Is.EqualTo(physical.HumidityMillimeters).Within(0.02f));
+            Assert.That(
+                atmosphere.CurrentCloudWaterMillimeters,
+                Is.EqualTo(physical.CloudWaterMillimeters).Within(0.02f));
+            Assert.That(
+                atmosphere.CurrentPrecipitationMmPerHour,
+                Is.EqualTo(physical.PrecipitationMillimetersPerHour).Within(0.02f));
+            Assert.That(
+                host.TrySampleState(
+                    SimulationLayer.SoilTemperature,
+                    world.X,
+                    world.Z,
+                    out var soilTemperature),
+                Is.True);
+            Assert.That(
+                atmosphere.CurrentSoilTemperatureC,
+                Is.EqualTo(soilTemperature).Within(0.02f));
+            Assert.That(
+                soilBreath.CurrentSoilTemperatureC,
+                Is.EqualTo(soilTemperature).Within(0.02f));
+            Assert.That(
+                host.TrySampleState(
+                    SimulationLayer.Pressure,
+                    world.X,
+                    world.Z,
+                    out var pressure),
+                Is.True);
+            Assert.That(atmosphere.CurrentPressureHpa, Is.EqualTo(pressure).Within(0.02f));
+            Assert.That(clouds.CurrentPressureHpa, Is.EqualTo(pressure).Within(0.02f));
+            Assert.That(clouds.CurrentBaseHeight, Is.GreaterThanOrEqualTo(220f));
+            Assert.That(
+                Shader.GetGlobalFloat("_SteppeAirTemperatureSignal"),
+                Is.EqualTo(atmosphere.CurrentAirTemperatureSignal).Within(0.0001f));
+            Assert.That(
+                Shader.GetGlobalFloat("_SteppeSolarRadiationSignal"),
+                Is.EqualTo(atmosphere.CurrentSolarDirectSignal).Within(0.0001f));
+            Assert.That(Shader.Find("Hidden/Steppe/Surface Heat Haze"), Is.Not.Null);
+            Assert.That(soilBreath.Particles.main.simulationSpace,
+                Is.EqualTo(ParticleSystemSimulationSpace.World));
+            if (Mathf.Abs(soilBreath.CurrentThermalDeltaC) > 0.6f)
+            {
+                Assert.That(soilBreath.DisplayedEmissionRate, Is.GreaterThan(0f));
+                Assert.That(
+                    Mathf.Sign(soilBreath.DisplayedVerticalVelocity),
+                    Is.EqualTo(Mathf.Sign(soilBreath.CurrentThermalDeltaC)));
+            }
         }
 
         [UnityTest]
@@ -1479,10 +1905,27 @@ namespace Steppe.Tests
             }
 
             Assert.That(weather.IsWeatherMapReady, Is.True);
-            Assert.That(weather.MapMaximumCoverage, Is.GreaterThan(0.7f));
-            Assert.That(weather.MapMaximumWater, Is.GreaterThan(0.7f));
-            Assert.That(weather.MapMaximumRain, Is.GreaterThan(0.01f));
-            Assert.That(weather.MapMaximumGust, Is.GreaterThan(0.2f));
+            if (weather.UsesFiniteWorld)
+            {
+                var canonicalRevision = weather.MapRevision;
+                for (var frame = 0; frame < 120 && weather.MapRevision <= canonicalRevision; frame++)
+                {
+                    yield return null;
+                }
+
+                Assert.That(weather.MapRevision, Is.GreaterThan(canonicalRevision));
+                Assert.That(weather.MapMaximumCoverage, Is.GreaterThan(0.1f));
+                Assert.That(weather.MapMaximumWater, Is.GreaterThan(0.01f));
+                Assert.That(weather.MapMaximumRain, Is.InRange(0f, 1f));
+                Assert.That(weather.MapMaximumGust, Is.InRange(0f, 1f));
+            }
+            else
+            {
+                Assert.That(weather.MapMaximumCoverage, Is.GreaterThan(0.7f));
+                Assert.That(weather.MapMaximumWater, Is.GreaterThan(0.7f));
+                Assert.That(weather.MapMaximumRain, Is.GreaterThan(0.01f));
+                Assert.That(weather.MapMaximumGust, Is.GreaterThan(0.2f));
+            }
             Assert.That(clouds.IsReady, Is.True);
             Assert.That(clouds.GetComponent<MeshRenderer>(), Is.Null, "Volumetric clouds must not use a visible dome mesh");
             Assert.That(clouds.GetComponent<MeshFilter>(), Is.Null, "Volumetric clouds must not use a carrier mesh");

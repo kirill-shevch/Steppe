@@ -1,0 +1,114 @@
+<?xml version="1.0" encoding="utf-8"?>
+<test-run id="2" testcasecount="9" result="Failed(Child)" total="9" passed="8" failed="1" inconclusive="0" skipped="0" asserts="0" engine-version="3.5.0.0" clr-version="4.0.30319.42000" start-time="2026-08-26 07:29:31Z" end-time="2026-08-26 07:29:32Z" duration="0.176638">
+  <test-suite type="TestSuite" id="1000" name="Steppe" fullname="Steppe" runstate="Runnable" testcasecount="147" result="Failed" site="Child" start-time="2026-08-26 07:29:31Z" end-time="2026-08-26 07:29:32Z" duration="0.176638" total="9" passed="8" failed="1" inconclusive="0" skipped="0" asserts="0">
+    <properties>
+      <property name="platform" value="EditMode" />
+    </properties>
+    <failure>
+      <message><![CDATA[One or more child tests had errors]]></message>
+    </failure>
+    <test-suite type="Assembly" id="1162" name="Steppe.Tests.EditMode.dll" fullname="C:/Projects/Steppe/Steppe/Library/ScriptAssemblies/Steppe.Tests.EditMode.dll" runstate="Runnable" testcasecount="147" result="Failed" site="Child" start-time="2026-08-26 07:29:31Z" end-time="2026-08-26 07:29:32Z" duration="0.160795" total="9" passed="8" failed="1" inconclusive="0" skipped="0" asserts="0">
+      <properties>
+        <property name="_PID" value="7104" />
+        <property name="_APPDOMAIN" value="Unity Child Domain" />
+        <property name="platform" value="EditMode" />
+        <property name="EditorOnly" value="True" />
+      </properties>
+      <failure>
+        <message><![CDATA[One or more child tests had errors]]></message>
+      </failure>
+      <test-suite type="TestSuite" id="1163" name="Steppe" fullname="Steppe" runstate="Runnable" testcasecount="147" result="Failed" site="Child" start-time="2026-08-26 07:29:31Z" end-time="2026-08-26 07:29:32Z" duration="0.156802" total="9" passed="8" failed="1" inconclusive="0" skipped="0" asserts="0">
+        <properties />
+        <failure>
+          <message><![CDATA[One or more child tests had errors]]></message>
+        </failure>
+        <test-suite type="TestSuite" id="1164" name="Tests" fullname="Steppe.Tests" runstate="Runnable" testcasecount="147" result="Failed" site="Child" start-time="2026-08-26 07:29:31Z" end-time="2026-08-26 07:29:32Z" duration="0.154223" total="9" passed="8" failed="1" inconclusive="0" skipped="0" asserts="0">
+          <properties />
+          <failure>
+            <message><![CDATA[One or more child tests had errors]]></message>
+          </failure>
+          <test-suite type="TestFixture" id="1109" name="NaturalVisualCatalogTests" fullname="Steppe.Tests.NaturalVisualCatalogTests" classname="Steppe.Tests.NaturalVisualCatalogTests" runstate="Runnable" testcasecount="9" result="Failed" site="Child" start-time="2026-08-26 07:29:31Z" end-time="2026-08-26 07:29:32Z" duration="0.150066" total="9" passed="8" failed="1" inconclusive="0" skipped="0" asserts="0">
+            <properties />
+            <failure>
+              <message><![CDATA[One or more child tests had errors]]></message>
+            </failure>
+            <test-case id="1114" name="DrainageTopologyPreservesDirectionAndBuildsRealConfluences" fullname="Steppe.Tests.NaturalVisualCatalogTests.DrainageTopologyPreservesDirectionAndBuildsRealConfluences" methodname="DrainageTopologyPreservesDirectionAndBuildsRealConfluences" classname="Steppe.Tests.NaturalVisualCatalogTests" runstate="Runnable" seed="368275096" result="Passed" start-time="2026-08-26 07:29:31Z" end-time="2026-08-26 07:29:31Z" duration="0.029535" asserts="0">
+              <properties>
+                <property name="retryIteration" value="0" />
+                <property name="repeatIteration" value="0" />
+              </properties>
+            </test-case>
+            <test-case id="1118" name="EveryGroundDetailKindBuildsNonEmptyUniqueTopology" fullname="Steppe.Tests.NaturalVisualCatalogTests.EveryGroundDetailKindBuildsNonEmptyUniqueTopology" methodname="EveryGroundDetailKindBuildsNonEmptyUniqueTopology" classname="Steppe.Tests.NaturalVisualCatalogTests" runstate="Runnable" seed="1991217781" result="Passed" start-time="2026-08-26 07:29:31Z" end-time="2026-08-26 07:29:32Z" duration="0.027875" asserts="0">
+              <properties>
+                <property name="retryIteration" value="0" />
+                <property name="repeatIteration" value="0" />
+              </properties>
+            </test-case>
+            <test-case id="1110" name="EveryStateOwnsOneUniqueNaturalVisualChannel" fullname="Steppe.Tests.NaturalVisualCatalogTests.EveryStateOwnsOneUniqueNaturalVisualChannel" methodname="EveryStateOwnsOneUniqueNaturalVisualChannel" classname="Steppe.Tests.NaturalVisualCatalogTests" runstate="Runnable" seed="4122459" result="Passed" start-time="2026-08-26 07:29:32Z" end-time="2026-08-26 07:29:32Z" duration="0.017064" asserts="0">
+              <properties>
+                <property name="retryIteration" value="0" />
+                <property name="repeatIteration" value="0" />
+              </properties>
+            </test-case>
+            <test-case id="1117" name="GroundDetailsUseElevenUniqueGeometryLanguagesAndCorrectOwners" fullname="Steppe.Tests.NaturalVisualCatalogTests.GroundDetailsUseElevenUniqueGeometryLanguagesAndCorrectOwners" methodname="GroundDetailsUseElevenUniqueGeometryLanguagesAndCorrectOwners" classname="Steppe.Tests.NaturalVisualCatalogTests" runstate="Runnable" seed="1905552145" result="Passed" start-time="2026-08-26 07:29:32Z" end-time="2026-08-26 07:29:32Z" duration="0.008854" asserts="0">
+              <properties>
+                <property name="retryIteration" value="0" />
+                <property name="repeatIteration" value="0" />
+              </properties>
+            </test-case>
+            <test-case id="1115" name="ProcessAtlasContainsAllNonCaravanFluxesAndEveryVectorExactlyOnce" fullname="Steppe.Tests.NaturalVisualCatalogTests.ProcessAtlasContainsAllNonCaravanFluxesAndEveryVectorExactlyOnce" methodname="ProcessAtlasContainsAllNonCaravanFluxesAndEveryVectorExactlyOnce" classname="Steppe.Tests.NaturalVisualCatalogTests" runstate="Runnable" seed="552302288" result="Failed" start-time="2026-08-26 07:29:32Z" end-time="2026-08-26 07:29:32Z" duration="0.021942" asserts="0">
+              <properties>
+                <property name="retryIteration" value="0" />
+                <property name="repeatIteration" value="0" />
+              </properties>
+              <failure>
+                <message><![CDATA[Unhandled log message: '[Error] Unexpected error in Burst compilation: System.AggregateException: One or more errors occurred. (Unable to load the unmanaged library `C:\Projects\Steppe\Steppe\Library\BurstCache\JIT\f04c342a67ec0c259743da3736e43ca1.dll`, error code 4551) ---> System.DllNotFoundException: Unable to load the unmanaged library `C:\Projects\Steppe\Steppe\Library\BurstCache\JIT\f04c342a67ec0c259743da3736e43ca1.dll`, error code 4551
+  at Burst.Backend.UnmanagedLibrary+WindowsUnmanagedLibrary.LoadLibrary (System.String name, System.Boolean addPlatformPrefix, System.Boolean addPlatformFileExtension, System.Boolean addArchitecturePostfix) [0x00050] in <c6081d66416a4b579fa919569b56c9a2>:0 
+  at Burst.Backend.UnmanagedLibrary.LoadLibrary (System.String name, System.Boolean addPlatformPrefix, System.Boolean addPlatformFileExtension, System.Boolean addArchitecturePostfix) [0x00020] in <c6081d66416a4b579fa919569b56c9a2>:0 
+  at Burst.Compiler.IL.Client.CompilerClient.OnLibraryCompiled (Burst.Compiler.IL.Server.CompilationMessage+Types+LibraryCompiledMessage e) [0x0020c] in <e55fa4270c8a4cb18b54084f9d890962>:0 
+  at Burst.Compiler.IL.Client.CompilerClient+<>c__DisplayClass59_0.<ScheduleCompilation>b__0 () [0x000f3] in <e55fa4270c8a4cb18b54084f9d890962>:0 
+  at Burst.Compiler.IL.Client.CompilerClient+<>c__DisplayClass59_0.<ScheduleCompilation>b__0 () [0x00224] in <e55fa4270c8a4cb18b54084f9d890962>:0 
+   --- End of inner exception stack trace ---
+---> (Inner Exception #0) System.DllNotFoundException: Unable to load the unmanaged library `C:\Projects\Steppe\Steppe\Library\BurstCache\JIT\f04c342a67ec0c259743da3736e43ca1.dll`, error code 4551
+  at Burst.Backend.UnmanagedLibrary+WindowsUnmanagedLibrary.LoadLibrary (System.String name, System.Boolean addPlatformPrefix, System.Boolean addPlatformFileExtension, System.Boolean addArchitecturePostfix) [0x00050] in <c6081d66416a4b579fa919569b56c9a2>:0 
+  at Burst.Backend.UnmanagedLibrary.LoadLibrary (System.String name, System.Boolean addPlatformPrefix, System.Boolean addPlatformFileExtension, System.Boolean addArchitecturePostfix) [0x00020] in <c6081d66416a4b579fa919569b56c9a2>:0 
+  at Burst.Compiler.IL.Client.CompilerClient.OnLibraryCompiled (Burst.Compiler.IL.Server.CompilationMessage+Types+LibraryCompiledMessage e) [0x0020c] in <e55fa4270c8a4cb18b54084f9d890962>:0 
+  at Burst.Compiler.IL.Client.CompilerClient+<>c__DisplayClass59_0.<ScheduleCompilation>b__0 () [0x000f3] in <e55fa4270c8a4cb18b54084f9d890962>:0 
+  at Burst.Compiler.IL.Client.CompilerClient+<>c__DisplayClass59_0.<ScheduleCompilation>b__0 () [0x00224] in <e55fa4270c8a4cb18b54084f9d890962>:0 <---
+'. Use UnityEngine.TestTools.LogAssert.Expect]]></message>
+                <stack-trace><![CDATA[
+]]></stack-trace>
+              </failure>
+            </test-case>
+            <test-case id="1113" name="RawPackingPreservesPhysicalUnitsAndSanitizesNonFiniteValues" fullname="Steppe.Tests.NaturalVisualCatalogTests.RawPackingPreservesPhysicalUnitsAndSanitizesNonFiniteValues" methodname="RawPackingPreservesPhysicalUnitsAndSanitizesNonFiniteValues" classname="Steppe.Tests.NaturalVisualCatalogTests" runstate="Runnable" seed="989122774" result="Passed" start-time="2026-08-26 07:29:32Z" end-time="2026-08-26 07:29:32Z" duration="0.000557" asserts="0">
+              <properties>
+                <property name="retryIteration" value="0" />
+                <property name="repeatIteration" value="0" />
+              </properties>
+            </test-case>
+            <test-case id="1111" name="RootWaterExclusivelyOwnsSoilBaseAlbedo" fullname="Steppe.Tests.NaturalVisualCatalogTests.RootWaterExclusivelyOwnsSoilBaseAlbedo" methodname="RootWaterExclusivelyOwnsSoilBaseAlbedo" classname="Steppe.Tests.NaturalVisualCatalogTests" runstate="Runnable" seed="1463982338" result="Passed" start-time="2026-08-26 07:29:32Z" end-time="2026-08-26 07:29:32Z" duration="0.000910" asserts="0">
+              <properties>
+                <property name="retryIteration" value="0" />
+                <property name="repeatIteration" value="0" />
+              </properties>
+            </test-case>
+            <test-case id="1112" name="SemanticPacksContainEveryStateExactlyOnce" fullname="Steppe.Tests.NaturalVisualCatalogTests.SemanticPacksContainEveryStateExactlyOnce" methodname="SemanticPacksContainEveryStateExactlyOnce" classname="Steppe.Tests.NaturalVisualCatalogTests" runstate="Runnable" seed="1254670641" result="Passed" start-time="2026-08-26 07:29:32Z" end-time="2026-08-26 07:29:32Z" duration="0.005285" asserts="0">
+              <properties>
+                <property name="retryIteration" value="0" />
+                <property name="repeatIteration" value="0" />
+              </properties>
+            </test-case>
+            <test-case id="1116" name="TerrainMaterialExposesNoSecondaryBaseColorControls" fullname="Steppe.Tests.NaturalVisualCatalogTests.TerrainMaterialExposesNoSecondaryBaseColorControls" methodname="TerrainMaterialExposesNoSecondaryBaseColorControls" classname="Steppe.Tests.NaturalVisualCatalogTests" runstate="Runnable" seed="983308031" result="Passed" start-time="2026-08-26 07:29:32Z" end-time="2026-08-26 07:29:32Z" duration="0.002628" asserts="0">
+              <properties>
+                <property name="retryIteration" value="0" />
+                <property name="repeatIteration" value="0" />
+              </properties>
+              <output><![CDATA[Saving results to: C:/Users/Kirill/AppData/LocalLow/DefaultCompany/Steppe\TestResults.xml
+]]></output>
+            </test-case>
+          </test-suite>
+        </test-suite>
+      </test-suite>
+    </test-suite>
+  </test-suite>
+</test-run>

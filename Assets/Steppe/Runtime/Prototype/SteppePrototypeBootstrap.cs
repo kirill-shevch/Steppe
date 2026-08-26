@@ -1,10 +1,11 @@
-using Steppe.Caravan;
 using Steppe.Ecology;
+using Steppe.Integration;
 using Steppe.Player;
 using Steppe.Rendering;
 using Steppe.Settings;
 using Steppe.Terrain;
 using Steppe.Time;
+using Steppe.UnitySimulation;
 using Steppe.Weather;
 using Steppe.World;
 using UnityEngine;
@@ -52,6 +53,13 @@ namespace Steppe.Prototype
             initialized = true;
             runtimeSettings = settings != null ? settings : SteppeWorldSettings.CreateRuntimeDefaults();
 
+            var simulationHost = gameObject.AddComponent<SteppeSimulationHost>();
+            simulationHost.Configure(
+                runtimeSettings.WorldSeed,
+                runtimeSettings.SimulationSecondsPerRealSecond,
+                latitudeDegrees: runtimeSettings.LatitudeDegrees);
+            var finiteEnvironment = new FiniteWorldEnvironmentAdapter(simulationHost);
+
             var camera = Camera.main != null ? Camera.main : FindAnyObjectByType<Camera>();
             if (camera == null)
             {
@@ -60,45 +68,43 @@ namespace Steppe.Prototype
                 cameraObject.tag = "MainCamera";
             }
 
-            var existingFlyController = camera.GetComponent<FlyCameraController>();
-            if (existingFlyController != null)
-            {
-                existingFlyController.enabled = false;
-            }
-
             const float initialX = 32f;
             const float initialZ = -64f;
             var initialGroundHeight = (float)new TerrainHeightGenerator(runtimeSettings).SampleHeight(initialX, initialZ);
-            var initialWeather = new SteppeWeatherModel(runtimeSettings).Sample(
+            camera.transform.position = new Vector3(
                 initialX,
-                initialZ,
-                0.0);
-            var initialWind = new Vector3(
-                initialWeather.SurfaceWind.x,
-                0f,
-                initialWeather.SurfaceWind.y);
-            var initialRotation = initialWind.sqrMagnitude > 0.001f
-                ? Quaternion.LookRotation(initialWind.normalized, Vector3.up)
-                : Quaternion.identity;
-            var caravanRig = CaravanDemoFactory.Create(new Vector3(
-                initialX,
-                initialGroundHeight + 1.35f,
-                initialZ),
-                initialRotation);
-            caravanRig.Root.transform.SetParent(transform, true);
-
-            camera.transform.position = caravanRig.Root.transform.position + new Vector3(0f, 2.2f, -3f);
-            camera.transform.rotation = Quaternion.identity;
+                initialGroundHeight + runtimeSettings.InitialCameraHeight,
+                initialZ);
+            camera.transform.rotation = Quaternion.Euler(12f, 24f, 0f);
             camera.nearClipPlane = 0.1f;
             camera.farClipPlane = runtimeSettings.CameraFarClip;
             camera.clearFlags = CameraClearFlags.Skybox;
+
+            var existingBallCamera = camera.GetComponent<SteppeBallCameraController>();
+            if (existingBallCamera != null)
+            {
+                existingBallCamera.enabled = false;
+            }
+
+            var flyCamera = camera.GetComponent<FlyCameraController>();
+            if (flyCamera == null)
+            {
+                flyCamera = camera.gameObject.AddComponent<FlyCameraController>();
+            }
+
+            flyCamera.enabled = true;
+            flyCamera.Configure(
+                runtimeSettings.CameraMoveSpeed,
+                runtimeSettings.CameraBoostMultiplier,
+                runtimeSettings.MouseSensitivity);
+            var focus = camera.transform;
 
             var sun = EnsureDirectionalLight();
             var moon = EnsureMoonLight();
             ConfigureAtmosphere();
 
             var timeSystem = gameObject.AddComponent<SteppeTimeSystem>();
-            timeSystem.Configure(runtimeSettings);
+            timeSystem.Configure(runtimeSettings, simulationHost);
             var celestialPresentation = gameObject.AddComponent<SteppeCelestialPresentation>();
             celestialPresentation.Configure(timeSystem, sun, moon, runtimeSettings.LatitudeDegrees);
 
@@ -107,7 +113,7 @@ namespace Steppe.Prototype
 
             var floatingOrigin = gameObject.AddComponent<FloatingOriginSystem>();
             floatingOrigin.Configure(
-                caravanRig.Root.transform,
+                focus,
                 worldSpaceObject.transform,
                 runtimeSettings.FloatingOriginThreshold,
                 runtimeSettings.ChunkSize);
@@ -116,7 +122,13 @@ namespace Steppe.Prototype
             workScheduler.Configure(runtimeSettings.WorldWorkBudgetMilliseconds);
 
             var weatherSystem = gameObject.AddComponent<SteppeWeatherSystem>();
-            weatherSystem.Configure(runtimeSettings, timeSystem, floatingOrigin, caravanRig.Root.transform, workScheduler);
+            weatherSystem.Configure(
+                runtimeSettings,
+                timeSystem,
+                floatingOrigin,
+                focus,
+                workScheduler,
+                finiteEnvironment);
 
             var ecologySystem = gameObject.AddComponent<SteppeEcologySystem>();
             ecologySystem.Configure(
@@ -124,79 +136,9 @@ namespace Steppe.Prototype
                 timeSystem,
                 weatherSystem,
                 floatingOrigin,
-                caravanRig.Root.transform,
-                workScheduler);
-
-            var environment = new CaravanEnvironmentSampler(
-                runtimeSettings,
-                floatingOrigin,
-                weatherSystem,
-                ecologySystem,
-                timeSystem);
-            caravanRig.Configure(runtimeSettings, floatingOrigin, environment);
-            var firstRidgeTower =
-                SteppeExpeditionLandmarkFactory.CreateFirstRidgeTower(
-                    worldSpaceObject.transform,
-                    floatingOrigin,
-                    weatherSystem,
-                    new TerrainHeightGenerator(runtimeSettings),
-                    initialX + 900.0,
-                    initialZ + 650.0);
-
-            var existingBallCamera = camera.GetComponent<SteppeBallCameraController>();
-            if (existingBallCamera != null)
-            {
-                existingBallCamera.enabled = false;
-            }
-
-            var playerObject = new GameObject("Steppe Caravan Keeper");
-            playerObject.transform.SetParent(transform, true);
-            playerObject.transform.SetPositionAndRotation(
-                caravanRig.PlayerSpawn.position,
-                caravanRig.PlayerSpawn.rotation);
-            playerObject.AddComponent<CharacterController>();
-            var firstPerson = playerObject.AddComponent<CaravanFirstPersonController>();
-            firstPerson.Configure(runtimeSettings, floatingOrigin, caravanRig.Chassis, camera);
-            var buildMode = playerObject.AddComponent<CaravanBuildModeController>();
-            buildMode.Configure(
-                camera,
-                firstPerson,
-                caravanRig.Chassis,
-                caravanRig.MountGrid,
-                caravanRig.ElectricalNetwork,
-                caravanRig.FluidNetwork,
-                caravanRig.BiomassNetwork,
-                caravanRig.MechanicalNetwork,
-                caravanRig.Construction);
-            var interactor = playerObject.AddComponent<CaravanPlayerInteractor>();
-            interactor.Configure(camera, firstPerson, buildMode);
-            var expedition =
-                playerObject.AddComponent<SteppeFirstExpeditionDirector>();
-            expedition.Configure(
-                runtimeSettings,
-                floatingOrigin,
-                weatherSystem,
-                environment,
-                caravanRig.Chassis,
-                caravanRig.FluidNetwork,
-                caravanRig.BiomassNetwork,
-                caravanRig.ResourceSystem,
-                firstRidgeTower);
-            var playerHud = playerObject.AddComponent<CaravanPlayerHud>();
-            playerHud.Configure(
-                interactor,
-                buildMode,
-                caravanRig.Chassis,
-                caravanRig.ElectricalNetwork,
-                expedition);
-
-            var trackSystem = gameObject.AddComponent<SteppeTrackSystem>();
-            trackSystem.Configure(
-                runtimeSettings,
-                timeSystem,
-                floatingOrigin,
-                caravanRig.Root.transform,
-                caravanRig.Chassis);
+                focus,
+                workScheduler,
+                finiteEnvironment);
 
             var atmospherePresentation = gameObject.AddComponent<SteppeAtmospherePresentation>();
             atmospherePresentation.Configure(
@@ -205,13 +147,20 @@ namespace Steppe.Prototype
                 weatherSystem,
                 ecologySystem,
                 floatingOrigin,
-                caravanRig.Root.transform,
-                celestialPresentation);
+                focus,
+                celestialPresentation,
+                finiteEnvironment,
+                simulationHost);
 
             var cloudObject = new GameObject("Cloud Layer");
             cloudObject.transform.SetParent(worldSpaceObject.transform, false);
             var cloudLayer = cloudObject.AddComponent<SteppeCloudLayer>();
-            cloudLayer.Configure(runtimeSettings, weatherSystem, floatingOrigin);
+            cloudLayer.Configure(
+                runtimeSettings,
+                weatherSystem,
+                floatingOrigin,
+                simulationHost,
+                focus);
 
             var rainObject = new GameObject("Rain Volume");
             rainObject.transform.SetParent(worldSpaceObject.transform, false);
@@ -222,7 +171,8 @@ namespace Steppe.Prototype
                 timeSystem,
                 floatingOrigin,
                 camera.transform,
-                rainMaterial);
+                rainMaterial,
+                finiteEnvironment);
 
             var snowObject = new GameObject("Snow Volume");
             snowObject.transform.SetParent(worldSpaceObject.transform, false);
@@ -233,7 +183,8 @@ namespace Steppe.Prototype
                 timeSystem,
                 floatingOrigin,
                 camera.transform,
-                snowMaterial);
+                snowMaterial,
+                finiteEnvironment);
 
             var dustObject = new GameObject("Dust Field");
             dustObject.transform.SetParent(worldSpaceObject.transform, false);
@@ -246,16 +197,51 @@ namespace Steppe.Prototype
                 camera.transform,
                 dustMaterial);
 
+            var windCueObject = new GameObject("Wind-borne Seeds");
+            windCueObject.transform.SetParent(worldSpaceObject.transform, false);
+            var windCue = windCueObject.AddComponent<SteppeWindCuePresentation>();
+            windCue.Configure(weatherSystem, floatingOrigin, focus);
+
             var grassObject = new GameObject("Grass Field");
             grassObject.transform.SetParent(worldSpaceObject.transform, false);
             var grassRenderer = grassObject.AddComponent<SteppeGrassRenderer>();
-            grassRenderer.Configure(runtimeSettings, floatingOrigin, caravanRig.Root.transform, workScheduler, grassMaterial);
+            grassRenderer.Configure(runtimeSettings, floatingOrigin, focus, workScheduler, grassMaterial);
+
+            var groundDetailObject = new GameObject("Semantic Ground Details");
+            groundDetailObject.transform.SetParent(worldSpaceObject.transform, false);
+            var groundDetailRenderer = groundDetailObject.AddComponent<SteppeGroundDetailRenderer>();
+            groundDetailRenderer.Configure(runtimeSettings, floatingOrigin, focus, workScheduler);
+
+            var soilBreathObject = new GameObject("Soil Thermal Breath");
+            soilBreathObject.transform.SetParent(worldSpaceObject.transform, false);
+            var soilBreath = soilBreathObject.AddComponent<SteppeSoilBreathPresentation>();
+            soilBreath.Configure(runtimeSettings, simulationHost, floatingOrigin, focus);
+
+            var hydrologicalVaporObject = new GameObject("Hydrological Vapor Processes");
+            hydrologicalVaporObject.transform.SetParent(worldSpaceObject.transform, false);
+            var hydrologicalVapor =
+                hydrologicalVaporObject.AddComponent<SteppeHydrologicalVaporPresentation>();
+            hydrologicalVapor.Configure(
+                runtimeSettings,
+                simulationHost,
+                floatingOrigin,
+                focus);
+
+            var atmosphericTransportObject = new GameObject("Atmospheric Transport Processes");
+            atmosphericTransportObject.transform.SetParent(worldSpaceObject.transform, false);
+            var atmosphericTransport =
+                atmosphericTransportObject.AddComponent<SteppeAtmosphericTransportPresentation>();
+            atmosphericTransport.Configure(
+                simulationHost,
+                floatingOrigin,
+                focus,
+                cloudLayer);
 
             var chunkStreamer = gameObject.AddComponent<TerrainChunkStreamer>();
             chunkStreamer.Configure(
                 runtimeSettings,
                 floatingOrigin,
-                caravanRig.Root.transform,
+                focus,
                 worldSpaceObject.transform,
                 workScheduler,
                 terrainMaterial);
@@ -278,23 +264,35 @@ namespace Steppe.Prototype
                 runtimeSettings,
                 floatingOrigin,
                 chunkStreamer,
-                caravanRig.Chassis,
-                trackSystem,
-                caravanRig.Root.transform,
+                flyCamera,
+                null,
+                focus,
                 timeSystem,
                 weatherSystem,
                 ecologySystem,
                 dustPresentation,
                 snowPresentation,
                 grassRenderer,
-                workScheduler);
+                workScheduler,
+                simulationHost);
 
-            var biomeNavigator = gameObject.AddComponent<BiomeDebugNavigator>();
-            biomeNavigator.Configure(
-                runtimeSettings,
+            var simulationVisualization = gameObject.AddComponent<SteppeSimulationVisualization>();
+            simulationVisualization.Configure(simulationHost, floatingOrigin, focus);
+
+            var naturalVisualAtlas = gameObject.AddComponent<SteppeNaturalVisualFieldAtlas>();
+            naturalVisualAtlas.Configure(simulationHost);
+
+            var naturalProcessAtlas = gameObject.AddComponent<SteppeNaturalProcessFieldAtlas>();
+            naturalProcessAtlas.Configure(simulationHost);
+
+            var macroPresentation = gameObject.AddComponent<SteppeMacroProcessPresentation>();
+            macroPresentation.Configure(
+                simulationHost,
                 floatingOrigin,
-                caravanRig.Root.transform,
-                caravanRig.Chassis);
+                weatherSystem,
+                focus,
+                worldSpaceObject.transform,
+                new TerrainHeightGenerator(runtimeSettings));
 
             Application.targetFrameRate = 60;
         }

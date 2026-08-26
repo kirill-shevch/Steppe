@@ -20,6 +20,7 @@ Shader "Steppe/Skybox"
             float _SteppeNightAmount;
             float _SteppeMoonVisibility;
             float _SteppeHeatHaze;
+            float _SteppeAirTemperatureSignal;
             float _SteppeWindAnimationTime;
             float4 _SteppeSunDirection;
             float4 _SteppeMoonDirection;
@@ -54,7 +55,15 @@ Shader "Steppe/Skybox"
             {
                 float3 direction = normalize(input.direction);
                 float horizon = pow(saturate(1.0 - abs(direction.y)), 3.0);
-                float upperSky = smoothstep(-0.12, 0.72, direction.y);
+                float horizonBand = exp(-abs(direction.y) * 42.0);
+                float heatWave = sin(direction.x * 310.0 + _SteppeWindAnimationTime * 5.8)
+                                 * sin(direction.z * 227.0 - _SteppeWindAnimationTime * 4.1);
+                float refractedHeight = direction.y
+                                        + heatWave
+                                        * horizonBand
+                                        * saturate(_SteppeHeatHaze)
+                                        * 0.0075;
+                float upperSky = smoothstep(-0.12, 0.72, refractedHeight);
 
                 half3 dayHorizon = half3(0.69, 0.79, 0.87);
                 half3 dayZenith = half3(0.24, 0.48, 0.74);
@@ -64,12 +73,19 @@ Shader "Steppe/Skybox"
                 half3 nightSky = lerp(nightHorizon, nightZenith, upperSky);
                 half3 color = lerp(nightSky, daySky, saturate(_SteppeDaylight));
 
-                // Hot, dry air becomes a restless mirage band at the horizon.
+                // AirTemperature owns only the far spectral offset. Humidity changes
+                // extinction, while surface heat changes refraction without tinting.
+                half3 warmAirOffset = half3(0.11, 0.038, -0.045);
+                half3 coldAirOffset = half3(-0.045, 0.018, 0.105);
+                color += (_SteppeAirTemperatureSignal >= 0.0
+                    ? warmAirOffset * _SteppeAirTemperatureSignal
+                    : coldAirOffset * -_SteppeAirTemperatureSignal)
+                    * horizon
+                    * 0.42;
+
+                // A hot surface becomes a restless mirage band at the horizon.
                 // This is a world signal, not a screen-space UI indicator.
-                float horizonBand = exp(-abs(direction.y) * 42.0);
-                float heatWave = sin(direction.x * 310.0 + _SteppeWindAnimationTime * 5.8)
-                                 * sin(direction.z * 227.0 - _SteppeWindAnimationTime * 4.1);
-                color += half3(0.12, 0.075, 0.025)
+                color += half3(0.024, 0.024, 0.024)
                          * heatWave
                          * horizonBand
                          * saturate(_SteppeHeatHaze)

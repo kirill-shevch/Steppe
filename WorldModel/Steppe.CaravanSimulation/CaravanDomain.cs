@@ -170,6 +170,52 @@ public sealed record CaravanStateSnapshot(
     IReadOnlyDictionary<CaravanActivity, int> ActivitySteps,
     IReadOnlyDictionary<CaravanRegime, double> RegimeHours);
 
+/// <summary>
+/// One slow physiology tick driven by an external real-time vehicle. Position and
+/// optional stores are observations, not movement or world-exchange requests.
+/// </summary>
+public sealed record CaravanEmbeddedStepInput(
+    double Hours,
+    int Year,
+    int DayOfYear,
+    double HourOfDay,
+    float XCells,
+    float YCells,
+    int WorldWidthCells,
+    int WorldHeightCells,
+    float CellSizeMeters,
+    float AirTemperatureC,
+    float SurfaceTemperatureC,
+    float WindXMs,
+    float WindYMs,
+    float HumidityMm,
+    float PrecipitationMmPerHour,
+    float SurfaceWaterMm,
+    float SnowWaterEquivalentMm,
+    float LiveBiomassGm2,
+    float DryBiomassGm2,
+    float DustGm2,
+    float BurnScarFraction,
+    float SolarRadiationWm2,
+    float ExternalDistanceKilometers,
+    float? ExternalWaterLiters,
+    float? ExternalWetOrganicDryKg,
+    float? ExternalWetOrganicWaterLiters,
+    float? ExternalDryOrganicKg,
+    float? ExternalElectricityKwh,
+    float? ExternalBodyTemperatureC,
+    IReadOnlyDictionary<CaravanOrganKind, float> OrganUsage,
+    IReadOnlyDictionary<CaravanOrganKind, float> GrowthPriorities);
+
+public sealed record CaravanEmbeddedStepResult(
+    CaravanStateSnapshot State,
+    CaravanStepLedger Ledger,
+    IReadOnlyList<CaravanActionRecord> Actions,
+    float WaterFulfillment,
+    float OrganicFulfillment,
+    float NitrogenFulfillment,
+    float ThermalFulfillment);
+
 public sealed record CaravanObservation(
     int Year,
     int DayOfYear,

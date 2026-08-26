@@ -109,7 +109,7 @@ public sealed record CaravanBlueprint(
         float heat,
         params float[] sizes)
     {
-        var kinds = Enum.GetValues<CaravanOrganKind>();
+        var kinds = RuntimeCompatibility.GetEnumValues<CaravanOrganKind>();
         if (sizes.Length != kinds.Length)
         {
             throw new InvalidOperationException("Every caravan blueprint must specify every organ.");

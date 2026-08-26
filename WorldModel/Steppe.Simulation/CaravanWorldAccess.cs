@@ -91,7 +91,7 @@ public sealed class CaravanWorldAccess
     public CaravanPhysicalExchangeResult Exchange(CaravanPhysicalExchangeRequest request)
     {
         EnsureActive();
-        ArgumentNullException.ThrowIfNull(request);
+        RuntimeCompatibility.ThrowIfNull(request, nameof(request));
         return exchange(request);
     }
 
@@ -119,12 +119,12 @@ public sealed partial class FiniteWorld
         Func<CaravanWorldAccess, TResult> interaction,
         CancellationToken cancellationToken = default)
     {
-        if (!double.IsFinite(hours) || hours < 0d)
+        if (!RuntimeCompatibility.IsFinite(hours) || hours < 0d)
         {
             throw new ArgumentOutOfRangeException(nameof(hours));
         }
 
-        ArgumentNullException.ThrowIfNull(interaction);
+        RuntimeCompatibility.ThrowIfNull(interaction, nameof(interaction));
         lock (sync)
         {
             fluxState.Begin(SampleValue);
@@ -353,7 +353,7 @@ public sealed partial class FiniteWorld
             request.DustLiftKg,
             request.WasteHeatKwh
         };
-        if (values.Any(value => !float.IsFinite(value) || value < 0f))
+        if (values.Any(value => !RuntimeCompatibility.IsFinite(value) || value < 0f))
         {
             throw new ArgumentOutOfRangeException(nameof(request), "Physical exchange amounts must be finite and non-negative.");
         }

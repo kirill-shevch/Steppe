@@ -1,0 +1,81 @@
+<?xml version="1.0" encoding="utf-8"?>
+<test-run id="2" testcasecount="9" result="Passed" total="9" passed="9" failed="0" inconclusive="0" skipped="0" asserts="0" engine-version="3.5.0.0" clr-version="4.0.30319.42000" start-time="2026-08-26 07:30:01Z" end-time="2026-08-26 07:30:01Z" duration="0.1101486">
+  <test-suite type="TestSuite" id="1000" name="Steppe" fullname="Steppe" runstate="Runnable" testcasecount="147" result="Passed" start-time="2026-08-26 07:30:01Z" end-time="2026-08-26 07:30:01Z" duration="0.110149" total="9" passed="9" failed="0" inconclusive="0" skipped="0" asserts="0">
+    <properties>
+      <property name="platform" value="EditMode" />
+    </properties>
+    <test-suite type="Assembly" id="1162" name="Steppe.Tests.EditMode.dll" fullname="C:/Projects/Steppe/Steppe/Library/ScriptAssemblies/Steppe.Tests.EditMode.dll" runstate="Runnable" testcasecount="147" result="Passed" start-time="2026-08-26 07:30:01Z" end-time="2026-08-26 07:30:01Z" duration="0.100771" total="9" passed="9" failed="0" inconclusive="0" skipped="0" asserts="0">
+      <properties>
+        <property name="_PID" value="27852" />
+        <property name="_APPDOMAIN" value="Unity Child Domain" />
+        <property name="platform" value="EditMode" />
+        <property name="EditorOnly" value="True" />
+      </properties>
+      <test-suite type="TestSuite" id="1163" name="Steppe" fullname="Steppe" runstate="Runnable" testcasecount="147" result="Passed" start-time="2026-08-26 07:30:01Z" end-time="2026-08-26 07:30:01Z" duration="0.097540" total="9" passed="9" failed="0" inconclusive="0" skipped="0" asserts="0">
+        <properties />
+        <test-suite type="TestSuite" id="1164" name="Tests" fullname="Steppe.Tests" runstate="Runnable" testcasecount="147" result="Passed" start-time="2026-08-26 07:30:01Z" end-time="2026-08-26 07:30:01Z" duration="0.094868" total="9" passed="9" failed="0" inconclusive="0" skipped="0" asserts="0">
+          <properties />
+          <test-suite type="TestFixture" id="1109" name="NaturalVisualCatalogTests" fullname="Steppe.Tests.NaturalVisualCatalogTests" classname="Steppe.Tests.NaturalVisualCatalogTests" runstate="Runnable" testcasecount="9" result="Passed" start-time="2026-08-26 07:30:01Z" end-time="2026-08-26 07:30:01Z" duration="0.090806" total="9" passed="9" failed="0" inconclusive="0" skipped="0" asserts="0">
+            <properties />
+            <test-case id="1114" name="DrainageTopologyPreservesDirectionAndBuildsRealConfluences" fullname="Steppe.Tests.NaturalVisualCatalogTests.DrainageTopologyPreservesDirectionAndBuildsRealConfluences" methodname="DrainageTopologyPreservesDirectionAndBuildsRealConfluences" classname="Steppe.Tests.NaturalVisualCatalogTests" runstate="Runnable" seed="1634271403" result="Passed" start-time="2026-08-26 07:30:01Z" end-time="2026-08-26 07:30:01Z" duration="0.015331" asserts="0">
+              <properties>
+                <property name="retryIteration" value="0" />
+                <property name="repeatIteration" value="0" />
+              </properties>
+            </test-case>
+            <test-case id="1118" name="EveryGroundDetailKindBuildsNonEmptyUniqueTopology" fullname="Steppe.Tests.NaturalVisualCatalogTests.EveryGroundDetailKindBuildsNonEmptyUniqueTopology" methodname="EveryGroundDetailKindBuildsNonEmptyUniqueTopology" classname="Steppe.Tests.NaturalVisualCatalogTests" runstate="Runnable" seed="540703683" result="Passed" start-time="2026-08-26 07:30:01Z" end-time="2026-08-26 07:30:01Z" duration="0.014278" asserts="0">
+              <properties>
+                <property name="retryIteration" value="0" />
+                <property name="repeatIteration" value="0" />
+              </properties>
+            </test-case>
+            <test-case id="1110" name="EveryStateOwnsOneUniqueNaturalVisualChannel" fullname="Steppe.Tests.NaturalVisualCatalogTests.EveryStateOwnsOneUniqueNaturalVisualChannel" methodname="EveryStateOwnsOneUniqueNaturalVisualChannel" classname="Steppe.Tests.NaturalVisualCatalogTests" runstate="Runnable" seed="1817811822" result="Passed" start-time="2026-08-26 07:30:01Z" end-time="2026-08-26 07:30:01Z" duration="0.016669" asserts="0">
+              <properties>
+                <property name="retryIteration" value="0" />
+                <property name="repeatIteration" value="0" />
+              </properties>
+            </test-case>
+            <test-case id="1117" name="GroundDetailsUseElevenUniqueGeometryLanguagesAndCorrectOwners" fullname="Steppe.Tests.NaturalVisualCatalogTests.GroundDetailsUseElevenUniqueGeometryLanguagesAndCorrectOwners" methodname="GroundDetailsUseElevenUniqueGeometryLanguagesAndCorrectOwners" classname="Steppe.Tests.NaturalVisualCatalogTests" runstate="Runnable" seed="1634483855" result="Passed" start-time="2026-08-26 07:30:01Z" end-time="2026-08-26 07:30:01Z" duration="0.004352" asserts="0">
+              <properties>
+                <property name="retryIteration" value="0" />
+                <property name="repeatIteration" value="0" />
+              </properties>
+            </test-case>
+            <test-case id="1115" name="ProcessAtlasContainsAllNonCaravanFluxesAndEveryVectorExactlyOnce" fullname="Steppe.Tests.NaturalVisualCatalogTests.ProcessAtlasContainsAllNonCaravanFluxesAndEveryVectorExactlyOnce" methodname="ProcessAtlasContainsAllNonCaravanFluxesAndEveryVectorExactlyOnce" classname="Steppe.Tests.NaturalVisualCatalogTests" runstate="Runnable" seed="81108924" result="Passed" start-time="2026-08-26 07:30:01Z" end-time="2026-08-26 07:30:01Z" duration="0.016615" asserts="0">
+              <properties>
+                <property name="retryIteration" value="0" />
+                <property name="repeatIteration" value="0" />
+              </properties>
+            </test-case>
+            <test-case id="1113" name="RawPackingPreservesPhysicalUnitsAndSanitizesNonFiniteValues" fullname="Steppe.Tests.NaturalVisualCatalogTests.RawPackingPreservesPhysicalUnitsAndSanitizesNonFiniteValues" methodname="RawPackingPreservesPhysicalUnitsAndSanitizesNonFiniteValues" classname="Steppe.Tests.NaturalVisualCatalogTests" runstate="Runnable" seed="476981688" result="Passed" start-time="2026-08-26 07:30:01Z" end-time="2026-08-26 07:30:01Z" duration="0.000564" asserts="0">
+              <properties>
+                <property name="retryIteration" value="0" />
+                <property name="repeatIteration" value="0" />
+              </properties>
+            </test-case>
+            <test-case id="1111" name="RootWaterExclusivelyOwnsSoilBaseAlbedo" fullname="Steppe.Tests.NaturalVisualCatalogTests.RootWaterExclusivelyOwnsSoilBaseAlbedo" methodname="RootWaterExclusivelyOwnsSoilBaseAlbedo" classname="Steppe.Tests.NaturalVisualCatalogTests" runstate="Runnable" seed="965921488" result="Passed" start-time="2026-08-26 07:30:01Z" end-time="2026-08-26 07:30:01Z" duration="0.001311" asserts="0">
+              <properties>
+                <property name="retryIteration" value="0" />
+                <property name="repeatIteration" value="0" />
+              </properties>
+            </test-case>
+            <test-case id="1112" name="SemanticPacksContainEveryStateExactlyOnce" fullname="Steppe.Tests.NaturalVisualCatalogTests.SemanticPacksContainEveryStateExactlyOnce" methodname="SemanticPacksContainEveryStateExactlyOnce" classname="Steppe.Tests.NaturalVisualCatalogTests" runstate="Runnable" seed="722777281" result="Passed" start-time="2026-08-26 07:30:01Z" end-time="2026-08-26 07:30:01Z" duration="0.004883" asserts="0">
+              <properties>
+                <property name="retryIteration" value="0" />
+                <property name="repeatIteration" value="0" />
+              </properties>
+            </test-case>
+            <test-case id="1116" name="TerrainMaterialExposesNoSecondaryBaseColorControls" fullname="Steppe.Tests.NaturalVisualCatalogTests.TerrainMaterialExposesNoSecondaryBaseColorControls" methodname="TerrainMaterialExposesNoSecondaryBaseColorControls" classname="Steppe.Tests.NaturalVisualCatalogTests" runstate="Runnable" seed="1756968032" result="Passed" start-time="2026-08-26 07:30:01Z" end-time="2026-08-26 07:30:01Z" duration="0.002057" asserts="0">
+              <properties>
+                <property name="retryIteration" value="0" />
+                <property name="repeatIteration" value="0" />
+              </properties>
+              <output><![CDATA[Saving results to: C:/Users/Kirill/AppData/LocalLow/DefaultCompany/Steppe\TestResults.xml
+]]></output>
+            </test-case>
+          </test-suite>
+        </test-suite>
+      </test-suite>
+    </test-suite>
+  </test-suite>
+</test-run>

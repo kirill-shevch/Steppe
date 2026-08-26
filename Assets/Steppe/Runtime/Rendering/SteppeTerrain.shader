@@ -1,4 +1,4 @@
-Shader "Steppe/Terrain Surface"
+Shader "Hidden/Steppe/Terrain Surface Legacy"
 {
     Properties
     {
@@ -37,6 +37,7 @@ Shader "Steppe/Terrain Surface"
             #include "Assets/Steppe/Runtime/Rendering/SteppeWindField.hlsl"
             #include "Assets/Steppe/Runtime/Rendering/SteppeEcologyField.hlsl"
             #include "Assets/Steppe/Runtime/Rendering/SteppeTrackField.hlsl"
+            #include "Assets/Steppe/Runtime/Rendering/SteppeSimulationField.hlsl"
 
             CBUFFER_START(UnityPerMaterial)
                 half4 _BaseColor;
@@ -109,6 +110,7 @@ Shader "Steppe/Terrain Surface"
                     0.42h + (input.color.g - input.color.r) * 2.8h);
                 SteppeEcologyFieldSample ecology = SampleSteppeEcologyField(canonicalXZ);
                 SteppeTrackFieldSample track = SampleSteppeTrackField(canonicalXZ);
+                SteppeSimulationFieldSample simulation = SampleSteppeSimulationField(canonicalXZ);
                 SteppeWindFieldSample wind = SampleSteppeWindField(
                     canonicalXZ,
                     vegetationSignal,
@@ -139,6 +141,13 @@ Shader "Steppe/Terrain Surface"
                 albedo *= 1.0h - wetness * _WetDarkening;
                 albedo = lerp(albedo, albedo * half3(0.86h, 0.93h, 1.0h), wetness * 0.24h);
                 albedo *= 1.0h + crust * _CrustLightening;
+                // Root-zone drought is deliberately broader and slower than the
+                // surface-water wetness cue. It cures vegetation and bleaches bare soil.
+                half drought = simulation.soilDryness * (1.0h - wetness);
+                albedo = lerp(
+                    albedo,
+                    albedo * lerp(half3(1.10h, 1.02h, 0.78h), half3(1.18h, 1.08h, 0.83h), soilSignal),
+                    drought * 0.34h);
                 // A warped cellular lattice turns dry cohesive crust into a
                 // readable crack network without storing another state channel.
                 float2 crackWarp = canonicalXZ
@@ -148,7 +157,7 @@ Shader "Steppe/Terrain Surface"
                                    * 1.8h;
                 float2 crackCell = abs(frac(crackWarp / 2.6h) - 0.5h);
                 half crackLine = smoothstep(0.455h, 0.495h, max(crackCell.x, crackCell.y));
-                half cracks = crackLine * crust * _CrackStrength;
+                half cracks = crackLine * max(crust, drought * soilSignal) * _CrackStrength;
                 albedo *= 1.0h - cracks * 0.48h;
                 half looseGrain = (SteppeWindValueNoise(canonicalXZ / 0.72h) - 0.5h)
                                   * soilSignal
@@ -157,6 +166,9 @@ Shader "Steppe/Terrain Surface"
                                   * 0.09h;
                 albedo *= 1.0h + looseGrain;
                 albedo *= 1.0h - track.soilRut * 0.12h;
+                albedo *= 1.0h - simulation.soilCompaction * soilSignal * 0.10h;
+                half burn = saturate(simulation.burnScar + simulation.fireIntensity * 0.52h);
+                albedo = lerp(albedo, albedo * half3(0.19h, 0.16h, 0.12h), burn * 0.88h);
                 half snowCoverage = smoothstep(0.015h, 0.22h, ecology.snowWater)
                                     * smoothstep(0.42h, 0.82h, normal.y);
                 half frost = ecology.frozenFraction
@@ -187,6 +199,11 @@ Shader "Steppe/Terrain Surface"
                                * saturate(dot(normal, mainLight.direction))
                                * 0.24h;
                 color += cloudAdjustedMainLight * sparkle;
+                color += half3(1.0h, 0.20h, 0.025h)
+                         * simulation.fireIntensity
+                         * (0.55h + SteppeWindValueNoise(canonicalXZ / 3.1h) * 0.45h);
+                half4 diagnostic = SampleSteppeDiagnosticField(canonicalXZ);
+                color = lerp(color, diagnostic.rgb, diagnostic.a);
                 color = MixFog(color, input.fogFactor);
                 return half4(color, 1.0h);
             }

@@ -56,7 +56,7 @@ public static class ClimateRegimeModel
 
     public static AnnualClimateRegime GetAnnualRegime(WorldConfig config, int year)
     {
-        ArgumentNullException.ThrowIfNull(config);
+        RuntimeCompatibility.ThrowIfNull(config, nameof(config));
         if (year < 1) throw new ArgumentOutOfRangeException(nameof(year));
 
         var key = Key(config, year);
@@ -191,9 +191,9 @@ public static class ClimateRegimeModel
         int year,
         float dayOfYear)
     {
-        ArgumentNullException.ThrowIfNull(config);
+        RuntimeCompatibility.ThrowIfNull(config, nameof(config));
         if (year < 1) throw new ArgumentOutOfRangeException(nameof(year));
-        if (!float.IsFinite(dayOfYear) || dayOfYear < 1f || dayOfYear >= 366f)
+        if (!RuntimeCompatibility.IsFinite(dayOfYear) || dayOfYear < 1f || dayOfYear >= 366f)
         {
             throw new ArgumentOutOfRangeException(nameof(dayOfYear));
         }

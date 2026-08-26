@@ -189,7 +189,7 @@ public sealed partial class FiniteWorld
 
     private static void ValidateCaravanAmount(float value, string name)
     {
-        if (!float.IsFinite(value) || value < 0f)
+        if (!RuntimeCompatibility.IsFinite(value) || value < 0f)
         {
             throw new ArgumentOutOfRangeException(name);
         }

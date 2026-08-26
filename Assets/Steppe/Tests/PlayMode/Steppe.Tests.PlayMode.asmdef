@@ -2,13 +2,18 @@
   "name": "Steppe.Tests.PlayMode",
   "rootNamespace": "Steppe.Tests",
   "references": [
-    "Steppe.Runtime"
+    "Steppe.Runtime",
+    "Steppe.SimulationBridge",
+    "Unity.InputSystem",
+    "Unity.InputSystem.TestFramework"
   ],
   "includePlatforms": [],
   "excludePlatforms": [],
   "allowUnsafeCode": false,
-  "overrideReferences": false,
-  "precompiledReferences": [],
+  "overrideReferences": true,
+  "precompiledReferences": [
+    "Steppe.Simulation.dll"
+  ],
   "autoReferenced": true,
   "defineConstraints": [],
   "versionDefines": [],

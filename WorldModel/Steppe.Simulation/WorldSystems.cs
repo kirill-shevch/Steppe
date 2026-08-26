@@ -429,7 +429,7 @@ internal static partial class WorldSystems
         WorldFluxState fluxState,
         float hours)
     {
-        Array.Clear(state.ScratchA);
+        RuntimeCompatibility.Clear(state.ScratchA);
         for (var y = 0; y < config.Height; y++)
         {
             for (var x = 0; x < config.Width; x++)
@@ -501,9 +501,9 @@ internal static partial class WorldSystems
         float hours)
     {
         InfiltrateAndPercolate(config, state, fluxState, hours);
-        Array.Clear(state.RunoffOutMm);
-        Array.Clear(state.RunoffVectorX);
-        Array.Clear(state.RunoffVectorY);
+        RuntimeCompatibility.Clear(state.RunoffOutMm);
+        RuntimeCompatibility.Clear(state.RunoffVectorX);
+        RuntimeCompatibility.Clear(state.RunoffVectorY);
         const int runoffSubsteps = 4;
         for (var substep = 0; substep < runoffSubsteps; substep++)
         {
@@ -555,7 +555,7 @@ internal static partial class WorldSystems
         float hours,
         WorldFluxState? fluxState = null)
     {
-        Array.Clear(state.ScratchA);
+        RuntimeCompatibility.Clear(state.ScratchA);
         for (var index = 0; index < config.CellCount; index++)
         {
             const float surfaceRetentionMm = 0.6f;
@@ -666,7 +666,7 @@ internal static partial class WorldSystems
         WorldFluxState fluxState,
         float hours)
     {
-        Array.Clear(state.ScratchA);
+        RuntimeCompatibility.Clear(state.ScratchA);
         for (var y = 0; y < config.Height; y++)
         {
             for (var x = 0; x < config.Width; x++)
@@ -880,7 +880,7 @@ internal static partial class WorldSystems
         WorldFluxState fluxState,
         float hours)
     {
-        Array.Clear(state.ScratchA);
+        RuntimeCompatibility.Clear(state.ScratchA);
         for (var index = 0; index < config.CellCount; index++)
         {
             var runoff = state.RunoffOutMm[index];

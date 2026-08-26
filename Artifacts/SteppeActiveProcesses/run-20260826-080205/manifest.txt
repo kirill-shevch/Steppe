@@ -1,0 +1,7 @@
+STEPPE NATURALLY ACTIVE PROCESS REGRESSION
+UTC: 2026-08-26T08:02:05.0391812Z
+Production bootstrap and every intermediate macro step are used; the observer travels only through WASD and frames with normal mouse look. No state is forced and no teleport occurs.
+
+SurfaceEvaporation	day=76.5408333333333	hour=12.98	world=(-371.31366,-3607.516724)	selectedRate=0.031869	arrivedRate=0.029163	pair=SurfaceEvaporation-a.png,SurfaceEvaporation-b.png
+Percolation	day=76.5408333333333	hour=12.98	world=(6109.612549,-3121.706726)	selectedRate=0.272666	arrivedRate=0.25289	pair=Percolation-a.png,Percolation-b.png
+CloudEvaporation	day=76.5408333333333	hour=12.98	world=(5121.377293,11857.520218)	selectedRate=0.009612	arrivedRate=0.008871	pair=CloudEvaporation-a.png,CloudEvaporation-b.png

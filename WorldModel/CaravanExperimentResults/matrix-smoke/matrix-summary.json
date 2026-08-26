@@ -1,0 +1,191 @@
+{
+  "years": 1,
+  "size": 24,
+  "cases": 16,
+  "survivors": 4,
+  "morphologies": 4,
+  "policies": 4,
+  "distinctProfiles": 4,
+  "universalBestConfiguration": "SailNomad/FollowWind",
+  "winningConfigurations": [
+    "SailNomad/FollowWind"
+  ],
+  "results": [
+    {
+      "seed": 123,
+      "morphology": "sailNomad",
+      "policy": "FollowWind",
+      "survived": true,
+      "distanceKilometers": 4176.885,
+      "nicheKinds": 6,
+      "dominantProfile": "solar/sail/surface-water",
+      "score": 1508.38,
+      "qualified": true
+    },
+    {
+      "seed": 123,
+      "morphology": "sailNomad",
+      "policy": "FollowSun",
+      "survived": false,
+      "distanceKilometers": 37.021084,
+      "nicheKinds": 5,
+      "dominantProfile": "biomass/sail/surface-water",
+      "score": 260.29831446556193,
+      "qualified": false
+    },
+    {
+      "seed": 123,
+      "morphology": "sailNomad",
+      "policy": "FollowBiomass",
+      "survived": false,
+      "distanceKilometers": 10.162571,
+      "nicheKinds": 5,
+      "dominantProfile": "biomass/sail/surface-water",
+      "score": 288.3033340271205,
+      "qualified": false
+    },
+    {
+      "seed": 123,
+      "morphology": "sailNomad",
+      "policy": "BalancedNomad",
+      "survived": true,
+      "distanceKilometers": 2155.7593,
+      "nicheKinds": 6,
+      "dominantProfile": "solar/sail/surface-water",
+      "score": 1437.7879638671875,
+      "qualified": true
+    },
+    {
+      "seed": 123,
+      "morphology": "solarElectric",
+      "policy": "FollowWind",
+      "survived": false,
+      "distanceKilometers": 830.13885,
+      "nicheKinds": 5,
+      "dominantProfile": "solar/motor/surface-water",
+      "score": 355.8851619271056,
+      "qualified": false
+    },
+    {
+      "seed": 123,
+      "morphology": "solarElectric",
+      "policy": "FollowSun",
+      "survived": false,
+      "distanceKilometers": 52.67093,
+      "nicheKinds": 5,
+      "dominantProfile": "solar/motor/surface-water",
+      "score": 290.18340946145247,
+      "qualified": false
+    },
+    {
+      "seed": 123,
+      "morphology": "solarElectric",
+      "policy": "FollowBiomass",
+      "survived": false,
+      "distanceKilometers": 49.95906,
+      "nicheKinds": 5,
+      "dominantProfile": "solar/motor/surface-water",
+      "score": 531.9838434444061,
+      "qualified": false
+    },
+    {
+      "seed": 123,
+      "morphology": "solarElectric",
+      "policy": "BalancedNomad",
+      "survived": true,
+      "distanceKilometers": 2332.5583,
+      "nicheKinds": 6,
+      "dominantProfile": "solar/motor/surface-water",
+      "score": 1446.6279174804688,
+      "qualified": true
+    },
+    {
+      "seed": 123,
+      "morphology": "biomassHeavy",
+      "policy": "FollowWind",
+      "survived": false,
+      "distanceKilometers": 384.7123,
+      "nicheKinds": 5,
+      "dominantProfile": "biomass/motor/surface-water",
+      "score": 249.12767033407133,
+      "qualified": false
+    },
+    {
+      "seed": 123,
+      "morphology": "biomassHeavy",
+      "policy": "FollowSun",
+      "survived": false,
+      "distanceKilometers": 28.986456,
+      "nicheKinds": 5,
+      "dominantProfile": "biomass/motor/surface-water",
+      "score": 303.50932279586794,
+      "qualified": false
+    },
+    {
+      "seed": 123,
+      "morphology": "biomassHeavy",
+      "policy": "FollowBiomass",
+      "survived": false,
+      "distanceKilometers": 240.89557,
+      "nicheKinds": 5,
+      "dominantProfile": "biomass/motor/surface-water",
+      "score": 846.8357373464925,
+      "qualified": false
+    },
+    {
+      "seed": 123,
+      "morphology": "biomassHeavy",
+      "policy": "BalancedNomad",
+      "survived": false,
+      "distanceKilometers": 2063.7783,
+      "nicheKinds": 6,
+      "dominantProfile": "biomass/motor/surface-water",
+      "score": 1017.8242584813784,
+      "qualified": false
+    },
+    {
+      "seed": 123,
+      "morphology": "balanced",
+      "policy": "FollowWind",
+      "survived": false,
+      "distanceKilometers": 397.5858,
+      "nicheKinds": 5,
+      "dominantProfile": "biomass/motor/surface-water",
+      "score": 268.054631711359,
+      "qualified": false
+    },
+    {
+      "seed": 123,
+      "morphology": "balanced",
+      "policy": "FollowSun",
+      "survived": false,
+      "distanceKilometers": 68.42733,
+      "nicheKinds": 5,
+      "dominantProfile": "solar/motor/surface-water",
+      "score": 311.65232540496413,
+      "qualified": false
+    },
+    {
+      "seed": 123,
+      "morphology": "balanced",
+      "policy": "FollowBiomass",
+      "survived": false,
+      "distanceKilometers": 94.273994,
+      "nicheKinds": 5,
+      "dominantProfile": "solar/motor/surface-water",
+      "score": 561.8679462976324,
+      "qualified": false
+    },
+    {
+      "seed": 123,
+      "morphology": "balanced",
+      "policy": "BalancedNomad",
+      "survived": true,
+      "distanceKilometers": 2315.0605,
+      "nicheKinds": 6,
+      "dominantProfile": "solar/motor/surface-water",
+      "score": 1437.75302734375,
+      "qualified": true
+    }
+  ]
+}

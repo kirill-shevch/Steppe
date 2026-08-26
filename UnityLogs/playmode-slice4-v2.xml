@@ -1,0 +1,138 @@
+<?xml version="1.0" encoding="utf-8"?>
+<test-run id="2" testcasecount="15" result="Passed" total="15" passed="15" failed="0" inconclusive="0" skipped="0" asserts="0" engine-version="3.5.0.0" clr-version="4.0.30319.42000" start-time="2026-08-21 14:35:38Z" end-time="2026-08-21 14:35:50Z" duration="11.5867335">
+  <test-suite type="TestSuite" id="1024" name="Steppe" fullname="Steppe" runstate="Runnable" testcasecount="15" result="Passed" start-time="2026-08-21 14:35:38Z" end-time="2026-08-21 14:35:50Z" duration="11.586734" total="15" passed="15" failed="0" inconclusive="0" skipped="0" asserts="0">
+    <properties>
+      <property name="platform" value="PlayMode" />
+    </properties>
+    <test-suite type="Assembly" id="1018" name="Steppe.Tests.PlayMode.dll" fullname="C:/Projects/Steppe/Steppe/Library/ScriptAssemblies/Steppe.Tests.PlayMode.dll" runstate="Runnable" testcasecount="15" result="Passed" start-time="2026-08-21 14:35:38Z" end-time="2026-08-21 14:35:50Z" duration="11.539378" total="15" passed="15" failed="0" inconclusive="0" skipped="0" asserts="0">
+      <properties>
+        <property name="_PID" value="13900" />
+        <property name="_APPDOMAIN" value="Unity Child Domain" />
+        <property name="platform" value="PlayMode" />
+        <property name="EditorOnly" value="False" />
+      </properties>
+      <test-suite type="TestSuite" id="1019" name="Steppe" fullname="Steppe" runstate="Runnable" testcasecount="15" result="Passed" start-time="2026-08-21 14:35:38Z" end-time="2026-08-21 14:35:50Z" duration="11.529648" total="15" passed="15" failed="0" inconclusive="0" skipped="0" asserts="0">
+        <properties />
+        <test-suite type="TestSuite" id="1020" name="Tests" fullname="Steppe.Tests" runstate="Runnable" testcasecount="15" result="Passed" start-time="2026-08-21 14:35:39Z" end-time="2026-08-21 14:35:50Z" duration="11.485168" total="15" passed="15" failed="0" inconclusive="0" skipped="0" asserts="0">
+          <properties />
+          <test-suite type="TestFixture" id="1001" name="P0RuntimeSmokeTests" fullname="Steppe.Tests.P0RuntimeSmokeTests" classname="Steppe.Tests.P0RuntimeSmokeTests" runstate="Runnable" testcasecount="14" result="Passed" start-time="2026-08-21 14:35:39Z" end-time="2026-08-21 14:35:50Z" duration="11.220143" total="14" passed="14" failed="0" inconclusive="0" skipped="0" asserts="0">
+            <properties />
+            <test-case id="1002" name="PrototypeCreatesPhysicalCaravanKeeperAndStreamsTerrain" fullname="Steppe.Tests.P0RuntimeSmokeTests.PrototypeCreatesPhysicalCaravanKeeperAndStreamsTerrain" methodname="PrototypeCreatesPhysicalCaravanKeeperAndStreamsTerrain" classname="Steppe.Tests.P0RuntimeSmokeTests" runstate="Runnable" seed="1762313831" result="Passed" start-time="2026-08-21 14:35:39Z" end-time="2026-08-21 14:35:39Z" duration="0.576007" asserts="0">
+              <properties>
+                <property name="_JOINTYPE" value="UnityCombinatorial" />
+                <property name="Order" value="-100" />
+                <property name="retryIteration" value="0" />
+                <property name="repeatIteration" value="0" />
+              </properties>
+            </test-case>
+            <test-case id="1007" name="BuildModeConstructsAndPipesPoweredWaterCoolingLoop" fullname="Steppe.Tests.P0RuntimeSmokeTests.BuildModeConstructsAndPipesPoweredWaterCoolingLoop" methodname="BuildModeConstructsAndPipesPoweredWaterCoolingLoop" classname="Steppe.Tests.P0RuntimeSmokeTests" runstate="Runnable" seed="1014385991" result="Passed" start-time="2026-08-21 14:35:39Z" end-time="2026-08-21 14:35:39Z" duration="0.177454" asserts="0">
+              <properties>
+                <property name="_JOINTYPE" value="UnityCombinatorial" />
+                <property name="retryIteration" value="0" />
+                <property name="repeatIteration" value="0" />
+              </properties>
+            </test-case>
+            <test-case id="1005" name="BuildModeDismantlesModuleAndCleansItsNetworks" fullname="Steppe.Tests.P0RuntimeSmokeTests.BuildModeDismantlesModuleAndCleansItsNetworks" methodname="BuildModeDismantlesModuleAndCleansItsNetworks" classname="Steppe.Tests.P0RuntimeSmokeTests" runstate="Runnable" seed="1752475440" result="Passed" start-time="2026-08-21 14:35:39Z" end-time="2026-08-21 14:35:40Z" duration="0.154230" asserts="0">
+              <properties>
+                <property name="_JOINTYPE" value="UnityCombinatorial" />
+                <property name="retryIteration" value="0" />
+                <property name="repeatIteration" value="0" />
+              </properties>
+            </test-case>
+            <test-case id="1004" name="BuildModeManuallyLaysAndRemovesElectricalCommunications" fullname="Steppe.Tests.P0RuntimeSmokeTests.BuildModeManuallyLaysAndRemovesElectricalCommunications" methodname="BuildModeManuallyLaysAndRemovesElectricalCommunications" classname="Steppe.Tests.P0RuntimeSmokeTests" runstate="Runnable" seed="1066984077" result="Passed" start-time="2026-08-21 14:35:40Z" end-time="2026-08-21 14:35:40Z" duration="0.147460" asserts="0">
+              <properties>
+                <property name="_JOINTYPE" value="UnityCombinatorial" />
+                <property name="retryIteration" value="0" />
+                <property name="repeatIteration" value="0" />
+              </properties>
+            </test-case>
+            <test-case id="1003" name="CanonicalClockDrivesWeatherPauseAndManualAdvance" fullname="Steppe.Tests.P0RuntimeSmokeTests.CanonicalClockDrivesWeatherPauseAndManualAdvance" methodname="CanonicalClockDrivesWeatherPauseAndManualAdvance" classname="Steppe.Tests.P0RuntimeSmokeTests" runstate="Runnable" seed="2002440527" result="Passed" start-time="2026-08-21 14:35:40Z" end-time="2026-08-21 14:35:40Z" duration="0.605832" asserts="0">
+              <properties>
+                <property name="_JOINTYPE" value="UnityCombinatorial" />
+                <property name="retryIteration" value="0" />
+                <property name="repeatIteration" value="0" />
+              </properties>
+            </test-case>
+            <test-case id="1010" name="ChassisMaintainsForwardGripDuringSustainedTurn" fullname="Steppe.Tests.P0RuntimeSmokeTests.ChassisMaintainsForwardGripDuringSustainedTurn" methodname="ChassisMaintainsForwardGripDuringSustainedTurn" classname="Steppe.Tests.P0RuntimeSmokeTests" runstate="Runnable" seed="2045381742" result="Passed" start-time="2026-08-21 14:35:40Z" end-time="2026-08-21 14:35:46Z" duration="6.037637" asserts="0">
+              <properties>
+                <property name="_JOINTYPE" value="UnityCombinatorial" />
+                <property name="retryIteration" value="0" />
+                <property name="repeatIteration" value="0" />
+              </properties>
+            </test-case>
+            <test-case id="1012" name="EcologyRetainsARecordAfterItLeavesTheActiveHorizon" fullname="Steppe.Tests.P0RuntimeSmokeTests.EcologyRetainsARecordAfterItLeavesTheActiveHorizon" methodname="EcologyRetainsARecordAfterItLeavesTheActiveHorizon" classname="Steppe.Tests.P0RuntimeSmokeTests" runstate="Runnable" seed="1510358491" result="Passed" start-time="2026-08-21 14:35:46Z" end-time="2026-08-21 14:35:46Z" duration="0.083734" asserts="0">
+              <properties>
+                <property name="_JOINTYPE" value="UnityCombinatorial" />
+                <property name="retryIteration" value="0" />
+                <property name="repeatIteration" value="0" />
+              </properties>
+            </test-case>
+            <test-case id="1009" name="ElectricalNetworkRegistersAdditionalStorageAndConsumersAtRuntime" fullname="Steppe.Tests.P0RuntimeSmokeTests.ElectricalNetworkRegistersAdditionalStorageAndConsumersAtRuntime" methodname="ElectricalNetworkRegistersAdditionalStorageAndConsumersAtRuntime" classname="Steppe.Tests.P0RuntimeSmokeTests" runstate="Runnable" seed="296028388" result="Passed" start-time="2026-08-21 14:35:46Z" end-time="2026-08-21 14:35:46Z" duration="0.094623" asserts="0">
+              <properties>
+                <property name="_JOINTYPE" value="UnityCombinatorial" />
+                <property name="retryIteration" value="0" />
+                <property name="repeatIteration" value="0" />
+              </properties>
+            </test-case>
+            <test-case id="1008" name="EveryCatalogModuleConstructsAndResourceChainsOperate" fullname="Steppe.Tests.P0RuntimeSmokeTests.EveryCatalogModuleConstructsAndResourceChainsOperate" methodname="EveryCatalogModuleConstructsAndResourceChainsOperate" classname="Steppe.Tests.P0RuntimeSmokeTests" runstate="Runnable" seed="403839426" result="Passed" start-time="2026-08-21 14:35:46Z" end-time="2026-08-21 14:35:47Z" duration="0.354662" asserts="0">
+              <properties>
+                <property name="_JOINTYPE" value="UnityCombinatorial" />
+                <property name="retryIteration" value="0" />
+                <property name="repeatIteration" value="0" />
+              </properties>
+            </test-case>
+            <test-case id="1011" name="FirstPersonKeeperFollowsASettledMovingDeck" fullname="Steppe.Tests.P0RuntimeSmokeTests.FirstPersonKeeperFollowsASettledMovingDeck" methodname="FirstPersonKeeperFollowsASettledMovingDeck" classname="Steppe.Tests.P0RuntimeSmokeTests" runstate="Runnable" seed="1292057771" result="Passed" start-time="2026-08-21 14:35:47Z" end-time="2026-08-21 14:35:47Z" duration="0.164962" asserts="0">
+              <properties>
+                <property name="_JOINTYPE" value="UnityCombinatorial" />
+                <property name="retryIteration" value="0" />
+                <property name="repeatIteration" value="0" />
+              </properties>
+              <output><![CDATA[Setting linear velocity of a kinematic body is not supported.
+]]></output>
+            </test-case>
+            <test-case id="1015" name="FloatingOriginPreservesAbsoluteFocusPosition" fullname="Steppe.Tests.P0RuntimeSmokeTests.FloatingOriginPreservesAbsoluteFocusPosition" methodname="FloatingOriginPreservesAbsoluteFocusPosition" classname="Steppe.Tests.P0RuntimeSmokeTests" runstate="Runnable" seed="303343258" result="Passed" start-time="2026-08-21 14:35:47Z" end-time="2026-08-21 14:35:47Z" duration="0.122260" asserts="0">
+              <properties>
+                <property name="_JOINTYPE" value="UnityCombinatorial" />
+                <property name="retryIteration" value="0" />
+                <property name="repeatIteration" value="0" />
+              </properties>
+            </test-case>
+            <test-case id="1013" name="NightRevealsMoonStarsAndWeakDirectionalLight" fullname="Steppe.Tests.P0RuntimeSmokeTests.NightRevealsMoonStarsAndWeakDirectionalLight" methodname="NightRevealsMoonStarsAndWeakDirectionalLight" classname="Steppe.Tests.P0RuntimeSmokeTests" runstate="Runnable" seed="369834292" result="Passed" start-time="2026-08-21 14:35:47Z" end-time="2026-08-21 14:35:49Z" duration="2.067866" asserts="0">
+              <properties>
+                <property name="_JOINTYPE" value="UnityCombinatorial" />
+                <property name="retryIteration" value="0" />
+                <property name="repeatIteration" value="0" />
+              </properties>
+            </test-case>
+            <test-case id="1006" name="SteeringSurvivesRemovingAndRebuildingElectricMotor" fullname="Steppe.Tests.P0RuntimeSmokeTests.SteeringSurvivesRemovingAndRebuildingElectricMotor" methodname="SteeringSurvivesRemovingAndRebuildingElectricMotor" classname="Steppe.Tests.P0RuntimeSmokeTests" runstate="Runnable" seed="1791988912" result="Passed" start-time="2026-08-21 14:35:49Z" end-time="2026-08-21 14:35:49Z" duration="0.154858" asserts="0">
+              <properties>
+                <property name="_JOINTYPE" value="UnityCombinatorial" />
+                <property name="retryIteration" value="0" />
+                <property name="repeatIteration" value="0" />
+              </properties>
+            </test-case>
+            <test-case id="1014" name="WeatherMapPublishesVisibleWaterBearingClouds" fullname="Steppe.Tests.P0RuntimeSmokeTests.WeatherMapPublishesVisibleWaterBearingClouds" methodname="WeatherMapPublishesVisibleWaterBearingClouds" classname="Steppe.Tests.P0RuntimeSmokeTests" runstate="Runnable" seed="1042374829" result="Passed" start-time="2026-08-21 14:35:49Z" end-time="2026-08-21 14:35:50Z" duration="0.421805" asserts="0">
+              <properties>
+                <property name="_JOINTYPE" value="UnityCombinatorial" />
+                <property name="retryIteration" value="0" />
+                <property name="repeatIteration" value="0" />
+              </properties>
+            </test-case>
+          </test-suite>
+          <test-suite type="TestFixture" id="1016" name="WorldSimulationHostSmokeTests" fullname="Steppe.Tests.WorldSimulationHostSmokeTests" classname="Steppe.Tests.WorldSimulationHostSmokeTests" runstate="Runnable" testcasecount="1" result="Passed" start-time="2026-08-21 14:35:50Z" end-time="2026-08-21 14:35:50Z" duration="0.224406" total="1" passed="1" failed="0" inconclusive="0" skipped="0" asserts="0">
+            <properties />
+            <test-case id="1017" name="Host_PublishesAndAdvancesFiniteWorldSnapshot" fullname="Steppe.Tests.WorldSimulationHostSmokeTests.Host_PublishesAndAdvancesFiniteWorldSnapshot" methodname="Host_PublishesAndAdvancesFiniteWorldSnapshot" classname="Steppe.Tests.WorldSimulationHostSmokeTests" runstate="Runnable" seed="815030673" result="Passed" start-time="2026-08-21 14:35:50Z" end-time="2026-08-21 14:35:50Z" duration="0.186648" asserts="0">
+              <properties>
+                <property name="_JOINTYPE" value="UnityCombinatorial" />
+                <property name="retryIteration" value="0" />
+                <property name="repeatIteration" value="0" />
+              </properties>
+              <output><![CDATA[Saving results to: C:/Users/Kirill/AppData/LocalLow/DefaultCompany/Steppe\TestResults.xml
+]]></output>
+            </test-case>
+          </test-suite>
+        </test-suite>
+      </test-suite>
+    </test-suite>
+  </test-suite>
+</test-run>

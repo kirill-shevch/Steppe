@@ -21,8 +21,8 @@ public static class CaravanPersistence
 
     public static void Save(CaravanSimulation caravan, Stream destination)
     {
-        ArgumentNullException.ThrowIfNull(caravan);
-        ArgumentNullException.ThrowIfNull(destination);
+        RuntimeCompatibility.ThrowIfNull(caravan, nameof(caravan));
+        RuntimeCompatibility.ThrowIfNull(destination, nameof(destination));
         var snapshot = caravan.Capture();
         var checkpoint = new CaravanCheckpoint(CurrentSchemaVersion, caravan.Blueprint, snapshot);
         JsonSerializer.Serialize(destination, checkpoint, Options);
@@ -30,14 +30,14 @@ public static class CaravanPersistence
 
     public static void Save(CaravanSimulation caravan, string path)
     {
-        ArgumentException.ThrowIfNullOrWhiteSpace(path);
+        RuntimeCompatibility.ThrowIfNullOrWhiteSpace(path, nameof(path));
         using var stream = File.Create(path);
         Save(caravan, stream);
     }
 
     public static CaravanSimulation Load(Stream source)
     {
-        ArgumentNullException.ThrowIfNull(source);
+        RuntimeCompatibility.ThrowIfNull(source, nameof(source));
         var checkpoint = JsonSerializer.Deserialize<CaravanCheckpoint>(source, Options)
             ?? throw new InvalidDataException("The caravan checkpoint is empty.");
         if (checkpoint.SchemaVersion != CurrentSchemaVersion)
@@ -50,7 +50,7 @@ public static class CaravanPersistence
 
     public static CaravanSimulation Load(string path)
     {
-        ArgumentException.ThrowIfNullOrWhiteSpace(path);
+        RuntimeCompatibility.ThrowIfNullOrWhiteSpace(path, nameof(path));
         using var stream = File.OpenRead(path);
         return Load(stream);
     }

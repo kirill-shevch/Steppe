@@ -9,10 +9,15 @@ namespace Steppe.Terrain
         private readonly GameObject gameObject;
         private readonly MeshFilter meshFilter;
         private readonly MeshRenderer meshRenderer;
+        private readonly MeshRenderer waterRenderer;
         private readonly MeshCollider meshCollider;
         private readonly Mesh mesh;
 
-        public TerrainChunk(Transform parent, Material material)
+        public TerrainChunk(
+            Transform parent,
+            Material material,
+            Material waterMaterial,
+            Material snowMaterial)
         {
             gameObject = new GameObject("Terrain Chunk");
             gameObject.transform.SetParent(parent, false);
@@ -23,6 +28,24 @@ namespace Steppe.Terrain
             meshCollider = gameObject.AddComponent<MeshCollider>();
             meshCollider.enabled = false;
 
+            var waterObject = new GameObject("Surface Water Layer");
+            waterObject.transform.SetParent(gameObject.transform, false);
+            var waterFilter = waterObject.AddComponent<MeshFilter>();
+            waterRenderer = waterObject.AddComponent<MeshRenderer>();
+            waterRenderer.sharedMaterial = waterMaterial;
+            waterRenderer.shadowCastingMode = ShadowCastingMode.Off;
+            waterRenderer.receiveShadows = true;
+            waterRenderer.enabled = waterMaterial != null;
+
+            var snowObject = new GameObject("Snow Layer");
+            snowObject.transform.SetParent(gameObject.transform, false);
+            var snowFilter = snowObject.AddComponent<MeshFilter>();
+            var snowRenderer = snowObject.AddComponent<MeshRenderer>();
+            snowRenderer.sharedMaterial = snowMaterial;
+            snowRenderer.shadowCastingMode = ShadowCastingMode.Off;
+            snowRenderer.receiveShadows = true;
+            snowRenderer.enabled = snowMaterial != null;
+
             mesh = new Mesh
             {
                 name = "Steppe Terrain Chunk",
@@ -30,6 +53,8 @@ namespace Steppe.Terrain
             };
             mesh.MarkDynamic();
             meshFilter.sharedMesh = mesh;
+            waterFilter.sharedMesh = mesh;
+            snowFilter.sharedMesh = mesh;
         }
 
         public ChunkCoordinate Coordinate { get; private set; }
@@ -77,6 +102,7 @@ namespace Steppe.Terrain
                 ? ShadowCastingMode.On
                 : ShadowCastingMode.Off;
             meshRenderer.receiveShadows = true;
+            waterRenderer.enabled = waterRenderer.sharedMaterial != null;
         }
 
         public void Deactivate()

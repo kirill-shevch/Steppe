@@ -1,0 +1,60 @@
+<?xml version="1.0" encoding="utf-8"?>
+<test-run id="2" testcasecount="1" result="Failed(Child)" total="1" passed="0" failed="1" inconclusive="0" skipped="0" asserts="0" engine-version="3.5.0.0" clr-version="4.0.30319.42000" start-time="2026-08-26 07:39:23Z" end-time="2026-08-26 07:43:55Z" duration="271.4194381">
+  <test-suite type="TestSuite" id="1030" name="Steppe" fullname="Steppe" runstate="Runnable" testcasecount="19" result="Failed" site="Child" start-time="2026-08-26 07:39:23Z" end-time="2026-08-26 07:43:55Z" duration="271.419438" total="1" passed="0" failed="1" inconclusive="0" skipped="0" asserts="0">
+    <properties>
+      <property name="platform" value="PlayMode" />
+    </properties>
+    <failure>
+      <message><![CDATA[One or more child tests had errors]]></message>
+    </failure>
+    <test-suite type="Assembly" id="1024" name="Steppe.Tests.PlayMode.dll" fullname="C:/Projects/Steppe/Steppe/Library/ScriptAssemblies/Steppe.Tests.PlayMode.dll" runstate="Runnable" testcasecount="19" result="Failed" site="Child" start-time="2026-08-26 07:39:24Z" end-time="2026-08-26 07:43:55Z" duration="271.399641" total="1" passed="0" failed="1" inconclusive="0" skipped="0" asserts="0">
+      <properties>
+        <property name="_PID" value="26328" />
+        <property name="_APPDOMAIN" value="Unity Child Domain" />
+        <property name="platform" value="PlayMode" />
+        <property name="EditorOnly" value="False" />
+      </properties>
+      <failure>
+        <message><![CDATA[One or more child tests had errors]]></message>
+      </failure>
+      <test-suite type="TestSuite" id="1025" name="Steppe" fullname="Steppe" runstate="Runnable" testcasecount="19" result="Failed" site="Child" start-time="2026-08-26 07:39:24Z" end-time="2026-08-26 07:43:55Z" duration="271.385229" total="1" passed="0" failed="1" inconclusive="0" skipped="0" asserts="0">
+        <properties />
+        <failure>
+          <message><![CDATA[One or more child tests had errors]]></message>
+        </failure>
+        <test-suite type="TestSuite" id="1026" name="Tests" fullname="Steppe.Tests" runstate="Runnable" testcasecount="19" result="Failed" site="Child" start-time="2026-08-26 07:39:24Z" end-time="2026-08-26 07:43:55Z" duration="271.343526" total="1" passed="0" failed="1" inconclusive="0" skipped="0" asserts="0">
+          <properties />
+          <failure>
+            <message><![CDATA[One or more child tests had errors]]></message>
+          </failure>
+          <test-suite type="TestFixture" id="1018" name="SteppeActiveProcessRegressionTests" fullname="Steppe.Tests.SteppeActiveProcessRegressionTests" classname="Steppe.Tests.SteppeActiveProcessRegressionTests" runstate="Runnable" testcasecount="1" result="Failed" site="Child" start-time="2026-08-26 07:39:24Z" end-time="2026-08-26 07:43:55Z" duration="271.329393" total="1" passed="0" failed="1" inconclusive="0" skipped="0" asserts="0">
+            <properties />
+            <failure>
+              <message><![CDATA[One or more child tests had errors]]></message>
+            </failure>
+            <test-case id="1019" name="CapturesNaturallyEvolvedHydrologicalAndCloudProcesses" fullname="Steppe.Tests.SteppeActiveProcessRegressionTests.CapturesNaturallyEvolvedHydrologicalAndCloudProcesses" methodname="CapturesNaturallyEvolvedHydrologicalAndCloudProcesses" classname="Steppe.Tests.SteppeActiveProcessRegressionTests" runstate="Explicit" seed="514075416" result="Failed" start-time="2026-08-26 07:39:24Z" end-time="2026-08-26 07:43:55Z" duration="271.303972" asserts="0">
+              <properties>
+                <property name="_JOINTYPE" value="UnityCombinatorial" />
+                <property name="Category" value="VisualRegression" />
+                <property name="Timeout" value="1800000" />
+                <property name="retryIteration" value="0" />
+                <property name="repeatIteration" value="0" />
+              </properties>
+              <failure>
+                <message><![CDATA[  CloudEvaporation
+  Expected: True
+  But was:  False
+]]></message>
+                <stack-trace><![CDATA[at Steppe.Tests.SteppeActiveProcessRegressionTests+<MoveToViewingHeight>d__8.MoveNext () [0x00038] in C:\Projects\Steppe\Steppe\Assets\Steppe\Tests\PlayMode\SteppeActiveProcessRegressionTests.cs:371
+at UnityEngine.TestTools.TestEnumerator+<Execute>d__7.MoveNext () [0x0003a] in .\Library\PackageCache\com.unity.test-framework@1405238725ab\UnityEngine.TestRunner\NUnitExtensions\Attributes\TestEnumerator.cs:44
+]]></stack-trace>
+              </failure>
+              <output><![CDATA[Saving results to: C:/Users/Kirill/AppData/LocalLow/DefaultCompany/Steppe\TestResults.xml
+]]></output>
+            </test-case>
+          </test-suite>
+        </test-suite>
+      </test-suite>
+    </test-suite>
+  </test-suite>
+</test-run>

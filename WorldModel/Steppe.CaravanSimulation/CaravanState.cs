@@ -104,9 +104,9 @@ internal sealed class CaravanOrganState
 internal sealed class CaravanState
 {
     private readonly Dictionary<CaravanActivity, int> activitySteps =
-        Enum.GetValues<CaravanActivity>().ToDictionary(item => item, _ => 0);
+        RuntimeCompatibility.GetEnumValues<CaravanActivity>().ToDictionary(item => item, _ => 0);
     private readonly Dictionary<CaravanRegime, double> regimeHours =
-        Enum.GetValues<CaravanRegime>()
+        RuntimeCompatibility.GetEnumValues<CaravanRegime>()
             .Where(item => item is not CaravanRegime.None)
             .ToDictionary(item => item, _ => 0d);
 
@@ -253,7 +253,7 @@ internal sealed class CaravanState
 
     public void RecordRegime(CaravanRegime regime, double hours)
     {
-        foreach (var flag in regimeHours.Keys)
+        foreach (var flag in regimeHours.Keys.ToArray())
         {
             if ((regime & flag) != 0) regimeHours[flag] += hours;
         }

@@ -397,11 +397,11 @@ public sealed partial class FiniteWorld
 {
     public float CollectGiantHarvesterMolt(int x, int y, float radiusCells, float maximumKg)
     {
-        if (!float.IsFinite(radiusCells) || radiusCells < 0f)
+        if (!RuntimeCompatibility.IsFinite(radiusCells) || radiusCells < 0f)
         {
             throw new ArgumentOutOfRangeException(nameof(radiusCells));
         }
-        if (!float.IsFinite(maximumKg) || maximumKg < 0f)
+        if (!RuntimeCompatibility.IsFinite(maximumKg) || maximumKg < 0f)
         {
             throw new ArgumentOutOfRangeException(nameof(maximumKg));
         }

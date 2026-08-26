@@ -1,5 +1,10 @@
 <Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
     <RootNamespace>Steppe.Simulation</RootNamespace>
+    <TargetFramework />
+    <TargetFrameworks>net10.0;netstandard2.1</TargetFrameworks>
   </PropertyGroup>
+  <ItemGroup>
+    <Compile Include="..\Compatibility\NetStandardPolyfills.cs" Link="Compatibility\NetStandardPolyfills.cs" />
+  </ItemGroup>
 </Project>

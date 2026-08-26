@@ -22,7 +22,11 @@ namespace Steppe.Terrain
         private TerrainHeightGenerator generator;
         private SteppeSurfaceGenerator surfaceGenerator;
         private Material terrainMaterial;
+        private Material waterMaterial;
+        private Material snowMaterial;
         private bool ownsMaterial;
+        private bool ownsWaterMaterial;
+        private bool ownsSnowMaterial;
         private bool hasCenter;
         private ChunkCoordinate center;
 
@@ -30,6 +34,8 @@ namespace Steppe.Terrain
         public int PendingCount => pending.Count;
         public ChunkCoordinate CenterCoordinate => center;
         public bool HasPendingWorldWork => pending.Count > 0;
+        public bool HasSurfaceWaterPresentation => waterMaterial != null;
+        public bool HasSnowPresentation => snowMaterial != null;
 
         public event Action<ChunkCoordinate, int> ChunkReady;
         public event Action<ChunkCoordinate> ChunkRemoved;
@@ -60,6 +66,11 @@ namespace Steppe.Terrain
                 terrainMaterial = CreateRuntimeMaterial();
                 ownsMaterial = true;
             }
+
+            waterMaterial = CreateRuntimeWaterMaterial();
+            ownsWaterMaterial = waterMaterial != null;
+            snowMaterial = CreateRuntimeSnowMaterial();
+            ownsSnowMaterial = snowMaterial != null;
 
             hasCenter = false;
             workScheduler.Register(this);
@@ -184,7 +195,11 @@ namespace Steppe.Terrain
             {
                 chunk = pool.Count > 0
                     ? pool.Pop()
-                    : new TerrainChunk(worldSpaceRoot, terrainMaterial);
+                    : new TerrainChunk(
+                        worldSpaceRoot,
+                        terrainMaterial,
+                        waterMaterial,
+                        snowMaterial);
                 loaded.Add(request.Coordinate, chunk);
             }
 
@@ -241,6 +256,36 @@ namespace Steppe.Terrain
             return material;
         }
 
+        private static Material CreateRuntimeWaterMaterial()
+        {
+            var shader = Shader.Find("Steppe/Surface Water");
+            if (shader == null)
+            {
+                return null;
+            }
+
+            return new Material(shader)
+            {
+                name = "Steppe Surface Water Material",
+                hideFlags = HideFlags.DontSave,
+            };
+        }
+
+        private static Material CreateRuntimeSnowMaterial()
+        {
+            var shader = Shader.Find("Steppe/Snow Layer");
+            if (shader == null)
+            {
+                return null;
+            }
+
+            return new Material(shader)
+            {
+                name = "Steppe Snow Layer Material",
+                hideFlags = HideFlags.DontSave,
+            };
+        }
+
         private void OnDestroy()
         {
             if (workScheduler != null)
@@ -269,6 +314,29 @@ namespace Steppe.Terrain
                 else
                 {
                     DestroyImmediate(terrainMaterial);
+                }
+            }
+
+            if (ownsWaterMaterial && waterMaterial != null)
+            {
+                if (Application.isPlaying)
+                {
+                    Destroy(waterMaterial);
+                }
+                else
+                {
+                    DestroyImmediate(waterMaterial);
+                }
+            }
+            if (ownsSnowMaterial && snowMaterial != null)
+            {
+                if (Application.isPlaying)
+                {
+                    Destroy(snowMaterial);
+                }
+                else
+                {
+                    DestroyImmediate(snowMaterial);
                 }
             }
         }

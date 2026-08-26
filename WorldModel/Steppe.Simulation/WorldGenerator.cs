@@ -151,7 +151,7 @@ internal static class WorldGenerator
             .OrderByDescending(index => state.ElevationM[index])
             .ToArray();
         Array.Fill(state.ScratchA, 1f);
-        Array.Clear(state.ScratchB);
+        RuntimeCompatibility.Clear(state.ScratchB);
 
         foreach (var index in order)
         {
@@ -245,7 +245,7 @@ internal static class WorldGenerator
     private static void ResolveDrainageSinks(WorldConfig config, WorldState state)
     {
         var visited = new bool[config.CellCount];
-        var queue = new PriorityQueue<int, float>();
+        var queue = new RuntimeCompatibility.MinPriorityQueue<int>();
 
         void AddBoundary(int x, int y)
         {

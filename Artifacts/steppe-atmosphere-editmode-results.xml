@@ -1,0 +1,81 @@
+<?xml version="1.0" encoding="utf-8"?>
+<test-run id="2" testcasecount="9" result="Passed" total="9" passed="9" failed="0" inconclusive="0" skipped="0" asserts="0" engine-version="3.5.0.0" clr-version="4.0.30319.42000" start-time="2026-08-25 17:56:09Z" end-time="2026-08-25 17:56:10Z" duration="0.0634035">
+  <test-suite type="TestSuite" id="1000" name="Steppe" fullname="Steppe" runstate="Runnable" testcasecount="145" result="Passed" start-time="2026-08-25 17:56:09Z" end-time="2026-08-25 17:56:10Z" duration="0.063404" total="9" passed="9" failed="0" inconclusive="0" skipped="0" asserts="0">
+    <properties>
+      <property name="platform" value="EditMode" />
+    </properties>
+    <test-suite type="Assembly" id="1160" name="Steppe.Tests.EditMode.dll" fullname="C:/Projects/Steppe/Steppe/Library/ScriptAssemblies/Steppe.Tests.EditMode.dll" runstate="Runnable" testcasecount="145" result="Passed" start-time="2026-08-25 17:56:09Z" end-time="2026-08-25 17:56:10Z" duration="0.053208" total="9" passed="9" failed="0" inconclusive="0" skipped="0" asserts="0">
+      <properties>
+        <property name="_PID" value="11160" />
+        <property name="_APPDOMAIN" value="Unity Child Domain" />
+        <property name="platform" value="EditMode" />
+        <property name="EditorOnly" value="True" />
+      </properties>
+      <test-suite type="TestSuite" id="1161" name="Steppe" fullname="Steppe" runstate="Runnable" testcasecount="145" result="Passed" start-time="2026-08-25 17:56:09Z" end-time="2026-08-25 17:56:10Z" duration="0.049186" total="9" passed="9" failed="0" inconclusive="0" skipped="0" asserts="0">
+        <properties />
+        <test-suite type="TestSuite" id="1162" name="Tests" fullname="Steppe.Tests" runstate="Runnable" testcasecount="145" result="Passed" start-time="2026-08-25 17:56:09Z" end-time="2026-08-25 17:56:10Z" duration="0.045456" total="9" passed="9" failed="0" inconclusive="0" skipped="0" asserts="0">
+          <properties />
+          <test-suite type="TestFixture" id="1150" name="WorldSimulationBridgeTests" fullname="Steppe.Tests.WorldSimulationBridgeTests" classname="Steppe.Tests.WorldSimulationBridgeTests" runstate="Runnable" testcasecount="9" result="Passed" start-time="2026-08-25 17:56:09Z" end-time="2026-08-25 17:56:10Z" duration="0.040940" total="9" passed="9" failed="0" inconclusive="0" skipped="0" asserts="0">
+            <properties />
+            <test-case id="1158" name="CloudBaseHeight_IsMonotonicPressureCarrier" fullname="Steppe.Tests.WorldSimulationBridgeTests.CloudBaseHeight_IsMonotonicPressureCarrier" methodname="CloudBaseHeight_IsMonotonicPressureCarrier" classname="Steppe.Tests.WorldSimulationBridgeTests" runstate="Runnable" seed="87795930" result="Passed" start-time="2026-08-25 17:56:09Z" end-time="2026-08-25 17:56:10Z" duration="0.012697" asserts="0">
+              <properties>
+                <property name="retryIteration" value="0" />
+                <property name="repeatIteration" value="0" />
+              </properties>
+            </test-case>
+            <test-case id="1153" name="CoordinateMapper_ProvidesContinuousCellCentreBlending" fullname="Steppe.Tests.WorldSimulationBridgeTests.CoordinateMapper_ProvidesContinuousCellCentreBlending" methodname="CoordinateMapper_ProvidesContinuousCellCentreBlending" classname="Steppe.Tests.WorldSimulationBridgeTests" runstate="Runnable" seed="1915450283" result="Passed" start-time="2026-08-25 17:56:10Z" end-time="2026-08-25 17:56:10Z" duration="0.006096" asserts="0">
+              <properties>
+                <property name="retryIteration" value="0" />
+                <property name="repeatIteration" value="0" />
+              </properties>
+            </test-case>
+            <test-case id="1151" name="CoordinateMapper_RoundTripsEveryCornerCell" fullname="Steppe.Tests.WorldSimulationBridgeTests.CoordinateMapper_RoundTripsEveryCornerCell" methodname="CoordinateMapper_RoundTripsEveryCornerCell" classname="Steppe.Tests.WorldSimulationBridgeTests" runstate="Runnable" seed="1478521049" result="Passed" start-time="2026-08-25 17:56:10Z" end-time="2026-08-25 17:56:10Z" duration="0.000903" asserts="0">
+              <properties>
+                <property name="retryIteration" value="0" />
+                <property name="repeatIteration" value="0" />
+              </properties>
+            </test-case>
+            <test-case id="1152" name="CoordinateMapper_UsesFiniteHalfOpenBounds" fullname="Steppe.Tests.WorldSimulationBridgeTests.CoordinateMapper_UsesFiniteHalfOpenBounds" methodname="CoordinateMapper_UsesFiniteHalfOpenBounds" classname="Steppe.Tests.WorldSimulationBridgeTests" runstate="Runnable" seed="2107416535" result="Passed" start-time="2026-08-25 17:56:10Z" end-time="2026-08-25 17:56:10Z" duration="0.000475" asserts="0">
+              <properties>
+                <property name="retryIteration" value="0" />
+                <property name="repeatIteration" value="0" />
+              </properties>
+            </test-case>
+            <test-case id="1157" name="EnvironmentAdapter_CloudCoverageBelongsOnlyToCloudWater" fullname="Steppe.Tests.WorldSimulationBridgeTests.EnvironmentAdapter_CloudCoverageBelongsOnlyToCloudWater" methodname="EnvironmentAdapter_CloudCoverageBelongsOnlyToCloudWater" classname="Steppe.Tests.WorldSimulationBridgeTests" runstate="Runnable" seed="2049542148" result="Passed" start-time="2026-08-25 17:56:10Z" end-time="2026-08-25 17:56:10Z" duration="0.001030" asserts="0">
+              <properties>
+                <property name="retryIteration" value="0" />
+                <property name="repeatIteration" value="0" />
+              </properties>
+            </test-case>
+            <test-case id="1159" name="EnvironmentAdapter_ConvertsPhysicalEcologyWithoutChangingRatios" fullname="Steppe.Tests.WorldSimulationBridgeTests.EnvironmentAdapter_ConvertsPhysicalEcologyWithoutChangingRatios" methodname="EnvironmentAdapter_ConvertsPhysicalEcologyWithoutChangingRatios" classname="Steppe.Tests.WorldSimulationBridgeTests" runstate="Runnable" seed="450793113" result="Passed" start-time="2026-08-25 17:56:10Z" end-time="2026-08-25 17:56:10Z" duration="0.000705" asserts="0">
+              <properties>
+                <property name="retryIteration" value="0" />
+                <property name="repeatIteration" value="0" />
+              </properties>
+            </test-case>
+            <test-case id="1156" name="EnvironmentAdapter_ConvertsPhysicalWeatherUnits" fullname="Steppe.Tests.WorldSimulationBridgeTests.EnvironmentAdapter_ConvertsPhysicalWeatherUnits" methodname="EnvironmentAdapter_ConvertsPhysicalWeatherUnits" classname="Steppe.Tests.WorldSimulationBridgeTests" runstate="Runnable" seed="1462507566" result="Passed" start-time="2026-08-25 17:56:10Z" end-time="2026-08-25 17:56:10Z" duration="0.000532" asserts="0">
+              <properties>
+                <property name="retryIteration" value="0" />
+                <property name="repeatIteration" value="0" />
+              </properties>
+            </test-case>
+            <test-case id="1154" name="LocalField_IsDeterministicAndContinuousWithinAMacroCell" fullname="Steppe.Tests.WorldSimulationBridgeTests.LocalField_IsDeterministicAndContinuousWithinAMacroCell" methodname="LocalField_IsDeterministicAndContinuousWithinAMacroCell" classname="Steppe.Tests.WorldSimulationBridgeTests" runstate="Runnable" seed="421193018" result="Passed" start-time="2026-08-25 17:56:10Z" end-time="2026-08-25 17:56:10Z" duration="0.000700" asserts="0">
+              <properties>
+                <property name="retryIteration" value="0" />
+                <property name="repeatIteration" value="0" />
+              </properties>
+            </test-case>
+            <test-case id="1155" name="UnityFactory_CreatesValidatedCoreConfiguration" fullname="Steppe.Tests.WorldSimulationBridgeTests.UnityFactory_CreatesValidatedCoreConfiguration" methodname="UnityFactory_CreatesValidatedCoreConfiguration" classname="Steppe.Tests.WorldSimulationBridgeTests" runstate="Runnable" seed="320793505" result="Passed" start-time="2026-08-25 17:56:10Z" end-time="2026-08-25 17:56:10Z" duration="0.000589" asserts="0">
+              <properties>
+                <property name="retryIteration" value="0" />
+                <property name="repeatIteration" value="0" />
+              </properties>
+              <output><![CDATA[Saving results to: C:/Users/Kirill/AppData/LocalLow/DefaultCompany/Steppe\TestResults.xml
+]]></output>
+            </test-case>
+          </test-suite>
+        </test-suite>
+      </test-suite>
+    </test-suite>
+  </test-suite>
+</test-run>

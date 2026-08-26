@@ -2,15 +2,18 @@
   "name": "Steppe.Tests.EditMode",
   "rootNamespace": "Steppe.Tests",
   "references": [
-    "Steppe.Runtime"
+    "Steppe.Runtime",
+    "Steppe.SimulationBridge"
   ],
   "includePlatforms": [
     "Editor"
   ],
   "excludePlatforms": [],
   "allowUnsafeCode": false,
-  "overrideReferences": false,
-  "precompiledReferences": [],
+  "overrideReferences": true,
+  "precompiledReferences": [
+    "Steppe.Simulation.dll"
+  ],
   "autoReferenced": true,
   "defineConstraints": [],
   "versionDefines": [],

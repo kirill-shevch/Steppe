@@ -49,6 +49,7 @@ Shader "Hidden/Steppe/Volumetric Clouds"
             #pragma vertex FullscreenVert
             #pragma fragment RaymarchFrag
             #include "Packages/com.unity.render-pipelines.universal/ShaderLibrary/Lighting.hlsl"
+            #include "Assets/Steppe/Runtime/Rendering/SteppeNaturalProcessField.hlsl"
 
             #define STEPPE_CLOUD_VIEW_STEPS 20
             #define STEPPE_CLOUD_LIGHT_STEPS 3
@@ -66,6 +67,7 @@ Shader "Hidden/Steppe/Volumetric Clouds"
             float4 _SteppeCloudLayerParameters;
             float _SteppeCloudMapWorldSize;
             float _SteppeDaylight;
+            float4 _SteppeFiniteWorldOriginXZ;
 
             float Hash12(float2 value)
             {
@@ -202,20 +204,101 @@ Shader "Hidden/Steppe/Volumetric Clouds"
                         sampleDistance);
                     float4 weather = SampleWeather(samplePosition);
                     float density = SampleDensity(samplePosition, weather, farFade);
+                    float2 finiteCanonicalXZ = samplePosition.xz
+                                               + _SteppeFiniteWorldOriginXZ.xz;
+                    SteppeNaturalCloudProcessSample cloudProcess =
+                        SampleSteppeNaturalCloudProcessLevel(finiteCanonicalXZ, 0.0);
+                    float evaporationStrength = sqrt(saturate(
+                        cloudProcess.cloudEvaporationRate / 0.03));
+                    if (evaporationStrength > 0.0001)
+                    {
+                        float edge = 1.0 - smoothstep(0.16, 0.68, density);
+                        // Vertical perforation shafts expand radially through dilute
+                        // cloud matter. A view ray can therefore see the phase loss
+                        // through the whole layer instead of having the void filled by
+                        // cloud farther along the same ray. Rate owns shaft population.
+                        float2 dissolveCoordinates = finiteCanonicalXZ / 310.0;
+                        float2 dissolveCell = floor(dissolveCoordinates);
+                        float2 dissolveLocal = frac(dissolveCoordinates) - 0.5;
+                        float dissolveSeed = Hash12(dissolveCell + 23.71);
+                        float dissolvePhase = frac(dissolveSeed + _Time.y * 0.27);
+                        float dissolveRadius = lerp(0.08, 0.94, dissolvePhase);
+                        float radialDistance = length(dissolveLocal * 2.0);
+                        float expandingVoid = 1.0 - smoothstep(
+                            dissolveRadius - 0.11,
+                            dissolveRadius + 0.08,
+                            radialDistance);
+                        float populationSeed = Hash12(dissolveCell + 91.43);
+                        float shaftPopulation = smoothstep(
+                            1.0 - evaporationStrength,
+                            min(1.0, 1.12 - evaporationStrength),
+                            populationSeed);
+                        float perforation = expandingVoid * edge * shaftPopulation;
+                        density *= 1.0 - saturate(perforation * 0.98);
+                    }
                     if (density > 0.004)
                     {
                         float lightTransmission = LightTransmission(
                             samplePosition,
                             lightDirection,
                             weather);
-                        float rainCore = smoothstep(0.12, 0.92, weather.b);
                         float waterWeight = smoothstep(0.18, 0.92, weather.g);
                         float ambientStrength = lerp(0.54, 0.25, waterWeight);
-                        ambientStrength *= lerp(1.0, 0.72, rainCore);
                         float3 directLight = mainLight.color
                                            * (0.18 + lightTransmission * 0.92)
                                            * forwardPhase;
                         float3 sampleLight = ambientColor * ambientStrength + directLight;
+
+                        // Condensation: stationary pearlescent micro-beads inside
+                        // existing cloud matter; flux owns their occurrence only.
+                        float condensationStrength = sqrt(saturate(
+                            cloudProcess.condensationRate / 2.5));
+                        float pearlNoise = Hash12(
+                            floor(finiteCanonicalXZ / 58.0)
+                            + floor(samplePosition.y / 46.0));
+                        float pearl = smoothstep(0.91, 0.995, pearlNoise)
+                                      * condensationStrength;
+
+                        // Cloud transport: concentric consolidation/dispersion arcs.
+                        // Positive net change contracts; negative change expands.
+                        float2 processCell = floor(
+                            (finiteCanonicalXZ - _SteppeNaturalProcessMapBounds.xy)
+                            * _SteppeNaturalProcessGrid.w);
+                        float2 processCenter = _SteppeNaturalProcessMapBounds.xy
+                                             + (processCell + 0.5)
+                                               * _SteppeNaturalProcessGrid.z;
+                        float transportStrength = sqrt(saturate(
+                            abs(cloudProcess.cloudTransportRate) / 0.06));
+                        float transportSign = cloudProcess.cloudTransportRate >= 0.0
+                            ? 1.0
+                            : -1.0;
+                        float radialPhase = length(finiteCanonicalXZ - processCenter) * 0.033
+                                          + _Time.y * transportSign * 0.62;
+                        float transportArc = pow(
+                            0.5 + 0.5 * sin(radialPhase),
+                            12.0) * transportStrength;
+
+                        // Cloud advection: combed pulses travel only along measured XY.
+                        float2 cloudDirection = cloudProcess.cloudAdvectionVector
+                                              / max(
+                                                  0.0001,
+                                                  length(cloudProcess.cloudAdvectionVector));
+                        float2 cloudSide = float2(-cloudDirection.y, cloudDirection.x);
+                        float advectionStrength = sqrt(saturate(
+                            cloudProcess.cloudAdvectionGrossMagnitude / 0.8));
+                        float along = dot(finiteCanonicalXZ, cloudDirection);
+                        float across = dot(finiteCanonicalXZ, cloudSide);
+                        float movingPulse = pow(
+                            0.5 + 0.5 * sin(
+                                along * 0.014
+                                - _Time.y * lerp(0.22, 1.3, advectionStrength)),
+                            10.0);
+                        float comb = pow(0.5 + 0.5 * sin(across * 0.021), 8.0);
+                        float filament = movingPulse * comb * advectionStrength;
+                        sampleLight *= 1.0
+                                     + pearl * 0.16
+                                     + transportArc * 0.075
+                                     + filament * 0.10;
                         float sampleOpacity = 1.0 - exp(-density * stepLength * 0.00215);
                         integratedLight += transmittance * sampleOpacity * sampleLight;
                         transmittance *= 1.0 - sampleOpacity;

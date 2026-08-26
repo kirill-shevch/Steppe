@@ -1,0 +1,36 @@
+<?xml version="1.0" encoding="utf-8"?>
+<test-run id="2" testcasecount="1" result="Passed" total="1" passed="1" failed="0" inconclusive="0" skipped="0" asserts="0" engine-version="3.5.0.0" clr-version="4.0.30319.42000" start-time="2026-08-26 08:43:38Z" end-time="2026-08-26 08:47:52Z" duration="254.8288439">
+  <test-suite type="TestSuite" id="1030" name="Steppe" fullname="Steppe" runstate="Runnable" testcasecount="19" result="Passed" start-time="2026-08-26 08:43:38Z" end-time="2026-08-26 08:47:52Z" duration="254.828844" total="1" passed="1" failed="0" inconclusive="0" skipped="0" asserts="0">
+    <properties>
+      <property name="platform" value="PlayMode" />
+    </properties>
+    <test-suite type="Assembly" id="1024" name="Steppe.Tests.PlayMode.dll" fullname="C:/Projects/Steppe/Steppe/Library/ScriptAssemblies/Steppe.Tests.PlayMode.dll" runstate="Runnable" testcasecount="19" result="Passed" start-time="2026-08-26 08:43:38Z" end-time="2026-08-26 08:47:52Z" duration="254.809986" total="1" passed="1" failed="0" inconclusive="0" skipped="0" asserts="0">
+      <properties>
+        <property name="_PID" value="22284" />
+        <property name="_APPDOMAIN" value="Unity Child Domain" />
+        <property name="platform" value="PlayMode" />
+        <property name="EditorOnly" value="False" />
+      </properties>
+      <test-suite type="TestSuite" id="1025" name="Steppe" fullname="Steppe" runstate="Runnable" testcasecount="19" result="Passed" start-time="2026-08-26 08:43:38Z" end-time="2026-08-26 08:47:52Z" duration="254.797253" total="1" passed="1" failed="0" inconclusive="0" skipped="0" asserts="0">
+        <properties />
+        <test-suite type="TestSuite" id="1026" name="Tests" fullname="Steppe.Tests" runstate="Runnable" testcasecount="19" result="Passed" start-time="2026-08-26 08:43:38Z" end-time="2026-08-26 08:47:52Z" duration="254.753371" total="1" passed="1" failed="0" inconclusive="0" skipped="0" asserts="0">
+          <properties />
+          <test-suite type="TestFixture" id="1018" name="SteppeActiveProcessRegressionTests" fullname="Steppe.Tests.SteppeActiveProcessRegressionTests" classname="Steppe.Tests.SteppeActiveProcessRegressionTests" runstate="Runnable" testcasecount="1" result="Passed" start-time="2026-08-26 08:43:38Z" end-time="2026-08-26 08:47:52Z" duration="254.739543" total="1" passed="1" failed="0" inconclusive="0" skipped="0" asserts="0">
+            <properties />
+            <test-case id="1019" name="CapturesNaturallyEvolvedHydrologicalAndCloudProcesses" fullname="Steppe.Tests.SteppeActiveProcessRegressionTests.CapturesNaturallyEvolvedHydrologicalAndCloudProcesses" methodname="CapturesNaturallyEvolvedHydrologicalAndCloudProcesses" classname="Steppe.Tests.SteppeActiveProcessRegressionTests" runstate="Explicit" seed="1846405627" result="Passed" start-time="2026-08-26 08:43:38Z" end-time="2026-08-26 08:47:52Z" duration="254.714162" asserts="0">
+              <properties>
+                <property name="_JOINTYPE" value="UnityCombinatorial" />
+                <property name="Category" value="VisualRegression" />
+                <property name="Timeout" value="1800000" />
+                <property name="retryIteration" value="0" />
+                <property name="repeatIteration" value="0" />
+              </properties>
+              <output><![CDATA[Saving results to: C:/Users/Kirill/AppData/LocalLow/DefaultCompany/Steppe\TestResults.xml
+]]></output>
+            </test-case>
+          </test-suite>
+        </test-suite>
+      </test-suite>
+    </test-suite>
+  </test-suite>
+</test-run>

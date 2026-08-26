@@ -18,7 +18,7 @@ internal static partial class WorldSystems
         float hours,
         bool allowIgnition)
     {
-        Array.Clear(state.ScratchA);
+        RuntimeCompatibility.Clear(state.ScratchA);
 
         if (config.WildfireEnabled)
         {

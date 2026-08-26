@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using Steppe.Integration;
 using Steppe.Settings;
 using Steppe.Surface;
 using Steppe.Terrain;
@@ -54,6 +55,7 @@ namespace Steppe.Ecology
         private SteppeSurfaceGenerator surfaceGenerator;
         private SteppeClimateModel climateModel;
         private SteppeEcologyModel ecologyModel;
+        private FiniteWorldEnvironmentAdapter finiteWorld;
         private EcoCellCoordinate centerCoordinate;
         private bool hasCenterCoordinate;
         private double targetSimulationSeconds;
@@ -65,6 +67,7 @@ namespace Steppe.Ecology
         private bool hasMapOrigin;
         private bool stateMapDirty;
         private float secondsUntilStateMapUpload;
+        private float secondsUntilFiniteRefresh;
 
         public int ActiveCellCount => activeCells.Count;
         public int StoredCellCount => records.Count;
@@ -82,6 +85,7 @@ namespace Steppe.Ecology
         public float MapMaximumSnow { get; private set; }
         public float MapMaximumFrozen { get; private set; }
         public bool HasPendingWorldWork => priorityWorkQueue.Count > 0 || workQueue.Count > 0;
+        public bool UsesFiniteWorld => finiteWorld != null && finiteWorld.IsReady;
 
         public void Configure(
             SteppeWorldSettings worldSettings,
@@ -89,7 +93,8 @@ namespace Steppe.Ecology
             SteppeWeatherSystem weather,
             FloatingOriginSystem origin,
             Transform focusTransform,
-            WorldWorkScheduler scheduler)
+            WorldWorkScheduler scheduler,
+            FiniteWorldEnvironmentAdapter finiteEnvironment = null)
         {
             settings = worldSettings != null ? worldSettings : throw new ArgumentNullException(nameof(worldSettings));
             timeSystem = clock != null ? clock : throw new ArgumentNullException(nameof(clock));
@@ -97,12 +102,14 @@ namespace Steppe.Ecology
             floatingOrigin = origin != null ? origin : throw new ArgumentNullException(nameof(origin));
             focus = focusTransform != null ? focusTransform : throw new ArgumentNullException(nameof(focusTransform));
             workScheduler = scheduler != null ? scheduler : throw new ArgumentNullException(nameof(scheduler));
+            finiteWorld = finiteEnvironment;
 
             terrainGenerator = new TerrainHeightGenerator(settings);
             surfaceGenerator = new SteppeSurfaceGenerator(settings);
             climateModel = new SteppeClimateModel(settings);
             ecologyModel = new SteppeEcologyModel(settings);
             targetSimulationSeconds = AlignToCompletedStep(timeSystem.ElapsedSimulationSeconds);
+            secondsUntilFiniteRefresh = 0f;
             CreateStateMap();
 
             var focusWorld = floatingOrigin.LocalToWorld(focus.position);
@@ -118,11 +125,28 @@ namespace Steppe.Ecology
                 return false;
             }
 
-            return TryGetState(EcoCellCoordinate.FromWorld(worldX, worldZ, settings.EcologyCellSize), out state);
+            if (finiteWorld != null && finiteWorld.TrySampleEcology(worldX, worldZ, out state))
+            {
+                return true;
+            }
+
+            return TryGetState(
+                EcoCellCoordinate.FromWorld(worldX, worldZ, settings.EcologyCellSize),
+                out state);
         }
 
         public bool TryGetState(EcoCellCoordinate coordinate, out SteppeEcoCellState state)
         {
+            if (settings != null
+                && finiteWorld != null
+                && finiteWorld.TrySampleEcology(
+                    coordinate.CenterX(settings.EcologyCellSize),
+                    coordinate.CenterZ(settings.EcologyCellSize),
+                    out state))
+            {
+                return true;
+            }
+
             if (records.TryGetValue(coordinate, out var record))
             {
                 state = record.State;
@@ -138,6 +162,17 @@ namespace Steppe.Ecology
             out SurfaceSample surface,
             out SteppeEcoCellState state)
         {
+            if (settings != null
+                && finiteWorld != null
+                && finiteWorld.TrySampleEcology(
+                    coordinate.CenterX(settings.EcologyCellSize),
+                    coordinate.CenterZ(settings.EcologyCellSize),
+                    out state))
+            {
+                surface = SampleSurface(coordinate);
+                return true;
+            }
+
             if (records.TryGetValue(coordinate, out var record))
             {
                 surface = record.Surface;
@@ -230,12 +265,31 @@ namespace Steppe.Ecology
                 RefreshActiveCells(focusWorld.X, focusWorld.Z);
             }
 
-            var nextTarget = AlignToCompletedStep(timeSystem.ElapsedSimulationSeconds);
-            if (nextTarget > targetSimulationSeconds + TimeEpsilon)
+            if (finiteWorld != null && finiteWorld.IsReady)
             {
-                targetSimulationSeconds = nextTarget;
-                QueuePriorityCellIfNeeded(centerCoordinate);
-                QueueAllActiveCells();
+                // The finite model changes only at macro boundaries, but its adapter
+                // exposes a continuously interpolated target. Refresh the local GPU
+                // field at presentation cadence instead of waiting for another tick.
+                secondsUntilFiniteRefresh -= UnityEngine.Time.unscaledDeltaTime;
+                var nextTarget = timeSystem.ElapsedSimulationSeconds;
+                if (secondsUntilFiniteRefresh <= 0f
+                    && nextTarget > targetSimulationSeconds + TimeEpsilon)
+                {
+                    targetSimulationSeconds = nextTarget;
+                    QueueCell(centerCoordinate);
+                    QueueAllActiveCells();
+                    secondsUntilFiniteRefresh = settings.EcologyStateMapUploadInterval;
+                }
+            }
+            else
+            {
+                var nextTarget = AlignToCompletedStep(timeSystem.ElapsedSimulationSeconds);
+                if (nextTarget > targetSimulationSeconds + TimeEpsilon)
+                {
+                    targetSimulationSeconds = nextTarget;
+                    QueuePriorityCellIfNeeded(centerCoordinate);
+                    QueueAllActiveCells();
+                }
             }
 
             secondsUntilStateMapUpload -= UnityEngine.Time.deltaTime;
@@ -302,11 +356,27 @@ namespace Steppe.Ecology
                 surface,
                 initialClimate.AirTemperatureC,
                 initialSeconds);
+            if (finiteWorld != null
+                && finiteWorld.TrySampleEcology(worldX, worldZ, out var canonicalState))
+            {
+                state = canonicalState;
+            }
             return new EcoCellRecord(surface, state);
         }
 
         private void AdvanceOneStep(EcoCellCoordinate coordinate, EcoCellRecord record)
         {
+            if (finiteWorld != null
+                && finiteWorld.TrySampleEcology(
+                    coordinate.CenterX(settings.EcologyCellSize),
+                    coordinate.CenterZ(settings.EcologyCellSize),
+                    out var canonicalState))
+            {
+                record.State = canonicalState;
+                WriteRecordToStateMap(coordinate, record);
+                return;
+            }
+
             var startSeconds = record.State.LastSimulationSeconds;
             var endSeconds = Math.Min(
                 targetSimulationSeconds,
@@ -332,6 +402,19 @@ namespace Steppe.Ecology
                 forcing,
                 durationSeconds);
             WriteRecordToStateMap(coordinate, record);
+        }
+
+        private SurfaceSample SampleSurface(EcoCellCoordinate coordinate)
+        {
+            var cellSize = settings.EcologyCellSize;
+            var worldX = coordinate.CenterX(cellSize);
+            var worldZ = coordinate.CenterZ(cellSize);
+            var height = terrainGenerator.SampleHeight(worldX, worldZ);
+            var normal = terrainGenerator.SampleNormal(
+                worldX,
+                worldZ,
+                Math.Max(2.0, cellSize * 0.04));
+            return surfaceGenerator.Sample(worldX, worldZ, height, normal.y);
         }
 
         private void RefreshActiveCells(double focusWorldX, double focusWorldZ)

@@ -1,0 +1,847 @@
+<?xml version="1.0" encoding="utf-8"?>
+<test-run id="2" testcasecount="130" result="Passed" total="130" passed="130" failed="0" inconclusive="0" skipped="0" asserts="0" engine-version="3.5.0.0" clr-version="4.0.30319.42000" start-time="2026-08-21 13:24:20Z" end-time="2026-08-21 13:24:21Z" duration="0.662111">
+  <test-suite type="TestSuite" id="1000" name="Steppe" fullname="Steppe" runstate="Runnable" testcasecount="130" result="Passed" start-time="2026-08-21 13:24:20Z" end-time="2026-08-21 13:24:21Z" duration="0.662111" total="130" passed="130" failed="0" inconclusive="0" skipped="0" asserts="0">
+    <properties>
+      <property name="platform" value="EditMode" />
+    </properties>
+    <test-suite type="Assembly" id="1144" name="Steppe.Tests.EditMode.dll" fullname="C:/Projects/Steppe/Steppe/Library/ScriptAssemblies/Steppe.Tests.EditMode.dll" runstate="Runnable" testcasecount="130" result="Passed" start-time="2026-08-21 13:24:20Z" end-time="2026-08-21 13:24:21Z" duration="0.646649" total="130" passed="130" failed="0" inconclusive="0" skipped="0" asserts="0">
+      <properties>
+        <property name="_PID" value="7732" />
+        <property name="_APPDOMAIN" value="Unity Child Domain" />
+        <property name="platform" value="EditMode" />
+        <property name="EditorOnly" value="True" />
+      </properties>
+      <test-suite type="TestSuite" id="1145" name="Steppe" fullname="Steppe" runstate="Runnable" testcasecount="130" result="Passed" start-time="2026-08-21 13:24:20Z" end-time="2026-08-21 13:24:21Z" duration="0.644457" total="130" passed="130" failed="0" inconclusive="0" skipped="0" asserts="0">
+        <properties />
+        <test-suite type="TestSuite" id="1146" name="Tests" fullname="Steppe.Tests" runstate="Runnable" testcasecount="130" result="Passed" start-time="2026-08-21 13:24:20Z" end-time="2026-08-21 13:24:21Z" duration="0.642391" total="130" passed="130" failed="0" inconclusive="0" skipped="0" asserts="0">
+          <properties />
+          <test-suite type="TestFixture" id="1001" name="CaravanDomainModelTests" fullname="Steppe.Tests.CaravanDomainModelTests" classname="Steppe.Tests.CaravanDomainModelTests" runstate="Runnable" testcasecount="33" result="Passed" start-time="2026-08-21 13:24:20Z" end-time="2026-08-21 13:24:20Z" duration="0.099650" total="33" passed="33" failed="0" inconclusive="0" skipped="0" asserts="0">
+            <properties />
+            <test-case id="1037" name="BiomassModelClampsMoistureRateAndElapsedTime" fullname="Steppe.Tests.CaravanDomainModelTests.BiomassModelClampsMoistureRateAndElapsedTime" methodname="BiomassModelClampsMoistureRateAndElapsedTime" classname="Steppe.Tests.CaravanDomainModelTests" runstate="Runnable" seed="1069178138" result="Passed" start-time="2026-08-21 13:24:20Z" end-time="2026-08-21 13:24:20Z" duration="0.017011" asserts="0">
+              <properties>
+                <property name="retryIteration" value="0" />
+                <property name="repeatIteration" value="0" />
+              </properties>
+            </test-case>
+            <test-suite type="ParameterizedMethod" id="1023" name="ControlModelClampsAndMapsToOperatingLevel" fullname="Steppe.Tests.CaravanDomainModelTests.ControlModelClampsAndMapsToOperatingLevel" classname="Steppe.Tests.CaravanDomainModelTests" runstate="Runnable" testcasecount="5" result="Passed" start-time="2026-08-21 13:24:20Z" end-time="2026-08-21 13:24:20Z" duration="0.009388" total="5" passed="5" failed="0" inconclusive="0" skipped="0" asserts="0">
+              <properties />
+              <test-case id="1018" name="ControlModelClampsAndMapsToOperatingLevel(-2.0f,-1.0f,0.0f)" fullname="Steppe.Tests.CaravanDomainModelTests.ControlModelClampsAndMapsToOperatingLevel(-2.0f,-1.0f,0.0f)" methodname="ControlModelClampsAndMapsToOperatingLevel" classname="Steppe.Tests.CaravanDomainModelTests" runstate="Runnable" seed="1958257482" result="Passed" start-time="2026-08-21 13:24:20Z" end-time="2026-08-21 13:24:20Z" duration="0.001129" asserts="0">
+                <properties>
+                  <property name="retryIteration" value="0" />
+                  <property name="repeatIteration" value="0" />
+                </properties>
+              </test-case>
+              <test-case id="1019" name="ControlModelClampsAndMapsToOperatingLevel(-1.0f,-1.0f,0.0f)" fullname="Steppe.Tests.CaravanDomainModelTests.ControlModelClampsAndMapsToOperatingLevel(-1.0f,-1.0f,0.0f)" methodname="ControlModelClampsAndMapsToOperatingLevel" classname="Steppe.Tests.CaravanDomainModelTests" runstate="Runnable" seed="1065923755" result="Passed" start-time="2026-08-21 13:24:20Z" end-time="2026-08-21 13:24:20Z" duration="0.000313" asserts="0">
+                <properties>
+                  <property name="retryIteration" value="0" />
+                  <property name="repeatIteration" value="0" />
+                </properties>
+              </test-case>
+              <test-case id="1020" name="ControlModelClampsAndMapsToOperatingLevel(0.0f,0.0f,0.5f)" fullname="Steppe.Tests.CaravanDomainModelTests.ControlModelClampsAndMapsToOperatingLevel(0.0f,0.0f,0.5f)" methodname="ControlModelClampsAndMapsToOperatingLevel" classname="Steppe.Tests.CaravanDomainModelTests" runstate="Runnable" seed="889445721" result="Passed" start-time="2026-08-21 13:24:20Z" end-time="2026-08-21 13:24:20Z" duration="0.000229" asserts="0">
+                <properties>
+                  <property name="retryIteration" value="0" />
+                  <property name="repeatIteration" value="0" />
+                </properties>
+              </test-case>
+              <test-case id="1021" name="ControlModelClampsAndMapsToOperatingLevel(1.0f,1.0f,1.0f)" fullname="Steppe.Tests.CaravanDomainModelTests.ControlModelClampsAndMapsToOperatingLevel(1.0f,1.0f,1.0f)" methodname="ControlModelClampsAndMapsToOperatingLevel" classname="Steppe.Tests.CaravanDomainModelTests" runstate="Runnable" seed="1758882602" result="Passed" start-time="2026-08-21 13:24:20Z" end-time="2026-08-21 13:24:20Z" duration="0.000184" asserts="0">
+                <properties>
+                  <property name="retryIteration" value="0" />
+                  <property name="repeatIteration" value="0" />
+                </properties>
+              </test-case>
+              <test-case id="1022" name="ControlModelClampsAndMapsToOperatingLevel(2.0f,1.0f,1.0f)" fullname="Steppe.Tests.CaravanDomainModelTests.ControlModelClampsAndMapsToOperatingLevel(2.0f,1.0f,1.0f)" methodname="ControlModelClampsAndMapsToOperatingLevel" classname="Steppe.Tests.CaravanDomainModelTests" runstate="Runnable" seed="528818174" result="Passed" start-time="2026-08-21 13:24:20Z" end-time="2026-08-21 13:24:20Z" duration="0.000158" asserts="0">
+                <properties>
+                  <property name="retryIteration" value="0" />
+                  <property name="repeatIteration" value="0" />
+                </properties>
+              </test-case>
+            </test-suite>
+            <test-suite type="ParameterizedMethod" id="1031" name="ControlModelMapsPumpDeadZone" fullname="Steppe.Tests.CaravanDomainModelTests.ControlModelMapsPumpDeadZone" classname="Steppe.Tests.CaravanDomainModelTests" runstate="Runnable" testcasecount="7" result="Passed" start-time="2026-08-21 13:24:20Z" end-time="2026-08-21 13:24:20Z" duration="0.008009" total="7" passed="7" failed="0" inconclusive="0" skipped="0" asserts="0">
+              <properties />
+              <test-case id="1024" name="ControlModelMapsPumpDeadZone(-1.0f,Extraction)" fullname="Steppe.Tests.CaravanDomainModelTests.ControlModelMapsPumpDeadZone(-1.0f,Extraction)" methodname="ControlModelMapsPumpDeadZone" classname="Steppe.Tests.CaravanDomainModelTests" runstate="Runnable" seed="1937784281" result="Passed" start-time="2026-08-21 13:24:20Z" end-time="2026-08-21 13:24:20Z" duration="0.001882" asserts="0">
+                <properties>
+                  <property name="retryIteration" value="0" />
+                  <property name="repeatIteration" value="0" />
+                </properties>
+              </test-case>
+              <test-case id="1025" name="ControlModelMapsPumpDeadZone(-0.251f,Extraction)" fullname="Steppe.Tests.CaravanDomainModelTests.ControlModelMapsPumpDeadZone(-0.251f,Extraction)" methodname="ControlModelMapsPumpDeadZone" classname="Steppe.Tests.CaravanDomainModelTests" runstate="Runnable" seed="1936332639" result="Passed" start-time="2026-08-21 13:24:20Z" end-time="2026-08-21 13:24:20Z" duration="0.000503" asserts="0">
+                <properties>
+                  <property name="retryIteration" value="0" />
+                  <property name="repeatIteration" value="0" />
+                </properties>
+              </test-case>
+              <test-case id="1026" name="ControlModelMapsPumpDeadZone(-0.25f,Off)" fullname="Steppe.Tests.CaravanDomainModelTests.ControlModelMapsPumpDeadZone(-0.25f,Off)" methodname="ControlModelMapsPumpDeadZone" classname="Steppe.Tests.CaravanDomainModelTests" runstate="Runnable" seed="1917379678" result="Passed" start-time="2026-08-21 13:24:20Z" end-time="2026-08-21 13:24:20Z" duration="0.000330" asserts="0">
+                <properties>
+                  <property name="retryIteration" value="0" />
+                  <property name="repeatIteration" value="0" />
+                </properties>
+              </test-case>
+              <test-case id="1027" name="ControlModelMapsPumpDeadZone(0.0f,Off)" fullname="Steppe.Tests.CaravanDomainModelTests.ControlModelMapsPumpDeadZone(0.0f,Off)" methodname="ControlModelMapsPumpDeadZone" classname="Steppe.Tests.CaravanDomainModelTests" runstate="Runnable" seed="1504963834" result="Passed" start-time="2026-08-21 13:24:20Z" end-time="2026-08-21 13:24:20Z" duration="0.000268" asserts="0">
+                <properties>
+                  <property name="retryIteration" value="0" />
+                  <property name="repeatIteration" value="0" />
+                </properties>
+              </test-case>
+              <test-case id="1028" name="ControlModelMapsPumpDeadZone(0.25f,Off)" fullname="Steppe.Tests.CaravanDomainModelTests.ControlModelMapsPumpDeadZone(0.25f,Off)" methodname="ControlModelMapsPumpDeadZone" classname="Steppe.Tests.CaravanDomainModelTests" runstate="Runnable" seed="670503077" result="Passed" start-time="2026-08-21 13:24:20Z" end-time="2026-08-21 13:24:20Z" duration="0.000269" asserts="0">
+                <properties>
+                  <property name="retryIteration" value="0" />
+                  <property name="repeatIteration" value="0" />
+                </properties>
+              </test-case>
+              <test-case id="1029" name="ControlModelMapsPumpDeadZone(0.251f,Circulation)" fullname="Steppe.Tests.CaravanDomainModelTests.ControlModelMapsPumpDeadZone(0.251f,Circulation)" methodname="ControlModelMapsPumpDeadZone" classname="Steppe.Tests.CaravanDomainModelTests" runstate="Runnable" seed="1418029111" result="Passed" start-time="2026-08-21 13:24:20Z" end-time="2026-08-21 13:24:20Z" duration="0.000285" asserts="0">
+                <properties>
+                  <property name="retryIteration" value="0" />
+                  <property name="repeatIteration" value="0" />
+                </properties>
+              </test-case>
+              <test-case id="1030" name="ControlModelMapsPumpDeadZone(1.0f,Circulation)" fullname="Steppe.Tests.CaravanDomainModelTests.ControlModelMapsPumpDeadZone(1.0f,Circulation)" methodname="ControlModelMapsPumpDeadZone" classname="Steppe.Tests.CaravanDomainModelTests" runstate="Runnable" seed="1360805441" result="Passed" start-time="2026-08-21 13:24:20Z" end-time="2026-08-21 13:24:20Z" duration="0.000211" asserts="0">
+                <properties>
+                  <property name="retryIteration" value="0" />
+                  <property name="repeatIteration" value="0" />
+                </properties>
+              </test-case>
+            </test-suite>
+            <test-case id="1002" name="ElectricalCompatibilityIsSymmetricAndRequiresStorageEndpoint" fullname="Steppe.Tests.CaravanDomainModelTests.ElectricalCompatibilityIsSymmetricAndRequiresStorageEndpoint" methodname="ElectricalCompatibilityIsSymmetricAndRequiresStorageEndpoint" classname="Steppe.Tests.CaravanDomainModelTests" runstate="Runnable" seed="1188156268" result="Passed" start-time="2026-08-21 13:24:20Z" end-time="2026-08-21 13:24:20Z" duration="0.002668" asserts="0">
+              <properties>
+                <property name="retryIteration" value="0" />
+                <property name="repeatIteration" value="0" />
+              </properties>
+            </test-case>
+            <test-case id="1034" name="ElectricalModelClampsEnergyAtEmptyAndFullBoundaries" fullname="Steppe.Tests.CaravanDomainModelTests.ElectricalModelClampsEnergyAtEmptyAndFullBoundaries" methodname="ElectricalModelClampsEnergyAtEmptyAndFullBoundaries" classname="Steppe.Tests.CaravanDomainModelTests" runstate="Runnable" seed="1409850825" result="Passed" start-time="2026-08-21 13:24:20Z" end-time="2026-08-21 13:24:20Z" duration="0.001015" asserts="0">
+              <properties>
+                <property name="retryIteration" value="0" />
+                <property name="repeatIteration" value="0" />
+              </properties>
+            </test-case>
+            <test-case id="1035" name="ElectricalModelDoesNotMoveStoredEnergyAtZeroDuration" fullname="Steppe.Tests.CaravanDomainModelTests.ElectricalModelDoesNotMoveStoredEnergyAtZeroDuration" methodname="ElectricalModelDoesNotMoveStoredEnergyAtZeroDuration" classname="Steppe.Tests.CaravanDomainModelTests" runstate="Runnable" seed="1318786333" result="Passed" start-time="2026-08-21 13:24:20Z" end-time="2026-08-21 13:24:20Z" duration="0.000456" asserts="0">
+              <properties>
+                <property name="retryIteration" value="0" />
+                <property name="repeatIteration" value="0" />
+              </properties>
+            </test-case>
+            <test-suite type="ParameterizedMethod" id="1007" name="FluidCompatibilityAllowsEveryDeclaredPairInBothDirections" fullname="Steppe.Tests.CaravanDomainModelTests.FluidCompatibilityAllowsEveryDeclaredPairInBothDirections" classname="Steppe.Tests.CaravanDomainModelTests" runstate="Runnable" testcasecount="4" result="Passed" start-time="2026-08-21 13:24:20Z" end-time="2026-08-21 13:24:20Z" duration="0.006618" total="4" passed="4" failed="0" inconclusive="0" skipped="0" asserts="0">
+              <properties />
+              <test-case id="1003" name="FluidCompatibilityAllowsEveryDeclaredPairInBothDirections(ReservoirSupply,PumpInlet)" fullname="Steppe.Tests.CaravanDomainModelTests.FluidCompatibilityAllowsEveryDeclaredPairInBothDirections(ReservoirSupply,PumpInlet)" methodname="FluidCompatibilityAllowsEveryDeclaredPairInBothDirections" classname="Steppe.Tests.CaravanDomainModelTests" runstate="Runnable" seed="1067918335" result="Passed" start-time="2026-08-21 13:24:20Z" end-time="2026-08-21 13:24:20Z" duration="0.002390" asserts="0">
+                <properties>
+                  <property name="retryIteration" value="0" />
+                  <property name="repeatIteration" value="0" />
+                </properties>
+              </test-case>
+              <test-case id="1004" name="FluidCompatibilityAllowsEveryDeclaredPairInBothDirections(PumpOutlet,RadiatorInlet)" fullname="Steppe.Tests.CaravanDomainModelTests.FluidCompatibilityAllowsEveryDeclaredPairInBothDirections(PumpOutlet,RadiatorInlet)" methodname="FluidCompatibilityAllowsEveryDeclaredPairInBothDirections" classname="Steppe.Tests.CaravanDomainModelTests" runstate="Runnable" seed="1798474065" result="Passed" start-time="2026-08-21 13:24:20Z" end-time="2026-08-21 13:24:20Z" duration="0.000339" asserts="0">
+                <properties>
+                  <property name="retryIteration" value="0" />
+                  <property name="repeatIteration" value="0" />
+                </properties>
+              </test-case>
+              <test-case id="1005" name="FluidCompatibilityAllowsEveryDeclaredPairInBothDirections(RadiatorOutlet,ReservoirReturn)" fullname="Steppe.Tests.CaravanDomainModelTests.FluidCompatibilityAllowsEveryDeclaredPairInBothDirections(RadiatorOutlet,ReservoirReturn)" methodname="FluidCompatibilityAllowsEveryDeclaredPairInBothDirections" classname="Steppe.Tests.CaravanDomainModelTests" runstate="Runnable" seed="737686596" result="Passed" start-time="2026-08-21 13:24:20Z" end-time="2026-08-21 13:24:20Z" duration="0.000362" asserts="0">
+                <properties>
+                  <property name="retryIteration" value="0" />
+                  <property name="repeatIteration" value="0" />
+                </properties>
+              </test-case>
+              <test-case id="1006" name="FluidCompatibilityAllowsEveryDeclaredPairInBothDirections(ThermalTap,ReservoirReturn)" fullname="Steppe.Tests.CaravanDomainModelTests.FluidCompatibilityAllowsEveryDeclaredPairInBothDirections(ThermalTap,ReservoirReturn)" methodname="FluidCompatibilityAllowsEveryDeclaredPairInBothDirections" classname="Steppe.Tests.CaravanDomainModelTests" runstate="Runnable" seed="1467840074" result="Passed" start-time="2026-08-21 13:24:20Z" end-time="2026-08-21 13:24:20Z" duration="0.000304" asserts="0">
+                <properties>
+                  <property name="retryIteration" value="0" />
+                  <property name="repeatIteration" value="0" />
+                </properties>
+              </test-case>
+            </test-suite>
+            <test-case id="1008" name="FluidCompatibilityRejectsEveryUndeclaredPair" fullname="Steppe.Tests.CaravanDomainModelTests.FluidCompatibilityRejectsEveryUndeclaredPair" methodname="FluidCompatibilityRejectsEveryUndeclaredPair" classname="Steppe.Tests.CaravanDomainModelTests" runstate="Runnable" seed="1358034163" result="Passed" start-time="2026-08-21 13:24:20Z" end-time="2026-08-21 13:24:20Z" duration="0.000870" asserts="0">
+              <properties>
+                <property name="retryIteration" value="0" />
+                <property name="repeatIteration" value="0" />
+              </properties>
+            </test-case>
+            <test-case id="1033" name="FuelModelClampsInvalidInputsAndOutput" fullname="Steppe.Tests.CaravanDomainModelTests.FuelModelClampsInvalidInputsAndOutput" methodname="FuelModelClampsInvalidInputsAndOutput" classname="Steppe.Tests.CaravanDomainModelTests" runstate="Runnable" seed="1886669920" result="Passed" start-time="2026-08-21 13:24:20Z" end-time="2026-08-21 13:24:20Z" duration="0.000697" asserts="0">
+              <properties>
+                <property name="retryIteration" value="0" />
+                <property name="repeatIteration" value="0" />
+              </properties>
+            </test-case>
+            <test-case id="1032" name="FuelModelRoundTripsRequestedEnginePower" fullname="Steppe.Tests.CaravanDomainModelTests.FuelModelRoundTripsRequestedEnginePower" methodname="FuelModelRoundTripsRequestedEnginePower" classname="Steppe.Tests.CaravanDomainModelTests" runstate="Runnable" seed="271247609" result="Passed" start-time="2026-08-21 13:24:20Z" end-time="2026-08-21 13:24:20Z" duration="0.000469" asserts="0">
+              <properties>
+                <property name="retryIteration" value="0" />
+                <property name="repeatIteration" value="0" />
+              </properties>
+            </test-case>
+            <test-suite type="ParameterizedMethod" id="1015" name="MaterialCompatibilityAllowsEveryDeclaredPairInBothDirections" fullname="Steppe.Tests.CaravanDomainModelTests.MaterialCompatibilityAllowsEveryDeclaredPairInBothDirections" classname="Steppe.Tests.CaravanDomainModelTests" runstate="Runnable" testcasecount="6" result="Passed" start-time="2026-08-21 13:24:20Z" end-time="2026-08-21 13:24:20Z" duration="0.006075" total="6" passed="6" failed="0" inconclusive="0" skipped="0" asserts="0">
+              <properties />
+              <test-case id="1009" name="MaterialCompatibilityAllowsEveryDeclaredPairInBothDirections(Biomass,WetBiomassOutput,WetBiomassInput)" fullname="Steppe.Tests.CaravanDomainModelTests.MaterialCompatibilityAllowsEveryDeclaredPairInBothDirections(Biomass,WetBiomassOutput,WetBiomassInput)" methodname="MaterialCompatibilityAllowsEveryDeclaredPairInBothDirections" classname="Steppe.Tests.CaravanDomainModelTests" runstate="Runnable" seed="1492934004" result="Passed" start-time="2026-08-21 13:24:20Z" end-time="2026-08-21 13:24:20Z" duration="0.001160" asserts="0">
+                <properties>
+                  <property name="retryIteration" value="0" />
+                  <property name="repeatIteration" value="0" />
+                </properties>
+              </test-case>
+              <test-case id="1010" name="MaterialCompatibilityAllowsEveryDeclaredPairInBothDirections(Biomass,DryBiomassOutput,DryBiomassInput)" fullname="Steppe.Tests.CaravanDomainModelTests.MaterialCompatibilityAllowsEveryDeclaredPairInBothDirections(Biomass,DryBiomassOutput,DryBiomassInput)" methodname="MaterialCompatibilityAllowsEveryDeclaredPairInBothDirections" classname="Steppe.Tests.CaravanDomainModelTests" runstate="Runnable" seed="1450352332" result="Passed" start-time="2026-08-21 13:24:20Z" end-time="2026-08-21 13:24:20Z" duration="0.000227" asserts="0">
+                <properties>
+                  <property name="retryIteration" value="0" />
+                  <property name="repeatIteration" value="0" />
+                </properties>
+              </test-case>
+              <test-case id="1011" name="MaterialCompatibilityAllowsEveryDeclaredPairInBothDirections(Mechanical,MechanicalSource,TransmissionInput)" fullname="Steppe.Tests.CaravanDomainModelTests.MaterialCompatibilityAllowsEveryDeclaredPairInBothDirections(Mechanical,MechanicalSource,TransmissionInput)" methodname="MaterialCompatibilityAllowsEveryDeclaredPairInBothDirections" classname="Steppe.Tests.CaravanDomainModelTests" runstate="Runnable" seed="1882373079" result="Passed" start-time="2026-08-21 13:24:20Z" end-time="2026-08-21 13:24:20Z" duration="0.000446" asserts="0">
+                <properties>
+                  <property name="retryIteration" value="0" />
+                  <property name="repeatIteration" value="0" />
+                </properties>
+              </test-case>
+              <test-case id="1012" name="MaterialCompatibilityAllowsEveryDeclaredPairInBothDirections(Mechanical,MechanicalSource,MechanicalConsumer)" fullname="Steppe.Tests.CaravanDomainModelTests.MaterialCompatibilityAllowsEveryDeclaredPairInBothDirections(Mechanical,MechanicalSource,MechanicalConsumer)" methodname="MaterialCompatibilityAllowsEveryDeclaredPairInBothDirections" classname="Steppe.Tests.CaravanDomainModelTests" runstate="Runnable" seed="888694037" result="Passed" start-time="2026-08-21 13:24:20Z" end-time="2026-08-21 13:24:20Z" duration="0.000514" asserts="0">
+                <properties>
+                  <property name="retryIteration" value="0" />
+                  <property name="repeatIteration" value="0" />
+                </properties>
+              </test-case>
+              <test-case id="1013" name="MaterialCompatibilityAllowsEveryDeclaredPairInBothDirections(Mechanical,TransmissionOutput,MechanicalConsumer)" fullname="Steppe.Tests.CaravanDomainModelTests.MaterialCompatibilityAllowsEveryDeclaredPairInBothDirections(Mechanical,TransmissionOutput,MechanicalConsumer)" methodname="MaterialCompatibilityAllowsEveryDeclaredPairInBothDirections" classname="Steppe.Tests.CaravanDomainModelTests" runstate="Runnable" seed="1151004323" result="Passed" start-time="2026-08-21 13:24:20Z" end-time="2026-08-21 13:24:20Z" duration="0.000316" asserts="0">
+                <properties>
+                  <property name="retryIteration" value="0" />
+                  <property name="repeatIteration" value="0" />
+                </properties>
+              </test-case>
+              <test-case id="1014" name="MaterialCompatibilityAllowsEveryDeclaredPairInBothDirections(Mechanical,CouplingEndpoint,CouplingEndpoint)" fullname="Steppe.Tests.CaravanDomainModelTests.MaterialCompatibilityAllowsEveryDeclaredPairInBothDirections(Mechanical,CouplingEndpoint,CouplingEndpoint)" methodname="MaterialCompatibilityAllowsEveryDeclaredPairInBothDirections" classname="Steppe.Tests.CaravanDomainModelTests" runstate="Runnable" seed="1691816794" result="Passed" start-time="2026-08-21 13:24:20Z" end-time="2026-08-21 13:24:20Z" duration="0.000287" asserts="0">
+                <properties>
+                  <property name="retryIteration" value="0" />
+                  <property name="repeatIteration" value="0" />
+                </properties>
+              </test-case>
+            </test-suite>
+            <test-case id="1016" name="MaterialCompatibilityRejectsCrossNetworkAndUndeclaredPairs" fullname="Steppe.Tests.CaravanDomainModelTests.MaterialCompatibilityRejectsCrossNetworkAndUndeclaredPairs" methodname="MaterialCompatibilityRejectsCrossNetworkAndUndeclaredPairs" classname="Steppe.Tests.CaravanDomainModelTests" runstate="Runnable" seed="1634357790" result="Passed" start-time="2026-08-21 13:24:20Z" end-time="2026-08-21 13:24:20Z" duration="0.000506" asserts="0">
+              <properties>
+                <property name="retryIteration" value="0" />
+                <property name="repeatIteration" value="0" />
+              </properties>
+            </test-case>
+            <test-case id="1017" name="MaterialRolesMapToOneStableNetworkKind" fullname="Steppe.Tests.CaravanDomainModelTests.MaterialRolesMapToOneStableNetworkKind" methodname="MaterialRolesMapToOneStableNetworkKind" classname="Steppe.Tests.CaravanDomainModelTests" runstate="Runnable" seed="659893434" result="Passed" start-time="2026-08-21 13:24:20Z" end-time="2026-08-21 13:24:20Z" duration="0.005300" asserts="0">
+              <properties>
+                <property name="retryIteration" value="0" />
+                <property name="repeatIteration" value="0" />
+              </properties>
+            </test-case>
+            <test-case id="1038" name="RopeModelClampsNegativeParametersAndBreaksOnlyAboveLimit" fullname="Steppe.Tests.CaravanDomainModelTests.RopeModelClampsNegativeParametersAndBreaksOnlyAboveLimit" methodname="RopeModelClampsNegativeParametersAndBreaksOnlyAboveLimit" classname="Steppe.Tests.CaravanDomainModelTests" runstate="Runnable" seed="2034401626" result="Passed" start-time="2026-08-21 13:24:20Z" end-time="2026-08-21 13:24:20Z" duration="0.000958" asserts="0">
+              <properties>
+                <property name="retryIteration" value="0" />
+                <property name="repeatIteration" value="0" />
+              </properties>
+            </test-case>
+            <test-case id="1036" name="WaterModelCannotCoolBelowAmbient" fullname="Steppe.Tests.CaravanDomainModelTests.WaterModelCannotCoolBelowAmbient" methodname="WaterModelCannotCoolBelowAmbient" classname="Steppe.Tests.CaravanDomainModelTests" runstate="Runnable" seed="92078874" result="Passed" start-time="2026-08-21 13:24:20Z" end-time="2026-08-21 13:24:20Z" duration="0.002667" asserts="0">
+              <properties>
+                <property name="retryIteration" value="0" />
+                <property name="repeatIteration" value="0" />
+              </properties>
+            </test-case>
+          </test-suite>
+          <test-suite type="TestFixture" id="1039" name="CaravanModuleBehaviorTests" fullname="Steppe.Tests.CaravanModuleBehaviorTests" classname="Steppe.Tests.CaravanModuleBehaviorTests" runstate="Runnable" testcasecount="23" result="Passed" start-time="2026-08-21 13:24:20Z" end-time="2026-08-21 13:24:20Z" duration="0.080815" total="23" passed="23" failed="0" inconclusive="0" skipped="0" asserts="0">
+            <properties />
+            <test-case id="1046" name="BatteryHonoursPowerLimitsEfficienciesAndCapacity" fullname="Steppe.Tests.CaravanModuleBehaviorTests.BatteryHonoursPowerLimitsEfficienciesAndCapacity" methodname="BatteryHonoursPowerLimitsEfficienciesAndCapacity" classname="Steppe.Tests.CaravanModuleBehaviorTests" runstate="Runnable" seed="724207837" result="Passed" start-time="2026-08-21 13:24:20Z" end-time="2026-08-21 13:24:20Z" duration="0.011571" asserts="0">
+              <properties>
+                <property name="retryIteration" value="0" />
+                <property name="repeatIteration" value="0" />
+              </properties>
+            </test-case>
+            <test-case id="1060" name="BatteryPortDefaultsToDistributionCapacity" fullname="Steppe.Tests.CaravanModuleBehaviorTests.BatteryPortDefaultsToDistributionCapacity" methodname="BatteryPortDefaultsToDistributionCapacity" classname="Steppe.Tests.CaravanModuleBehaviorTests" runstate="Runnable" seed="1128417319" result="Passed" start-time="2026-08-21 13:24:20Z" end-time="2026-08-21 13:24:20Z" duration="0.003274" asserts="0">
+              <properties>
+                <property name="retryIteration" value="0" />
+                <property name="repeatIteration" value="0" />
+              </properties>
+            </test-case>
+            <test-case id="1055" name="BiofuelEngineRequiresControlThrottleCouplingAndFuel" fullname="Steppe.Tests.CaravanModuleBehaviorTests.BiofuelEngineRequiresControlThrottleCouplingAndFuel" methodname="BiofuelEngineRequiresControlThrottleCouplingAndFuel" classname="Steppe.Tests.CaravanModuleBehaviorTests" runstate="Runnable" seed="1288409097" result="Passed" start-time="2026-08-21 13:24:20Z" end-time="2026-08-21 13:24:20Z" duration="0.002849" asserts="0">
+              <properties>
+                <property name="retryIteration" value="0" />
+                <property name="repeatIteration" value="0" />
+              </properties>
+            </test-case>
+            <test-case id="1054" name="BiofurnaceConvertsExactlyRequestedFuelAndRespectsDamage" fullname="Steppe.Tests.CaravanModuleBehaviorTests.BiofurnaceConvertsExactlyRequestedFuelAndRespectsDamage" methodname="BiofurnaceConvertsExactlyRequestedFuelAndRespectsDamage" classname="Steppe.Tests.CaravanModuleBehaviorTests" runstate="Runnable" seed="1677924436" result="Passed" start-time="2026-08-21 13:24:20Z" end-time="2026-08-21 13:24:20Z" duration="0.002795" asserts="0">
+              <properties>
+                <property name="retryIteration" value="0" />
+                <property name="repeatIteration" value="0" />
+              </properties>
+            </test-case>
+            <test-case id="1053" name="BiomassStorageAcceptsAndSuppliesWithoutCreatingMatter" fullname="Steppe.Tests.CaravanModuleBehaviorTests.BiomassStorageAcceptsAndSuppliesWithoutCreatingMatter" methodname="BiomassStorageAcceptsAndSuppliesWithoutCreatingMatter" classname="Steppe.Tests.CaravanModuleBehaviorTests" runstate="Runnable" seed="616972130" result="Passed" start-time="2026-08-21 13:24:20Z" end-time="2026-08-21 13:24:20Z" duration="0.001809" asserts="0">
+              <properties>
+                <property name="retryIteration" value="0" />
+                <property name="repeatIteration" value="0" />
+              </properties>
+            </test-case>
+            <test-case id="1043" name="ConstructionCatalogueProvidesRussianNamesAndDescriptions" fullname="Steppe.Tests.CaravanModuleBehaviorTests.ConstructionCatalogueProvidesRussianNamesAndDescriptions" methodname="ConstructionCatalogueProvidesRussianNamesAndDescriptions" classname="Steppe.Tests.CaravanModuleBehaviorTests" runstate="Runnable" seed="1677942569" result="Passed" start-time="2026-08-21 13:24:20Z" end-time="2026-08-21 13:24:20Z" duration="0.004109" asserts="0">
+              <properties>
+                <property name="retryIteration" value="0" />
+                <property name="repeatIteration" value="0" />
+              </properties>
+            </test-case>
+            <test-case id="1057" name="CouplingRopesLinkBreakRepairAndUnlinkSymmetrically" fullname="Steppe.Tests.CaravanModuleBehaviorTests.CouplingRopesLinkBreakRepairAndUnlinkSymmetrically" methodname="CouplingRopesLinkBreakRepairAndUnlinkSymmetrically" classname="Steppe.Tests.CaravanModuleBehaviorTests" runstate="Runnable" seed="597216115" result="Passed" start-time="2026-08-21 13:24:20Z" end-time="2026-08-21 13:24:20Z" duration="0.004468" asserts="0">
+              <properties>
+                <property name="retryIteration" value="0" />
+                <property name="repeatIteration" value="0" />
+              </properties>
+            </test-case>
+            <test-case id="1052" name="DryerConservesMatterAndKeepsReturnedOverflow" fullname="Steppe.Tests.CaravanModuleBehaviorTests.DryerConservesMatterAndKeepsReturnedOverflow" methodname="DryerConservesMatterAndKeepsReturnedOverflow" classname="Steppe.Tests.CaravanModuleBehaviorTests" runstate="Runnable" seed="485041916" result="Passed" start-time="2026-08-21 13:24:20Z" end-time="2026-08-21 13:24:20Z" duration="0.003039" asserts="0">
+              <properties>
+                <property name="retryIteration" value="0" />
+                <property name="repeatIteration" value="0" />
+              </properties>
+            </test-case>
+            <test-case id="1047" name="ElectricMotorClampsThrottlePowerAndConvertsMechanicalOutput" fullname="Steppe.Tests.CaravanModuleBehaviorTests.ElectricMotorClampsThrottlePowerAndConvertsMechanicalOutput" methodname="ElectricMotorClampsThrottlePowerAndConvertsMechanicalOutput" classname="Steppe.Tests.CaravanModuleBehaviorTests" runstate="Runnable" seed="561621418" result="Passed" start-time="2026-08-21 13:24:20Z" end-time="2026-08-21 13:24:20Z" duration="0.002131" asserts="0">
+              <properties>
+                <property name="retryIteration" value="0" />
+                <property name="repeatIteration" value="0" />
+              </properties>
+            </test-case>
+            <test-case id="1062" name="FirstExpeditionRequiresRealResourcesAndEnvironmentalWindows" fullname="Steppe.Tests.CaravanModuleBehaviorTests.FirstExpeditionRequiresRealResourcesAndEnvironmentalWindows" methodname="FirstExpeditionRequiresRealResourcesAndEnvironmentalWindows" classname="Steppe.Tests.CaravanModuleBehaviorTests" runstate="Runnable" seed="193412393" result="Passed" start-time="2026-08-21 13:24:20Z" end-time="2026-08-21 13:24:20Z" duration="0.001912" asserts="0">
+              <properties>
+                <property name="retryIteration" value="0" />
+                <property name="repeatIteration" value="0" />
+              </properties>
+            </test-case>
+            <test-case id="1045" name="GridSupportsRotationReplacementRemovalAndNegativeTurns" fullname="Steppe.Tests.CaravanModuleBehaviorTests.GridSupportsRotationReplacementRemovalAndNegativeTurns" methodname="GridSupportsRotationReplacementRemovalAndNegativeTurns" classname="Steppe.Tests.CaravanModuleBehaviorTests" runstate="Runnable" seed="1410817148" result="Passed" start-time="2026-08-21 13:24:20Z" end-time="2026-08-21 13:24:20Z" duration="0.003096" asserts="0">
+              <properties>
+                <property name="retryIteration" value="0" />
+                <property name="repeatIteration" value="0" />
+              </properties>
+            </test-case>
+            <test-case id="1051" name="HarvesterPreservesMixtureAndNeverExceedsCapacity" fullname="Steppe.Tests.CaravanModuleBehaviorTests.HarvesterPreservesMixtureAndNeverExceedsCapacity" methodname="HarvesterPreservesMixtureAndNeverExceedsCapacity" classname="Steppe.Tests.CaravanModuleBehaviorTests" runstate="Runnable" seed="762566560" result="Passed" start-time="2026-08-21 13:24:20Z" end-time="2026-08-21 13:24:20Z" duration="0.002167" asserts="0">
+              <properties>
+                <property name="retryIteration" value="0" />
+                <property name="repeatIteration" value="0" />
+              </properties>
+            </test-case>
+            <test-case id="1044" name="ImmediateModeUiScalesFromReferenceResolution" fullname="Steppe.Tests.CaravanModuleBehaviorTests.ImmediateModeUiScalesFromReferenceResolution" methodname="ImmediateModeUiScalesFromReferenceResolution" classname="Steppe.Tests.CaravanModuleBehaviorTests" runstate="Runnable" seed="101183128" result="Passed" start-time="2026-08-21 13:24:20Z" end-time="2026-08-21 13:24:20Z" duration="0.001078" asserts="0">
+              <properties>
+                <property name="retryIteration" value="0" />
+                <property name="repeatIteration" value="0" />
+              </properties>
+            </test-case>
+            <test-case id="1040" name="ModuleStateClampsMutationsAndIgnoresNegativeMaintenance" fullname="Steppe.Tests.CaravanModuleBehaviorTests.ModuleStateClampsMutationsAndIgnoresNegativeMaintenance" methodname="ModuleStateClampsMutationsAndIgnoresNegativeMaintenance" classname="Steppe.Tests.CaravanModuleBehaviorTests" runstate="Runnable" seed="1524588947" result="Passed" start-time="2026-08-21 13:24:20Z" end-time="2026-08-21 13:24:20Z" duration="0.001013" asserts="0">
+              <properties>
+                <property name="retryIteration" value="0" />
+                <property name="repeatIteration" value="0" />
+              </properties>
+            </test-case>
+            <test-case id="1061" name="MotorFeedbackExplainsDisconnectedPowerAndMaintenance" fullname="Steppe.Tests.CaravanModuleBehaviorTests.MotorFeedbackExplainsDisconnectedPowerAndMaintenance" methodname="MotorFeedbackExplainsDisconnectedPowerAndMaintenance" classname="Steppe.Tests.CaravanModuleBehaviorTests" runstate="Runnable" seed="2043321563" result="Passed" start-time="2026-08-21 13:24:20Z" end-time="2026-08-21 13:24:20Z" duration="0.004451" asserts="0">
+              <properties>
+                <property name="retryIteration" value="0" />
+                <property name="repeatIteration" value="0" />
+              </properties>
+            </test-case>
+            <test-case id="1059" name="OnboardingAdvancesThroughConnectionsThrottleAndTravel" fullname="Steppe.Tests.CaravanModuleBehaviorTests.OnboardingAdvancesThroughConnectionsThrottleAndTravel" methodname="OnboardingAdvancesThroughConnectionsThrottleAndTravel" classname="Steppe.Tests.CaravanModuleBehaviorTests" runstate="Runnable" seed="106847110" result="Passed" start-time="2026-08-21 13:24:20Z" end-time="2026-08-21 13:24:20Z" duration="0.001355" asserts="0">
+              <properties>
+                <property name="retryIteration" value="0" />
+                <property name="repeatIteration" value="0" />
+              </properties>
+            </test-case>
+            <test-case id="1041" name="PartAndModuleClampResourceMassAndOutput" fullname="Steppe.Tests.CaravanModuleBehaviorTests.PartAndModuleClampResourceMassAndOutput" methodname="PartAndModuleClampResourceMassAndOutput" classname="Steppe.Tests.CaravanModuleBehaviorTests" runstate="Runnable" seed="509907302" result="Passed" start-time="2026-08-21 13:24:20Z" end-time="2026-08-21 13:24:20Z" duration="0.000857" asserts="0">
+              <properties>
+                <property name="retryIteration" value="0" />
+                <property name="repeatIteration" value="0" />
+              </properties>
+            </test-case>
+            <test-case id="1042" name="PartDefinitionValidatesIdentityAndClampsPhysicalValues" fullname="Steppe.Tests.CaravanModuleBehaviorTests.PartDefinitionValidatesIdentityAndClampsPhysicalValues" methodname="PartDefinitionValidatesIdentityAndClampsPhysicalValues" classname="Steppe.Tests.CaravanModuleBehaviorTests" runstate="Runnable" seed="736310438" result="Passed" start-time="2026-08-21 13:24:20Z" end-time="2026-08-21 13:24:20Z" duration="0.000928" asserts="0">
+              <properties>
+                <property name="retryIteration" value="0" />
+                <property name="repeatIteration" value="0" />
+              </properties>
+            </test-case>
+            <test-case id="1049" name="PumpMapsControlsAndCombinesMechanicalWithElectricalPower" fullname="Steppe.Tests.CaravanModuleBehaviorTests.PumpMapsControlsAndCombinesMechanicalWithElectricalPower" methodname="PumpMapsControlsAndCombinesMechanicalWithElectricalPower" classname="Steppe.Tests.CaravanModuleBehaviorTests" runstate="Runnable" seed="2075701860" result="Passed" start-time="2026-08-21 13:24:20Z" end-time="2026-08-21 13:24:20Z" duration="0.002103" asserts="0">
+              <properties>
+                <property name="retryIteration" value="0" />
+                <property name="repeatIteration" value="0" />
+              </properties>
+            </test-case>
+            <test-case id="1050" name="RadiatorControlAndDamageReduceAvailableCooling" fullname="Steppe.Tests.CaravanModuleBehaviorTests.RadiatorControlAndDamageReduceAvailableCooling" methodname="RadiatorControlAndDamageReduceAvailableCooling" classname="Steppe.Tests.CaravanModuleBehaviorTests" runstate="Runnable" seed="1786131394" result="Passed" start-time="2026-08-21 13:24:20Z" end-time="2026-08-21 13:24:20Z" duration="0.002339" asserts="0">
+              <properties>
+                <property name="retryIteration" value="0" />
+                <property name="repeatIteration" value="0" />
+              </properties>
+            </test-case>
+            <test-case id="1056" name="TransmissionMapsFullGearRangeAndEngagement" fullname="Steppe.Tests.CaravanModuleBehaviorTests.TransmissionMapsFullGearRangeAndEngagement" methodname="TransmissionMapsFullGearRangeAndEngagement" classname="Steppe.Tests.CaravanModuleBehaviorTests" runstate="Runnable" seed="1405950241" result="Passed" start-time="2026-08-21 13:24:20Z" end-time="2026-08-21 13:24:20Z" duration="0.002758" asserts="0">
+              <properties>
+                <property name="retryIteration" value="0" />
+                <property name="repeatIteration" value="0" />
+              </properties>
+            </test-case>
+            <test-case id="1058" name="TypedModulesRejectPartsWithWrongTechnicalKind" fullname="Steppe.Tests.CaravanModuleBehaviorTests.TypedModulesRejectPartsWithWrongTechnicalKind" methodname="TypedModulesRejectPartsWithWrongTechnicalKind" classname="Steppe.Tests.CaravanModuleBehaviorTests" runstate="Runnable" seed="528856226" result="Passed" start-time="2026-08-21 13:24:20Z" end-time="2026-08-21 13:24:20Z" duration="0.002843" asserts="0">
+              <properties>
+                <property name="retryIteration" value="0" />
+                <property name="repeatIteration" value="0" />
+              </properties>
+            </test-case>
+            <test-case id="1048" name="WaterReservoirTracksPayloadCapacityAndTemperature" fullname="Steppe.Tests.CaravanModuleBehaviorTests.WaterReservoirTracksPayloadCapacityAndTemperature" methodname="WaterReservoirTracksPayloadCapacityAndTemperature" classname="Steppe.Tests.CaravanModuleBehaviorTests" runstate="Runnable" seed="1061038911" result="Passed" start-time="2026-08-21 13:24:20Z" end-time="2026-08-21 13:24:20Z" duration="0.001081" asserts="0">
+              <properties>
+                <property name="retryIteration" value="0" />
+                <property name="repeatIteration" value="0" />
+              </properties>
+            </test-case>
+          </test-suite>
+          <test-suite type="TestFixture" id="1063" name="CaravanNetworkBehaviorTests" fullname="Steppe.Tests.CaravanNetworkBehaviorTests" classname="Steppe.Tests.CaravanNetworkBehaviorTests" runstate="Runnable" testcasecount="5" result="Passed" start-time="2026-08-21 13:24:20Z" end-time="2026-08-21 13:24:20Z" duration="0.050980" total="5" passed="5" failed="0" inconclusive="0" skipped="0" asserts="0">
+            <properties />
+            <test-case id="1068" name="CouplingMaterialLinkStopsConductingWhenRopeBreaks" fullname="Steppe.Tests.CaravanNetworkBehaviorTests.CouplingMaterialLinkStopsConductingWhenRopeBreaks" methodname="CouplingMaterialLinkStopsConductingWhenRopeBreaks" classname="Steppe.Tests.CaravanNetworkBehaviorTests" runstate="Runnable" seed="1728348154" result="Passed" start-time="2026-08-21 13:24:20Z" end-time="2026-08-21 13:24:20Z" duration="0.013160" asserts="0">
+              <properties>
+                <property name="retryIteration" value="0" />
+                <property name="repeatIteration" value="0" />
+              </properties>
+            </test-case>
+            <test-case id="1064" name="ElectricalNetworkBalancesConnectedComponentAndIgnoresOpenCable" fullname="Steppe.Tests.CaravanNetworkBehaviorTests.ElectricalNetworkBalancesConnectedComponentAndIgnoresOpenCable" methodname="ElectricalNetworkBalancesConnectedComponentAndIgnoresOpenCable" classname="Steppe.Tests.CaravanNetworkBehaviorTests" runstate="Runnable" seed="1834331945" result="Passed" start-time="2026-08-21 13:24:20Z" end-time="2026-08-21 13:24:20Z" duration="0.014825" asserts="0">
+              <properties>
+                <property name="retryIteration" value="0" />
+                <property name="repeatIteration" value="0" />
+              </properties>
+            </test-case>
+            <test-case id="1065" name="FluidNetworkRequiresExactClosedLoopAndPoweredPump" fullname="Steppe.Tests.CaravanNetworkBehaviorTests.FluidNetworkRequiresExactClosedLoopAndPoweredPump" methodname="FluidNetworkRequiresExactClosedLoopAndPoweredPump" classname="Steppe.Tests.CaravanNetworkBehaviorTests" runstate="Runnable" seed="1052188941" result="Passed" start-time="2026-08-21 13:24:20Z" end-time="2026-08-21 13:24:20Z" duration="0.009142" asserts="0">
+              <properties>
+                <property name="retryIteration" value="0" />
+                <property name="repeatIteration" value="0" />
+              </properties>
+            </test-case>
+            <test-case id="1066" name="FluidNetworkStopsFrozenWaterAndAppliesHeatOnlyToClosedCircuit" fullname="Steppe.Tests.CaravanNetworkBehaviorTests.FluidNetworkStopsFrozenWaterAndAppliesHeatOnlyToClosedCircuit" methodname="FluidNetworkStopsFrozenWaterAndAppliesHeatOnlyToClosedCircuit" classname="Steppe.Tests.CaravanNetworkBehaviorTests" runstate="Runnable" seed="777931871" result="Passed" start-time="2026-08-21 13:24:20Z" end-time="2026-08-21 13:24:20Z" duration="0.002313" asserts="0">
+              <properties>
+                <property name="retryIteration" value="0" />
+                <property name="repeatIteration" value="0" />
+              </properties>
+            </test-case>
+            <test-case id="1067" name="MaterialNetworkBuildsPathAcrossTransmissionAndDetectsBreak" fullname="Steppe.Tests.CaravanNetworkBehaviorTests.MaterialNetworkBuildsPathAcrossTransmissionAndDetectsBreak" methodname="MaterialNetworkBuildsPathAcrossTransmissionAndDetectsBreak" classname="Steppe.Tests.CaravanNetworkBehaviorTests" runstate="Runnable" seed="1582837778" result="Passed" start-time="2026-08-21 13:24:20Z" end-time="2026-08-21 13:24:20Z" duration="0.003142" asserts="0">
+              <properties>
+                <property name="retryIteration" value="0" />
+                <property name="repeatIteration" value="0" />
+              </properties>
+            </test-case>
+          </test-suite>
+          <test-suite type="TestFixture" id="1069" name="CaravanSimulationTests" fullname="Steppe.Tests.CaravanSimulationTests" classname="Steppe.Tests.CaravanSimulationTests" runstate="Runnable" testcasecount="18" result="Passed" start-time="2026-08-21 13:24:20Z" end-time="2026-08-21 13:24:20Z" duration="0.033004" total="18" passed="18" failed="0" inconclusive="0" skipped="0" asserts="0">
+            <properties />
+            <test-case id="1083" name="BiomassDryingConservesDryMatterAndRecoveredWater" fullname="Steppe.Tests.CaravanSimulationTests.BiomassDryingConservesDryMatterAndRecoveredWater" methodname="BiomassDryingConservesDryMatterAndRecoveredWater" classname="Steppe.Tests.CaravanSimulationTests" runstate="Runnable" seed="2028626842" result="Passed" start-time="2026-08-21 13:24:20Z" end-time="2026-08-21 13:24:20Z" duration="0.000536" asserts="0">
+              <properties>
+                <property name="retryIteration" value="0" />
+                <property name="repeatIteration" value="0" />
+              </properties>
+            </test-case>
+            <test-case id="1070" name="BroadsideSailReceivesWindAndEdgeOnSailDoesNot" fullname="Steppe.Tests.CaravanSimulationTests.BroadsideSailReceivesWindAndEdgeOnSailDoesNot" methodname="BroadsideSailReceivesWindAndEdgeOnSailDoesNot" classname="Steppe.Tests.CaravanSimulationTests" runstate="Runnable" seed="1405472173" result="Passed" start-time="2026-08-21 13:24:20Z" end-time="2026-08-21 13:24:20Z" duration="0.001239" asserts="0">
+              <properties>
+                <property name="retryIteration" value="0" />
+                <property name="repeatIteration" value="0" />
+              </properties>
+            </test-case>
+            <test-case id="1085" name="CouplingRopeIsSlackThenLoadsAndBreaksProgressively" fullname="Steppe.Tests.CaravanSimulationTests.CouplingRopeIsSlackThenLoadsAndBreaksProgressively" methodname="CouplingRopeIsSlackThenLoadsAndBreaksProgressively" classname="Steppe.Tests.CaravanSimulationTests" runstate="Runnable" seed="274991212" result="Passed" start-time="2026-08-21 13:24:20Z" end-time="2026-08-21 13:24:20Z" duration="0.000511" asserts="0">
+              <properties>
+                <property name="retryIteration" value="0" />
+                <property name="repeatIteration" value="0" />
+              </properties>
+            </test-case>
+            <test-case id="1072" name="DemoSailProducesReadableStartingForce" fullname="Steppe.Tests.CaravanSimulationTests.DemoSailProducesReadableStartingForce" methodname="DemoSailProducesReadableStartingForce" classname="Steppe.Tests.CaravanSimulationTests" runstate="Runnable" seed="751635735" result="Passed" start-time="2026-08-21 13:24:20Z" end-time="2026-08-21 13:24:20Z" duration="0.000712" asserts="0">
+              <properties>
+                <property name="retryIteration" value="0" />
+                <property name="repeatIteration" value="0" />
+              </properties>
+            </test-case>
+            <test-case id="1073" name="DirtyDamagedModuleDegradesGraduallyAndCanBeMaintained" fullname="Steppe.Tests.CaravanSimulationTests.DirtyDamagedModuleDegradesGraduallyAndCanBeMaintained" methodname="DirtyDamagedModuleDegradesGraduallyAndCanBeMaintained" classname="Steppe.Tests.CaravanSimulationTests" runstate="Runnable" seed="400947214" result="Passed" start-time="2026-08-21 13:24:20Z" end-time="2026-08-21 13:24:20Z" duration="0.000455" asserts="0">
+              <properties>
+                <property name="retryIteration" value="0" />
+                <property name="repeatIteration" value="0" />
+              </properties>
+            </test-case>
+            <test-case id="1080" name="DisconnectedMotorReceivesNoPowerWhileBatteryCanStillCharge" fullname="Steppe.Tests.CaravanSimulationTests.DisconnectedMotorReceivesNoPowerWhileBatteryCanStillCharge" methodname="DisconnectedMotorReceivesNoPowerWhileBatteryCanStillCharge" classname="Steppe.Tests.CaravanSimulationTests" runstate="Runnable" seed="1904323933" result="Passed" start-time="2026-08-21 13:24:20Z" end-time="2026-08-21 13:24:20Z" duration="0.000390" asserts="0">
+              <properties>
+                <property name="retryIteration" value="0" />
+                <property name="repeatIteration" value="0" />
+              </properties>
+            </test-case>
+            <test-case id="1084" name="EcologyExtractionSubtractsOnlyAvailableResources" fullname="Steppe.Tests.CaravanSimulationTests.EcologyExtractionSubtractsOnlyAvailableResources" methodname="EcologyExtractionSubtractsOnlyAvailableResources" classname="Steppe.Tests.CaravanSimulationTests" runstate="Runnable" seed="1821113268" result="Passed" start-time="2026-08-21 13:24:20Z" end-time="2026-08-21 13:24:20Z" duration="0.001779" asserts="0">
+              <properties>
+                <property name="retryIteration" value="0" />
+                <property name="repeatIteration" value="0" />
+              </properties>
+            </test-case>
+            <test-case id="1079" name="ElectricMotorDrawsSolarFirstAndBatteryCoversDeficit" fullname="Steppe.Tests.CaravanSimulationTests.ElectricMotorDrawsSolarFirstAndBatteryCoversDeficit" methodname="ElectricMotorDrawsSolarFirstAndBatteryCoversDeficit" classname="Steppe.Tests.CaravanSimulationTests" runstate="Runnable" seed="856819901" result="Passed" start-time="2026-08-21 13:24:20Z" end-time="2026-08-21 13:24:20Z" duration="0.000513" asserts="0">
+              <properties>
+                <property name="retryIteration" value="0" />
+                <property name="repeatIteration" value="0" />
+              </properties>
+            </test-case>
+            <test-case id="1086" name="LowSunProjectsCloudShadowAwayFromReceiver" fullname="Steppe.Tests.CaravanSimulationTests.LowSunProjectsCloudShadowAwayFromReceiver" methodname="LowSunProjectsCloudShadowAwayFromReceiver" classname="Steppe.Tests.CaravanSimulationTests" runstate="Runnable" seed="1062365052" result="Passed" start-time="2026-08-21 13:24:20Z" end-time="2026-08-21 13:24:20Z" duration="0.001008" asserts="0">
+              <properties>
+                <property name="retryIteration" value="0" />
+                <property name="repeatIteration" value="0" />
+              </properties>
+            </test-case>
+            <test-case id="1076" name="ModuleInstancesReceiveUniqueIdsAndCanRestoreStableIdentity" fullname="Steppe.Tests.CaravanSimulationTests.ModuleInstancesReceiveUniqueIdsAndCanRestoreStableIdentity" methodname="ModuleInstancesReceiveUniqueIdsAndCanRestoreStableIdentity" classname="Steppe.Tests.CaravanSimulationTests" runstate="Runnable" seed="393781262" result="Passed" start-time="2026-08-21 13:24:20Z" end-time="2026-08-21 13:24:20Z" duration="0.001786" asserts="0">
+              <properties>
+                <property name="retryIteration" value="0" />
+                <property name="repeatIteration" value="0" />
+              </properties>
+            </test-case>
+            <test-case id="1074" name="MountGridRejectsOverlapAndHonoursRotatedFootprints" fullname="Steppe.Tests.CaravanSimulationTests.MountGridRejectsOverlapAndHonoursRotatedFootprints" methodname="MountGridRejectsOverlapAndHonoursRotatedFootprints" classname="Steppe.Tests.CaravanSimulationTests" runstate="Runnable" seed="1795868233" result="Passed" start-time="2026-08-21 13:24:20Z" end-time="2026-08-21 13:24:20Z" duration="0.000949" asserts="0">
+              <properties>
+                <property name="retryIteration" value="0" />
+                <property name="repeatIteration" value="0" />
+              </properties>
+            </test-case>
+            <test-case id="1075" name="PartCatalogueOwnsOneStableDefinitionForEveryTechnicalKind" fullname="Steppe.Tests.CaravanSimulationTests.PartCatalogueOwnsOneStableDefinitionForEveryTechnicalKind" methodname="PartCatalogueOwnsOneStableDefinitionForEveryTechnicalKind" classname="Steppe.Tests.CaravanSimulationTests" runstate="Runnable" seed="2078231401" result="Passed" start-time="2026-08-21 13:24:20Z" end-time="2026-08-21 13:24:20Z" duration="0.003231" asserts="0">
+              <properties>
+                <property name="retryIteration" value="0" />
+                <property name="repeatIteration" value="0" />
+              </properties>
+            </test-case>
+            <test-case id="1077" name="PhotovoltaicExposureUsesPanelAngleAndStormShadow" fullname="Steppe.Tests.CaravanSimulationTests.PhotovoltaicExposureUsesPanelAngleAndStormShadow" methodname="PhotovoltaicExposureUsesPanelAngleAndStormShadow" classname="Steppe.Tests.CaravanSimulationTests" runstate="Runnable" seed="1178209645" result="Passed" start-time="2026-08-21 13:24:20Z" end-time="2026-08-21 13:24:20Z" duration="0.001815" asserts="0">
+              <properties>
+                <property name="retryIteration" value="0" />
+                <property name="repeatIteration" value="0" />
+              </properties>
+            </test-case>
+            <test-case id="1082" name="PoweredWaterCircuitCoolsReservoirAndBenefitsFromWind" fullname="Steppe.Tests.CaravanSimulationTests.PoweredWaterCircuitCoolsReservoirAndBenefitsFromWind" methodname="PoweredWaterCircuitCoolsReservoirAndBenefitsFromWind" classname="Steppe.Tests.CaravanSimulationTests" runstate="Runnable" seed="1189048710" result="Passed" start-time="2026-08-21 13:24:20Z" end-time="2026-08-21 13:24:20Z" duration="0.000497" asserts="0">
+              <properties>
+                <property name="retryIteration" value="0" />
+                <property name="repeatIteration" value="0" />
+              </properties>
+            </test-case>
+            <test-case id="1078" name="SolarSurplusChargesBatteryWithinChargeLimit" fullname="Steppe.Tests.CaravanSimulationTests.SolarSurplusChargesBatteryWithinChargeLimit" methodname="SolarSurplusChargesBatteryWithinChargeLimit" classname="Steppe.Tests.CaravanSimulationTests" runstate="Runnable" seed="603205095" result="Passed" start-time="2026-08-21 13:24:20Z" end-time="2026-08-21 13:24:20Z" duration="0.000474" asserts="0">
+              <properties>
+                <property name="retryIteration" value="0" />
+                <property name="repeatIteration" value="0" />
+              </properties>
+            </test-case>
+            <test-case id="1071" name="VehicleVelocityReducesApparentWindAndSailForce" fullname="Steppe.Tests.CaravanSimulationTests.VehicleVelocityReducesApparentWindAndSailForce" methodname="VehicleVelocityReducesApparentWindAndSailForce" classname="Steppe.Tests.CaravanSimulationTests" runstate="Runnable" seed="1643704619" result="Passed" start-time="2026-08-21 13:24:20Z" end-time="2026-08-21 13:24:20Z" duration="0.000633" asserts="0">
+              <properties>
+                <property name="retryIteration" value="0" />
+                <property name="repeatIteration" value="0" />
+              </properties>
+            </test-case>
+            <test-case id="1081" name="WaterCircuitRequiresClosedPipesAndPumpPower" fullname="Steppe.Tests.CaravanSimulationTests.WaterCircuitRequiresClosedPipesAndPumpPower" methodname="WaterCircuitRequiresClosedPipesAndPumpPower" classname="Steppe.Tests.CaravanSimulationTests" runstate="Runnable" seed="1975677890" result="Passed" start-time="2026-08-21 13:24:20Z" end-time="2026-08-21 13:24:20Z" duration="0.000349" asserts="0">
+              <properties>
+                <property name="retryIteration" value="0" />
+                <property name="repeatIteration" value="0" />
+              </properties>
+            </test-case>
+            <test-case id="1087" name="WindVaneArrowPointsIntoSurfaceWind" fullname="Steppe.Tests.CaravanSimulationTests.WindVaneArrowPointsIntoSurfaceWind" methodname="WindVaneArrowPointsIntoSurfaceWind" classname="Steppe.Tests.CaravanSimulationTests" runstate="Runnable" seed="1461286352" result="Passed" start-time="2026-08-21 13:24:20Z" end-time="2026-08-21 13:24:20Z" duration="0.001131" asserts="0">
+              <properties>
+                <property name="retryIteration" value="0" />
+                <property name="repeatIteration" value="0" />
+              </properties>
+            </test-case>
+          </test-suite>
+          <test-suite type="TestFixture" id="1088" name="EcologySimulationTests" fullname="Steppe.Tests.EcologySimulationTests" classname="Steppe.Tests.EcologySimulationTests" runstate="Runnable" testcasecount="20" result="Passed" start-time="2026-08-21 13:24:20Z" end-time="2026-08-21 13:24:20Z" duration="0.047805" total="20" passed="20" failed="0" inconclusive="0" skipped="0" asserts="0">
+            <properties />
+            <test-case id="1089" name="CellCoordinatesUseFloorDivisionAcrossTheWorldOrigin" fullname="Steppe.Tests.EcologySimulationTests.CellCoordinatesUseFloorDivisionAcrossTheWorldOrigin" methodname="CellCoordinatesUseFloorDivisionAcrossTheWorldOrigin" classname="Steppe.Tests.EcologySimulationTests" runstate="Runnable" seed="126929018" result="Passed" start-time="2026-08-21 13:24:20Z" end-time="2026-08-21 13:24:20Z" duration="0.005516" asserts="0">
+              <properties>
+                <property name="retryIteration" value="0" />
+                <property name="repeatIteration" value="0" />
+              </properties>
+            </test-case>
+            <test-case id="1102" name="ColdPrecipitationAccumulatesSnowInsteadOfWetSurfaceWater" fullname="Steppe.Tests.EcologySimulationTests.ColdPrecipitationAccumulatesSnowInsteadOfWetSurfaceWater" methodname="ColdPrecipitationAccumulatesSnowInsteadOfWetSurfaceWater" classname="Steppe.Tests.EcologySimulationTests" runstate="Runnable" seed="306936651" result="Passed" start-time="2026-08-21 13:24:20Z" end-time="2026-08-21 13:24:20Z" duration="0.004213" asserts="0">
+              <properties>
+                <property name="retryIteration" value="0" />
+                <property name="repeatIteration" value="0" />
+              </properties>
+            </test-case>
+            <test-case id="1105" name="CryosphereMapKeepsSnowCompactionAndFrozenChannelsSeparate" fullname="Steppe.Tests.EcologySimulationTests.CryosphereMapKeepsSnowCompactionAndFrozenChannelsSeparate" methodname="CryosphereMapKeepsSnowCompactionAndFrozenChannelsSeparate" classname="Steppe.Tests.EcologySimulationTests" runstate="Runnable" seed="426157475" result="Passed" start-time="2026-08-21 13:24:20Z" end-time="2026-08-21 13:24:20Z" duration="0.002501" asserts="0">
+              <properties>
+                <property name="retryIteration" value="0" />
+                <property name="repeatIteration" value="0" />
+              </properties>
+            </test-case>
+            <test-case id="1096" name="DustStartsOnlyAfterWindExceedsTheDynamicSoilThreshold" fullname="Steppe.Tests.EcologySimulationTests.DustStartsOnlyAfterWindExceedsTheDynamicSoilThreshold" methodname="DustStartsOnlyAfterWindExceedsTheDynamicSoilThreshold" classname="Steppe.Tests.EcologySimulationTests" runstate="Runnable" seed="163696102" result="Passed" start-time="2026-08-21 13:24:20Z" end-time="2026-08-21 13:24:20Z" duration="0.001906" asserts="0">
+              <properties>
+                <property name="retryIteration" value="0" />
+                <property name="repeatIteration" value="0" />
+              </properties>
+            </test-case>
+            <test-case id="1100" name="FifteenDayDrySeasonVisiblyReducesStandingDryMass" fullname="Steppe.Tests.EcologySimulationTests.FifteenDayDrySeasonVisiblyReducesStandingDryMass" methodname="FifteenDayDrySeasonVisiblyReducesStandingDryMass" classname="Steppe.Tests.EcologySimulationTests" runstate="Runnable" seed="2080543593" result="Passed" start-time="2026-08-21 13:24:20Z" end-time="2026-08-21 13:24:20Z" duration="0.001285" asserts="0">
+              <properties>
+                <property name="retryIteration" value="0" />
+                <property name="repeatIteration" value="0" />
+              </properties>
+            </test-case>
+            <test-case id="1101" name="FifteenDayWetGrowingSeasonRecoversLiveBiomass" fullname="Steppe.Tests.EcologySimulationTests.FifteenDayWetGrowingSeasonRecoversLiveBiomass" methodname="FifteenDayWetGrowingSeasonRecoversLiveBiomass" classname="Steppe.Tests.EcologySimulationTests" runstate="Runnable" seed="2145693437" result="Passed" start-time="2026-08-21 13:24:20Z" end-time="2026-08-21 13:24:20Z" duration="0.000932" asserts="0">
+              <properties>
+                <property name="retryIteration" value="0" />
+                <property name="repeatIteration" value="0" />
+              </properties>
+            </test-case>
+            <test-case id="1093" name="FixedForcingProducesDeterministicState" fullname="Steppe.Tests.EcologySimulationTests.FixedForcingProducesDeterministicState" methodname="FixedForcingProducesDeterministicState" classname="Steppe.Tests.EcologySimulationTests" runstate="Runnable" seed="2127452280" result="Passed" start-time="2026-08-21 13:24:20Z" end-time="2026-08-21 13:24:20Z" duration="0.001093" asserts="0">
+              <properties>
+                <property name="retryIteration" value="0" />
+                <property name="repeatIteration" value="0" />
+              </properties>
+            </test-case>
+            <test-case id="1107" name="FreshSnowSinksMoreThanCompactedOrFrozenSnow" fullname="Steppe.Tests.EcologySimulationTests.FreshSnowSinksMoreThanCompactedOrFrozenSnow" methodname="FreshSnowSinksMoreThanCompactedOrFrozenSnow" classname="Steppe.Tests.EcologySimulationTests" runstate="Runnable" seed="309158760" result="Passed" start-time="2026-08-21 13:24:20Z" end-time="2026-08-21 13:24:20Z" duration="0.001551" asserts="0">
+              <properties>
+                <property name="retryIteration" value="0" />
+                <property name="repeatIteration" value="0" />
+              </properties>
+            </test-case>
+            <test-case id="1099" name="HotDroughtCuresGrassFasterThanStandingBiomassDisappears" fullname="Steppe.Tests.EcologySimulationTests.HotDroughtCuresGrassFasterThanStandingBiomassDisappears" methodname="HotDroughtCuresGrassFasterThanStandingBiomassDisappears" classname="Steppe.Tests.EcologySimulationTests" runstate="Runnable" seed="138000757" result="Passed" start-time="2026-08-21 13:24:20Z" end-time="2026-08-21 13:24:20Z" duration="0.000919" asserts="0">
+              <properties>
+                <property name="retryIteration" value="0" />
+                <property name="repeatIteration" value="0" />
+              </properties>
+            </test-case>
+            <test-case id="1091" name="ProlongedWarmWindyWeatherEventuallyDrainsBothWaterLayers" fullname="Steppe.Tests.EcologySimulationTests.ProlongedWarmWindyWeatherEventuallyDrainsBothWaterLayers" methodname="ProlongedWarmWindyWeatherEventuallyDrainsBothWaterLayers" classname="Steppe.Tests.EcologySimulationTests" runstate="Runnable" seed="2133836575" result="Passed" start-time="2026-08-21 13:24:20Z" end-time="2026-08-21 13:24:20Z" duration="0.001194" asserts="0">
+              <properties>
+                <property name="retryIteration" value="0" />
+                <property name="repeatIteration" value="0" />
+              </properties>
+            </test-case>
+            <test-case id="1090" name="RainFirstFillsTheSurfaceAndThenTheRootLayer" fullname="Steppe.Tests.EcologySimulationTests.RainFirstFillsTheSurfaceAndThenTheRootLayer" methodname="RainFirstFillsTheSurfaceAndThenTheRootLayer" classname="Steppe.Tests.EcologySimulationTests" runstate="Runnable" seed="1037839168" result="Passed" start-time="2026-08-21 13:24:20Z" end-time="2026-08-21 13:24:20Z" duration="0.000716" asserts="0">
+              <properties>
+                <property name="retryIteration" value="0" />
+                <property name="repeatIteration" value="0" />
+              </properties>
+            </test-case>
+            <test-case id="1092" name="RainSoftensAnExistingDryCrust" fullname="Steppe.Tests.EcologySimulationTests.RainSoftensAnExistingDryCrust" methodname="RainSoftensAnExistingDryCrust" classname="Steppe.Tests.EcologySimulationTests" runstate="Runnable" seed="2105928113" result="Passed" start-time="2026-08-21 13:24:20Z" end-time="2026-08-21 13:24:20Z" duration="0.000803" asserts="0">
+              <properties>
+                <property name="retryIteration" value="0" />
+                <property name="repeatIteration" value="0" />
+              </properties>
+            </test-case>
+            <test-case id="1106" name="SaturatedClayIsHarderToCrossThanTheSameDryCrustedSoil" fullname="Steppe.Tests.EcologySimulationTests.SaturatedClayIsHarderToCrossThanTheSameDryCrustedSoil" methodname="SaturatedClayIsHarderToCrossThanTheSameDryCrustedSoil" classname="Steppe.Tests.EcologySimulationTests" runstate="Runnable" seed="1731553644" result="Passed" start-time="2026-08-21 13:24:20Z" end-time="2026-08-21 13:24:20Z" duration="0.000924" asserts="0">
+              <properties>
+                <property name="retryIteration" value="0" />
+                <property name="repeatIteration" value="0" />
+              </properties>
+            </test-case>
+            <test-case id="1104" name="SnowCoverPreventsDustEvenInStrongWind" fullname="Steppe.Tests.EcologySimulationTests.SnowCoverPreventsDustEvenInStrongWind" methodname="SnowCoverPreventsDustEvenInStrongWind" classname="Steppe.Tests.EcologySimulationTests" runstate="Runnable" seed="540165294" result="Passed" start-time="2026-08-21 13:24:20Z" end-time="2026-08-21 13:24:20Z" duration="0.001109" asserts="0">
+              <properties>
+                <property name="retryIteration" value="0" />
+                <property name="repeatIteration" value="0" />
+              </properties>
+            </test-case>
+            <test-case id="1095" name="StateMapCoversTheCompleteActiveEcologyDiameter" fullname="Steppe.Tests.EcologySimulationTests.StateMapCoversTheCompleteActiveEcologyDiameter" methodname="StateMapCoversTheCompleteActiveEcologyDiameter" classname="Steppe.Tests.EcologySimulationTests" runstate="Runnable" seed="974627612" result="Passed" start-time="2026-08-21 13:24:20Z" end-time="2026-08-21 13:24:20Z" duration="0.001080" asserts="0">
+              <properties>
+                <property name="retryIteration" value="0" />
+                <property name="repeatIteration" value="0" />
+              </properties>
+            </test-case>
+            <test-case id="1094" name="StateMapEncodingUsesRelativeBiomassAndStableChannels" fullname="Steppe.Tests.EcologySimulationTests.StateMapEncodingUsesRelativeBiomassAndStableChannels" methodname="StateMapEncodingUsesRelativeBiomassAndStableChannels" classname="Steppe.Tests.EcologySimulationTests" runstate="Runnable" seed="1034282992" result="Passed" start-time="2026-08-21 13:24:20Z" end-time="2026-08-21 13:24:20Z" duration="0.001143" asserts="0">
+              <properties>
+                <property name="retryIteration" value="0" />
+                <property name="repeatIteration" value="0" />
+              </properties>
+            </test-case>
+            <test-case id="1108" name="TrackCoordinatesRemainStableAcrossNegativeWorldSpace" fullname="Steppe.Tests.EcologySimulationTests.TrackCoordinatesRemainStableAcrossNegativeWorldSpace" methodname="TrackCoordinatesRemainStableAcrossNegativeWorldSpace" classname="Steppe.Tests.EcologySimulationTests" runstate="Runnable" seed="1609341845" result="Passed" start-time="2026-08-21 13:24:20Z" end-time="2026-08-21 13:24:20Z" duration="0.001116" asserts="0">
+              <properties>
+                <property name="retryIteration" value="0" />
+                <property name="repeatIteration" value="0" />
+              </properties>
+            </test-case>
+            <test-case id="1103" name="WarmDayMeltsSnowIntoSoilWaterAndThawsFrozenGround" fullname="Steppe.Tests.EcologySimulationTests.WarmDayMeltsSnowIntoSoilWaterAndThawsFrozenGround" methodname="WarmDayMeltsSnowIntoSoilWaterAndThawsFrozenGround" classname="Steppe.Tests.EcologySimulationTests" runstate="Runnable" seed="847992668" result="Passed" start-time="2026-08-21 13:24:20Z" end-time="2026-08-21 13:24:20Z" duration="0.001288" asserts="0">
+              <properties>
+                <property name="retryIteration" value="0" />
+                <property name="repeatIteration" value="0" />
+              </properties>
+            </test-case>
+            <test-case id="1098" name="WarmRootWaterGreensPlantsBeforeBiomassRecovers" fullname="Steppe.Tests.EcologySimulationTests.WarmRootWaterGreensPlantsBeforeBiomassRecovers" methodname="WarmRootWaterGreensPlantsBeforeBiomassRecovers" classname="Steppe.Tests.EcologySimulationTests" runstate="Runnable" seed="1098862507" result="Passed" start-time="2026-08-21 13:24:20Z" end-time="2026-08-21 13:24:20Z" duration="0.000789" asserts="0">
+              <properties>
+                <property name="retryIteration" value="0" />
+                <property name="repeatIteration" value="0" />
+              </properties>
+            </test-case>
+            <test-case id="1097" name="WaterRainAndCrustIndependentlySuppressDust" fullname="Steppe.Tests.EcologySimulationTests.WaterRainAndCrustIndependentlySuppressDust" methodname="WaterRainAndCrustIndependentlySuppressDust" classname="Steppe.Tests.EcologySimulationTests" runstate="Runnable" seed="888018549" result="Passed" start-time="2026-08-21 13:24:20Z" end-time="2026-08-21 13:24:20Z" duration="0.000972" asserts="0">
+              <properties>
+                <property name="retryIteration" value="0" />
+                <property name="repeatIteration" value="0" />
+              </properties>
+            </test-case>
+          </test-suite>
+          <test-suite type="TestFixture" id="1109" name="TerrainGenerationTests" fullname="Steppe.Tests.TerrainGenerationTests" classname="Steppe.Tests.TerrainGenerationTests" runstate="Runnable" testcasecount="10" result="Passed" start-time="2026-08-21 13:24:20Z" end-time="2026-08-21 13:24:21Z" duration="0.297062" total="10" passed="10" failed="0" inconclusive="0" skipped="0" asserts="0">
+            <properties />
+            <test-case id="1118" name="AdjacentDifferentLodMeshesShareBoundaryHeights" fullname="Steppe.Tests.TerrainGenerationTests.AdjacentDifferentLodMeshesShareBoundaryHeights" methodname="AdjacentDifferentLodMeshesShareBoundaryHeights" classname="Steppe.Tests.TerrainGenerationTests" runstate="Runnable" seed="140376492" result="Passed" start-time="2026-08-21 13:24:20Z" end-time="2026-08-21 13:24:20Z" duration="0.009773" asserts="0">
+              <properties>
+                <property name="retryIteration" value="0" />
+                <property name="repeatIteration" value="0" />
+              </properties>
+            </test-case>
+            <test-case id="1114" name="CanonicalClimateContainsAllFourSteppeBiomes" fullname="Steppe.Tests.TerrainGenerationTests.CanonicalClimateContainsAllFourSteppeBiomes" methodname="CanonicalClimateContainsAllFourSteppeBiomes" classname="Steppe.Tests.TerrainGenerationTests" runstate="Runnable" seed="1968774149" result="Passed" start-time="2026-08-21 13:24:20Z" end-time="2026-08-21 13:24:20Z" duration="0.006081" asserts="0">
+              <properties>
+                <property name="retryIteration" value="0" />
+                <property name="repeatIteration" value="0" />
+              </properties>
+            </test-case>
+            <test-case id="1110" name="ChunkCoordinatesFloorAcrossNegativeBoundaries" fullname="Steppe.Tests.TerrainGenerationTests.ChunkCoordinatesFloorAcrossNegativeBoundaries" methodname="ChunkCoordinatesFloorAcrossNegativeBoundaries" classname="Steppe.Tests.TerrainGenerationTests" runstate="Runnable" seed="555830957" result="Passed" start-time="2026-08-21 13:24:20Z" end-time="2026-08-21 13:24:20Z" duration="0.001516" asserts="0">
+              <properties>
+                <property name="retryIteration" value="0" />
+                <property name="repeatIteration" value="0" />
+              </properties>
+            </test-case>
+            <test-case id="1117" name="GrassCellBuilderIsDeterministicAndOwnsNoSceneState" fullname="Steppe.Tests.TerrainGenerationTests.GrassCellBuilderIsDeterministicAndOwnsNoSceneState" methodname="GrassCellBuilderIsDeterministicAndOwnsNoSceneState" classname="Steppe.Tests.TerrainGenerationTests" runstate="Runnable" seed="80686884" result="Passed" start-time="2026-08-21 13:24:20Z" end-time="2026-08-21 13:24:20Z" duration="0.086310" asserts="0">
+              <properties>
+                <property name="retryIteration" value="0" />
+                <property name="repeatIteration" value="0" />
+              </properties>
+            </test-case>
+            <test-case id="1111" name="HeightIsBitwiseDeterministicAtLargeCoordinates" fullname="Steppe.Tests.TerrainGenerationTests.HeightIsBitwiseDeterministicAtLargeCoordinates" methodname="HeightIsBitwiseDeterministicAtLargeCoordinates" classname="Steppe.Tests.TerrainGenerationTests" runstate="Runnable" seed="1441745563" result="Passed" start-time="2026-08-21 13:24:20Z" end-time="2026-08-21 13:24:20Z" duration="0.001747" asserts="0">
+              <properties>
+                <property name="retryIteration" value="0" />
+                <property name="repeatIteration" value="0" />
+              </properties>
+            </test-case>
+            <test-case id="1112" name="InitialStreamingAreaContainsReadableRelief" fullname="Steppe.Tests.TerrainGenerationTests.InitialStreamingAreaContainsReadableRelief" methodname="InitialStreamingAreaContainsReadableRelief" classname="Steppe.Tests.TerrainGenerationTests" runstate="Runnable" seed="1934554205" result="Passed" start-time="2026-08-21 13:24:20Z" end-time="2026-08-21 13:24:20Z" duration="0.004947" asserts="0">
+              <properties>
+                <property name="retryIteration" value="0" />
+                <property name="repeatIteration" value="0" />
+              </properties>
+              <output><![CDATA[Initial terrain: min=-116.5m max=116.0m range=232.5m sigma=45.8m
+]]></output>
+            </test-case>
+            <test-case id="1119" name="OverrideStampChangesOnlyItsAuthoredArea" fullname="Steppe.Tests.TerrainGenerationTests.OverrideStampChangesOnlyItsAuthoredArea" methodname="OverrideStampChangesOnlyItsAuthoredArea" classname="Steppe.Tests.TerrainGenerationTests" runstate="Runnable" seed="167252429" result="Passed" start-time="2026-08-21 13:24:20Z" end-time="2026-08-21 13:24:20Z" duration="0.001986" asserts="0">
+              <properties>
+                <property name="retryIteration" value="0" />
+                <property name="repeatIteration" value="0" />
+              </properties>
+            </test-case>
+            <test-case id="1115" name="StartingRegionReachesAnEcotoneWithinThirtyKilometers" fullname="Steppe.Tests.TerrainGenerationTests.StartingRegionReachesAnEcotoneWithinThirtyKilometers" methodname="StartingRegionReachesAnEcotoneWithinThirtyKilometers" classname="Steppe.Tests.TerrainGenerationTests" runstate="Runnable" seed="143631849" result="Passed" start-time="2026-08-21 13:24:20Z" end-time="2026-08-21 13:24:20Z" duration="0.003161" asserts="0">
+              <properties>
+                <property name="retryIteration" value="0" />
+                <property name="repeatIteration" value="0" />
+              </properties>
+              <output><![CDATA[Nearest biome transition from FeatherGrass: 12288 m near (-4702, -11353)
+]]></output>
+            </test-case>
+            <test-case id="1113" name="SurfaceFieldsAreDeterministicAndContinuous" fullname="Steppe.Tests.TerrainGenerationTests.SurfaceFieldsAreDeterministicAndContinuous" methodname="SurfaceFieldsAreDeterministicAndContinuous" classname="Steppe.Tests.TerrainGenerationTests" runstate="Runnable" seed="962314696" result="Passed" start-time="2026-08-21 13:24:20Z" end-time="2026-08-21 13:24:20Z" duration="0.005346" asserts="0">
+              <properties>
+                <property name="retryIteration" value="0" />
+                <property name="repeatIteration" value="0" />
+              </properties>
+            </test-case>
+            <test-case id="1116" name="TerrainColorsAndVegetationUseTheSameSurfaceField" fullname="Steppe.Tests.TerrainGenerationTests.TerrainColorsAndVegetationUseTheSameSurfaceField" methodname="TerrainColorsAndVegetationUseTheSameSurfaceField" classname="Steppe.Tests.TerrainGenerationTests" runstate="Runnable" seed="1009099807" result="Passed" start-time="2026-08-21 13:24:20Z" end-time="2026-08-21 13:24:21Z" duration="0.168778" asserts="0">
+              <properties>
+                <property name="retryIteration" value="0" />
+                <property name="repeatIteration" value="0" />
+              </properties>
+            </test-case>
+          </test-suite>
+          <test-suite type="TestFixture" id="1120" name="TimeSimulationTests" fullname="Steppe.Tests.TimeSimulationTests" classname="Steppe.Tests.TimeSimulationTests" runstate="Runnable" testcasecount="5" result="Passed" start-time="2026-08-21 13:24:21Z" end-time="2026-08-21 13:24:21Z" duration="0.006459" total="5" passed="5" failed="0" inconclusive="0" skipped="0" asserts="0">
+            <properties />
+            <test-case id="1125" name="ClearSkyTemperaturePeaksAfterSolarNoonWithoutChangingBiome" fullname="Steppe.Tests.TimeSimulationTests.ClearSkyTemperaturePeaksAfterSolarNoonWithoutChangingBiome" methodname="ClearSkyTemperaturePeaksAfterSolarNoonWithoutChangingBiome" classname="Steppe.Tests.TimeSimulationTests" runstate="Runnable" seed="248469277" result="Passed" start-time="2026-08-21 13:24:21Z" end-time="2026-08-21 13:24:21Z" duration="0.001205" asserts="0">
+              <properties>
+                <property name="retryIteration" value="0" />
+                <property name="repeatIteration" value="0" />
+              </properties>
+            </test-case>
+            <test-case id="1121" name="ClockAdvancesDaysAndWrapsTheLongYearDeterministically" fullname="Steppe.Tests.TimeSimulationTests.ClockAdvancesDaysAndWrapsTheLongYearDeterministically" methodname="ClockAdvancesDaysAndWrapsTheLongYearDeterministically" classname="Steppe.Tests.TimeSimulationTests" runstate="Runnable" seed="758673395" result="Passed" start-time="2026-08-21 13:24:21Z" end-time="2026-08-21 13:24:21Z" duration="0.001380" asserts="0">
+              <properties>
+                <property name="retryIteration" value="0" />
+                <property name="repeatIteration" value="0" />
+              </properties>
+            </test-case>
+            <test-case id="1122" name="FourSeasonWindowsEachSpanFifteenDays" fullname="Steppe.Tests.TimeSimulationTests.FourSeasonWindowsEachSpanFifteenDays" methodname="FourSeasonWindowsEachSpanFifteenDays" classname="Steppe.Tests.TimeSimulationTests" runstate="Runnable" seed="326169434" result="Passed" start-time="2026-08-21 13:24:21Z" end-time="2026-08-21 13:24:21Z" duration="0.000646" asserts="0">
+              <properties>
+                <property name="retryIteration" value="0" />
+                <property name="repeatIteration" value="0" />
+              </properties>
+            </test-case>
+            <test-case id="1123" name="RuntimeClockStartsAtNormalSpeed" fullname="Steppe.Tests.TimeSimulationTests.RuntimeClockStartsAtNormalSpeed" methodname="RuntimeClockStartsAtNormalSpeed" classname="Steppe.Tests.TimeSimulationTests" runstate="Runnable" seed="1394114694" result="Passed" start-time="2026-08-21 13:24:21Z" end-time="2026-08-21 13:24:21Z" duration="0.000692" asserts="0">
+              <properties>
+                <property name="retryIteration" value="0" />
+                <property name="repeatIteration" value="0" />
+              </properties>
+            </test-case>
+            <test-case id="1124" name="SunIsAboveTheHorizonAtNoonAndBelowItAtMidnight" fullname="Steppe.Tests.TimeSimulationTests.SunIsAboveTheHorizonAtNoonAndBelowItAtMidnight" methodname="SunIsAboveTheHorizonAtNoonAndBelowItAtMidnight" classname="Steppe.Tests.TimeSimulationTests" runstate="Runnable" seed="1874555682" result="Passed" start-time="2026-08-21 13:24:21Z" end-time="2026-08-21 13:24:21Z" duration="0.000949" asserts="0">
+              <properties>
+                <property name="retryIteration" value="0" />
+                <property name="repeatIteration" value="0" />
+              </properties>
+            </test-case>
+          </test-suite>
+          <test-suite type="TestFixture" id="1126" name="WeatherSimulationTests" fullname="Steppe.Tests.WeatherSimulationTests" classname="Steppe.Tests.WeatherSimulationTests" runstate="Runnable" testcasecount="13" result="Passed" start-time="2026-08-21 13:24:21Z" end-time="2026-08-21 13:24:21Z" duration="0.015143" total="13" passed="13" failed="0" inconclusive="0" skipped="0" asserts="0">
+            <properties />
+            <test-case id="1130" name="CloudAndSurfaceWindRemainRelatedButDistinct" fullname="Steppe.Tests.WeatherSimulationTests.CloudAndSurfaceWindRemainRelatedButDistinct" methodname="CloudAndSurfaceWindRemainRelatedButDistinct" classname="Steppe.Tests.WeatherSimulationTests" runstate="Runnable" seed="690667450" result="Passed" start-time="2026-08-21 13:24:21Z" end-time="2026-08-21 13:24:21Z" duration="0.003940" asserts="0">
+              <properties>
+                <property name="retryIteration" value="0" />
+                <property name="repeatIteration" value="0" />
+              </properties>
+            </test-case>
+            <test-case id="1131" name="CompleteWeatherPatternAdvectsWithIntegratedCloudWind" fullname="Steppe.Tests.WeatherSimulationTests.CompleteWeatherPatternAdvectsWithIntegratedCloudWind" methodname="CompleteWeatherPatternAdvectsWithIntegratedCloudWind" classname="Steppe.Tests.WeatherSimulationTests" runstate="Runnable" seed="1989018986" result="Passed" start-time="2026-08-21 13:24:21Z" end-time="2026-08-21 13:24:21Z" duration="0.001563" asserts="0">
+              <properties>
+                <property name="retryIteration" value="0" />
+                <property name="repeatIteration" value="0" />
+              </properties>
+            </test-case>
+            <test-case id="1137" name="CoverageNeverFallsIntoAWorldWideClearBandBetweenFronts" fullname="Steppe.Tests.WeatherSimulationTests.CoverageNeverFallsIntoAWorldWideClearBandBetweenFronts" methodname="CoverageNeverFallsIntoAWorldWideClearBandBetweenFronts" classname="Steppe.Tests.WeatherSimulationTests" runstate="Runnable" seed="1234234743" result="Passed" start-time="2026-08-21 13:24:21Z" end-time="2026-08-21 13:24:21Z" duration="0.000734" asserts="0">
+              <properties>
+                <property name="retryIteration" value="0" />
+                <property name="repeatIteration" value="0" />
+              </properties>
+            </test-case>
+            <test-case id="1135" name="FrontBuildsABroadRainCoreAndDrainsBeforeCloudCoverClears" fullname="Steppe.Tests.WeatherSimulationTests.FrontBuildsABroadRainCoreAndDrainsBeforeCloudCoverClears" methodname="FrontBuildsABroadRainCoreAndDrainsBeforeCloudCoverClears" classname="Steppe.Tests.WeatherSimulationTests" runstate="Runnable" seed="1042153305" result="Passed" start-time="2026-08-21 13:24:21Z" end-time="2026-08-21 13:24:21Z" duration="0.000741" asserts="0">
+              <properties>
+                <property name="retryIteration" value="0" />
+                <property name="repeatIteration" value="0" />
+              </properties>
+            </test-case>
+            <test-case id="1139" name="OnlyOneWetFrontCanOccupyTheVisibleCloudHorizon" fullname="Steppe.Tests.WeatherSimulationTests.OnlyOneWetFrontCanOccupyTheVisibleCloudHorizon" methodname="OnlyOneWetFrontCanOccupyTheVisibleCloudHorizon" classname="Steppe.Tests.WeatherSimulationTests" runstate="Runnable" seed="1618829985" result="Passed" start-time="2026-08-21 13:24:21Z" end-time="2026-08-21 13:24:21Z" duration="0.000331" asserts="0">
+              <properties>
+                <property name="retryIteration" value="0" />
+                <property name="repeatIteration" value="0" />
+              </properties>
+            </test-case>
+            <test-case id="1136" name="RainBelongsToAContinuousFrontInsteadOfAnIsolatedSample" fullname="Steppe.Tests.WeatherSimulationTests.RainBelongsToAContinuousFrontInsteadOfAnIsolatedSample" methodname="RainBelongsToAContinuousFrontInsteadOfAnIsolatedSample" classname="Steppe.Tests.WeatherSimulationTests" runstate="Runnable" seed="180811451" result="Passed" start-time="2026-08-21 13:24:21Z" end-time="2026-08-21 13:24:21Z" duration="0.000496" asserts="0">
+              <properties>
+                <property name="retryIteration" value="0" />
+                <property name="repeatIteration" value="0" />
+              </properties>
+            </test-case>
+            <test-case id="1134" name="SuccessiveFrontsKeepReturningAlongTheWindAxis" fullname="Steppe.Tests.WeatherSimulationTests.SuccessiveFrontsKeepReturningAlongTheWindAxis" methodname="SuccessiveFrontsKeepReturningAlongTheWindAxis" classname="Steppe.Tests.WeatherSimulationTests" runstate="Runnable" seed="110269093" result="Passed" start-time="2026-08-21 13:24:21Z" end-time="2026-08-21 13:24:21Z" duration="0.000448" asserts="0">
+              <properties>
+                <property name="retryIteration" value="0" />
+                <property name="repeatIteration" value="0" />
+              </properties>
+            </test-case>
+            <test-case id="1138" name="WeatherMapAlwaysCoversTheStreamedTerrainDiameter" fullname="Steppe.Tests.WeatherSimulationTests.WeatherMapAlwaysCoversTheStreamedTerrainDiameter" methodname="WeatherMapAlwaysCoversTheStreamedTerrainDiameter" classname="Steppe.Tests.WeatherSimulationTests" runstate="Runnable" seed="1024931285" result="Passed" start-time="2026-08-21 13:24:21Z" end-time="2026-08-21 13:24:21Z" duration="0.000393" asserts="0">
+              <properties>
+                <property name="retryIteration" value="0" />
+                <property name="repeatIteration" value="0" />
+              </properties>
+            </test-case>
+            <test-case id="1127" name="WeatherTimeIsDerivedFromTheCanonicalSimulationClock" fullname="Steppe.Tests.WeatherSimulationTests.WeatherTimeIsDerivedFromTheCanonicalSimulationClock" methodname="WeatherTimeIsDerivedFromTheCanonicalSimulationClock" classname="Steppe.Tests.WeatherSimulationTests" runstate="Runnable" seed="2144441007" result="Passed" start-time="2026-08-21 13:24:21Z" end-time="2026-08-21 13:24:21Z" duration="0.000505" asserts="0">
+              <properties>
+                <property name="retryIteration" value="0" />
+                <property name="repeatIteration" value="0" />
+              </properties>
+            </test-case>
+            <test-case id="1128" name="WeatherTimeIsIndependentOfSimulationAdvanceCadence" fullname="Steppe.Tests.WeatherSimulationTests.WeatherTimeIsIndependentOfSimulationAdvanceCadence" methodname="WeatherTimeIsIndependentOfSimulationAdvanceCadence" classname="Steppe.Tests.WeatherSimulationTests" runstate="Runnable" seed="541814894" result="Passed" start-time="2026-08-21 13:24:21Z" end-time="2026-08-21 13:24:21Z" duration="0.000323" asserts="0">
+              <properties>
+                <property name="retryIteration" value="0" />
+                <property name="repeatIteration" value="0" />
+              </properties>
+            </test-case>
+            <test-case id="1132" name="WetFrontLeadingEdgeAddsALocalSurfaceGust" fullname="Steppe.Tests.WeatherSimulationTests.WetFrontLeadingEdgeAddsALocalSurfaceGust" methodname="WetFrontLeadingEdgeAddsALocalSurfaceGust" classname="Steppe.Tests.WeatherSimulationTests" runstate="Runnable" seed="1814893806" result="Passed" start-time="2026-08-21 13:24:21Z" end-time="2026-08-21 13:24:21Z" duration="0.000871" asserts="0">
+              <properties>
+                <property name="retryIteration" value="0" />
+                <property name="repeatIteration" value="0" />
+              </properties>
+            </test-case>
+            <test-case id="1133" name="WetFrontProducesRainWhileTheInterfrontSkyRemainsCloudyButDrier" fullname="Steppe.Tests.WeatherSimulationTests.WetFrontProducesRainWhileTheInterfrontSkyRemainsCloudyButDrier" methodname="WetFrontProducesRainWhileTheInterfrontSkyRemainsCloudyButDrier" classname="Steppe.Tests.WeatherSimulationTests" runstate="Runnable" seed="1816407805" result="Passed" start-time="2026-08-21 13:24:21Z" end-time="2026-08-21 13:24:21Z" duration="0.000793" asserts="0">
+              <properties>
+                <property name="retryIteration" value="0" />
+                <property name="repeatIteration" value="0" />
+              </properties>
+            </test-case>
+            <test-case id="1129" name="WindRegimesAreDeterministicSmoothAndActuallyChange" fullname="Steppe.Tests.WeatherSimulationTests.WindRegimesAreDeterministicSmoothAndActuallyChange" methodname="WindRegimesAreDeterministicSmoothAndActuallyChange" classname="Steppe.Tests.WeatherSimulationTests" runstate="Runnable" seed="938635940" result="Passed" start-time="2026-08-21 13:24:21Z" end-time="2026-08-21 13:24:21Z" duration="0.001114" asserts="0">
+              <properties>
+                <property name="retryIteration" value="0" />
+                <property name="repeatIteration" value="0" />
+              </properties>
+            </test-case>
+          </test-suite>
+          <test-suite type="TestFixture" id="1140" name="WorldSimulationBridgeTests" fullname="Steppe.Tests.WorldSimulationBridgeTests" classname="Steppe.Tests.WorldSimulationBridgeTests" runstate="Runnable" testcasecount="3" result="Passed" start-time="2026-08-21 13:24:21Z" end-time="2026-08-21 13:24:21Z" duration="0.003138" total="3" passed="3" failed="0" inconclusive="0" skipped="0" asserts="0">
+            <properties />
+            <test-case id="1141" name="CoordinateMapper_RoundTripsEveryCornerCell" fullname="Steppe.Tests.WorldSimulationBridgeTests.CoordinateMapper_RoundTripsEveryCornerCell" methodname="CoordinateMapper_RoundTripsEveryCornerCell" classname="Steppe.Tests.WorldSimulationBridgeTests" runstate="Runnable" seed="23520627" result="Passed" start-time="2026-08-21 13:24:21Z" end-time="2026-08-21 13:24:21Z" duration="0.000695" asserts="0">
+              <properties>
+                <property name="retryIteration" value="0" />
+                <property name="repeatIteration" value="0" />
+              </properties>
+            </test-case>
+            <test-case id="1142" name="CoordinateMapper_UsesFiniteHalfOpenBounds" fullname="Steppe.Tests.WorldSimulationBridgeTests.CoordinateMapper_UsesFiniteHalfOpenBounds" methodname="CoordinateMapper_UsesFiniteHalfOpenBounds" classname="Steppe.Tests.WorldSimulationBridgeTests" runstate="Runnable" seed="445701897" result="Passed" start-time="2026-08-21 13:24:21Z" end-time="2026-08-21 13:24:21Z" duration="0.000368" asserts="0">
+              <properties>
+                <property name="retryIteration" value="0" />
+                <property name="repeatIteration" value="0" />
+              </properties>
+            </test-case>
+            <test-case id="1143" name="UnityFactory_CreatesValidatedCoreConfiguration" fullname="Steppe.Tests.WorldSimulationBridgeTests.UnityFactory_CreatesValidatedCoreConfiguration" methodname="UnityFactory_CreatesValidatedCoreConfiguration" classname="Steppe.Tests.WorldSimulationBridgeTests" runstate="Runnable" seed="195945756" result="Passed" start-time="2026-08-21 13:24:21Z" end-time="2026-08-21 13:24:21Z" duration="0.001037" asserts="0">
+              <properties>
+                <property name="retryIteration" value="0" />
+                <property name="repeatIteration" value="0" />
+              </properties>
+              <output><![CDATA[Saving results to: C:/Users/Kirill/AppData/LocalLow/DefaultCompany/Steppe\TestResults.xml
+]]></output>
+            </test-case>
+          </test-suite>
+        </test-suite>
+      </test-suite>
+    </test-suite>
+  </test-suite>
+</test-run>

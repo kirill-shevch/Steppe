@@ -1,5 +1,6 @@
 using System;
 using Steppe.Settings;
+using Steppe.Integration;
 using Steppe.Time;
 using Steppe.World;
 using UnityEngine;
@@ -38,14 +39,15 @@ namespace Steppe.Weather
             SteppeTimeSystem clock,
             FloatingOriginSystem origin,
             Transform focusTransform,
-            Material material = null)
+            Material material = null,
+            FiniteWorldEnvironmentAdapter finiteEnvironment = null)
         {
             settings = worldSettings != null ? worldSettings : throw new ArgumentNullException(nameof(worldSettings));
             weatherSystem = weather != null ? weather : throw new ArgumentNullException(nameof(weather));
             timeSystem = clock != null ? clock : throw new ArgumentNullException(nameof(clock));
             floatingOrigin = origin != null ? origin : throw new ArgumentNullException(nameof(origin));
             focus = focusTransform != null ? focusTransform : throw new ArgumentNullException(nameof(focusTransform));
-            climateSampler = new SteppeLocalClimateSampler(settings);
+            climateSampler = new SteppeLocalClimateSampler(settings, finiteEnvironment);
 
             rainParticles = GetComponent<ParticleSystem>();
             if (rainParticles == null)

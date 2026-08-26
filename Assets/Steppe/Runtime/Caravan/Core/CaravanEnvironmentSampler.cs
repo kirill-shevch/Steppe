@@ -1,5 +1,6 @@
 using System;
 using Steppe.Ecology;
+using Steppe.Integration;
 using Steppe.Player;
 using Steppe.Settings;
 using Steppe.Surface;
@@ -48,19 +49,22 @@ namespace Steppe.Caravan
         private readonly TerrainHeightGenerator terrain;
         private readonly SteppeSurfaceGenerator surface;
         private readonly SteppeClimateModel climate;
+        private readonly FiniteWorldEnvironmentAdapter finiteWorld;
 
         public CaravanEnvironmentSampler(
             SteppeWorldSettings worldSettings,
             FloatingOriginSystem origin,
             SteppeWeatherSystem weather,
             SteppeEcologySystem ecology,
-            SteppeTimeSystem clock)
+            SteppeTimeSystem clock,
+            FiniteWorldEnvironmentAdapter finiteEnvironment = null)
         {
             settings = worldSettings != null ? worldSettings : throw new ArgumentNullException(nameof(worldSettings));
             floatingOrigin = origin != null ? origin : throw new ArgumentNullException(nameof(origin));
             weatherSystem = weather != null ? weather : throw new ArgumentNullException(nameof(weather));
             ecologySystem = ecology != null ? ecology : throw new ArgumentNullException(nameof(ecology));
             timeSystem = clock != null ? clock : throw new ArgumentNullException(nameof(clock));
+            finiteWorld = finiteEnvironment;
             terrain = new TerrainHeightGenerator(settings);
             surface = new SteppeSurfaceGenerator(settings);
             climate = new SteppeClimateModel(settings);
@@ -100,6 +104,12 @@ namespace Steppe.Caravan
         public double SampleAirTemperature(Vector3 localPosition)
         {
             var world = floatingOrigin.LocalToWorld(localPosition);
+            if (finiteWorld != null
+                && finiteWorld.TrySampleAirTemperature(world.X, world.Z, out var canonicalTemperature))
+            {
+                return canonicalTemperature;
+            }
+
             var height = terrain.SampleHeight(world.X, world.Z);
             var normal = terrain.SampleNormal(world.X, world.Z, 2.0);
             var surfaceSample = surface.Sample(world.X, world.Z, height, normal.y);
@@ -115,6 +125,18 @@ namespace Steppe.Caravan
             out SteppeEcoExtraction extraction)
         {
             var world = floatingOrigin.LocalToWorld(localPosition);
+            if (finiteWorld != null && finiteWorld.IsReady)
+            {
+                return finiteWorld.TryExtractResources(
+                    world.X,
+                    world.Z,
+                    Math.Max(0f, requestedSurfaceWater),
+                    Math.Max(0f, requestedRootWater),
+                    Math.Max(0f, requestedSnowWater),
+                    Math.Max(0f, requestedBiomass),
+                    out extraction);
+            }
+
             return ecologySystem.TryExtractResources(
                 world.X,
                 world.Z,

@@ -53,7 +53,7 @@ internal abstract class CaravanPolicyBase : ICaravanPolicy
     protected static IReadOnlyDictionary<CaravanOrganKind, float> Priorities(
         params (CaravanOrganKind Organ, float Priority)[] values)
     {
-        var priorities = Enum.GetValues<CaravanOrganKind>().ToDictionary(item => item, _ => 0f);
+        var priorities = RuntimeCompatibility.GetEnumValues<CaravanOrganKind>().ToDictionary(item => item, _ => 0f);
         foreach (var (organ, priority) in values)
         {
             priorities[organ] = Math.Clamp(priority, 0f, 1f);

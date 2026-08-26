@@ -1,4 +1,5 @@
 using System;
+using Steppe.Integration;
 using Steppe.Settings;
 using Steppe.Time;
 using Steppe.World;
@@ -24,6 +25,7 @@ namespace Steppe.Weather
         private Transform focus;
         private WorldWorkScheduler workScheduler;
         private SteppeWeatherModel model;
+        private FiniteWorldEnvironmentAdapter finiteWorld;
         private Texture2D weatherMap;
         private Color32[] weatherPixels;
         private double windAnimationSeconds;
@@ -40,11 +42,21 @@ namespace Steppe.Weather
         private float buildMaximumWater;
         private float buildMaximumRain;
         private float buildMaximumGust;
+        private double lastAdvectionSeconds;
+        private double cloudAdvectionX;
+        private double cloudAdvectionZ;
+        private double surfaceAdvectionX;
+        private double surfaceAdvectionZ;
+        private Vector2 previousCloudVelocity;
+        private Vector2 previousSurfaceVelocity;
+        private bool advectionUsesFiniteWorld;
 
         public SteppeWeatherModel Model => model;
         public Texture2D WeatherMap => weatherMap;
         public double WeatherSeconds => settings != null && timeSystem != null
-            ? SteppeWeatherTime.FromSimulationSeconds(settings, timeSystem.ElapsedSimulationSeconds)
+            ? timeSystem.UsesFiniteWorld
+                ? timeSystem.ElapsedSimulationSeconds
+                : SteppeWeatherTime.FromSimulationSeconds(settings, timeSystem.ElapsedSimulationSeconds)
             : 0.0;
         public double WindAnimationSeconds => windAnimationSeconds;
         public double MapCenterX => mapCenterX;
@@ -59,6 +71,7 @@ namespace Steppe.Weather
         public float MapMaximumGust { get; private set; }
         public SteppeWindRegimeSample CurrentWind { get; private set; }
         public SteppeWeatherSample CurrentAtFocus { get; private set; }
+        public bool UsesFiniteWorld => finiteWorld != null && finiteWorld.IsReady;
         public bool HasPendingWorldWork => mapBuildInProgress;
 
         public void Configure(
@@ -66,21 +79,25 @@ namespace Steppe.Weather
             SteppeTimeSystem clock,
             FloatingOriginSystem origin,
             Transform focusTransform,
-            WorldWorkScheduler scheduler)
+            WorldWorkScheduler scheduler,
+            FiniteWorldEnvironmentAdapter finiteEnvironment = null)
         {
             settings = worldSettings != null ? worldSettings : throw new ArgumentNullException(nameof(worldSettings));
             timeSystem = clock != null ? clock : throw new ArgumentNullException(nameof(clock));
             floatingOrigin = origin != null ? origin : throw new ArgumentNullException(nameof(origin));
             focus = focusTransform != null ? focusTransform : throw new ArgumentNullException(nameof(focusTransform));
             workScheduler = scheduler != null ? scheduler : throw new ArgumentNullException(nameof(scheduler));
+            finiteWorld = finiteEnvironment;
             model = new SteppeWeatherModel(settings);
             windAnimationSeconds = 0.0;
             CreateWeatherMap();
             var focusWorld = floatingOrigin.LocalToWorld(focus.position);
             mapCenterX = focusWorld.X;
             mapCenterZ = focusWorld.Z;
-            CurrentWind = model.SampleWind(WeatherSeconds);
-            CurrentAtFocus = model.Sample(focusWorld.X, focusWorld.Z, WeatherSeconds);
+            var legacyWind = model.SampleWind(WeatherSeconds);
+            CurrentAtFocus = Sample(focusWorld.X, focusWorld.Z);
+            ResetPresentationAdvection(CurrentAtFocus, WeatherSeconds);
+            CurrentWind = CreatePresentationWind(legacyWind, CurrentAtFocus);
             PublishWindShaderState();
             BeginWeatherMapBuild(focusWorld.X, focusWorld.Z);
             workScheduler.Register(this);
@@ -93,7 +110,7 @@ namespace Steppe.Weather
                 throw new InvalidOperationException("The weather system has not been configured.");
             }
 
-            return model.Sample(worldX, worldZ, WeatherSeconds);
+            return SampleAtTime(worldX, worldZ, WeatherSeconds);
         }
 
         private void Update()
@@ -112,8 +129,12 @@ namespace Steppe.Weather
             }
 
             var focusWorld = floatingOrigin.LocalToWorld(focus.position);
-            CurrentWind = model.SampleWind(WeatherSeconds);
-            CurrentAtFocus = model.Sample(focusWorld.X, focusWorld.Z, WeatherSeconds);
+            var weatherSeconds = WeatherSeconds;
+            var legacyWind = model.SampleWind(weatherSeconds);
+            var nextAtFocus = Sample(focusWorld.X, focusWorld.Z);
+            UpdatePresentationAdvection(nextAtFocus, weatherSeconds);
+            CurrentAtFocus = nextAtFocus;
+            CurrentWind = CreatePresentationWind(legacyWind, CurrentAtFocus);
             PublishWindShaderState();
 
             if (mapBuildInProgress)
@@ -180,7 +201,10 @@ namespace Steppe.Weather
             {
                 for (var x = 0; x < resolution; x++)
                 {
-                    var sample = model.Sample(minimumX + x * step, minimumZ + z * step, buildWeatherSeconds);
+                    var sample = SampleAtTime(
+                        minimumX + x * step,
+                        minimumZ + z * step,
+                        buildWeatherSeconds);
                     buildMaximumCoverage = Mathf.Max(buildMaximumCoverage, (float)sample.CloudCoverage);
                     buildMaximumWater = Mathf.Max(buildMaximumWater, (float)sample.CloudWater);
                     buildMaximumRain = Mathf.Max(buildMaximumRain, (float)sample.RainIntensity);
@@ -216,6 +240,74 @@ namespace Steppe.Weather
         private static byte ToByte(double value)
         {
             return (byte)Mathf.RoundToInt(Mathf.Clamp01((float)value) * 255f);
+        }
+
+        private SteppeWeatherSample SampleAtTime(
+            double worldX,
+            double worldZ,
+            double legacyWeatherSeconds)
+        {
+            if (finiteWorld != null
+                && finiteWorld.TrySampleWeather(worldX, worldZ, out var canonical))
+            {
+                return canonical;
+            }
+
+            return model.Sample(worldX, worldZ, legacyWeatherSeconds);
+        }
+
+        private SteppeWindRegimeSample CreatePresentationWind(
+            SteppeWindRegimeSample legacy,
+            SteppeWeatherSample weather)
+        {
+            return new SteppeWindRegimeSample(
+                weather.CloudWind,
+                weather.SurfaceWind,
+                advectionUsesFiniteWorld
+                    ? new SteppeWindAdvection(cloudAdvectionX, cloudAdvectionZ)
+                    : legacy.CloudAdvection,
+                advectionUsesFiniteWorld
+                    ? new SteppeWindAdvection(surfaceAdvectionX, surfaceAdvectionZ)
+                    : legacy.SurfaceAdvection,
+                Mathf.Max(legacy.Gustiness * 0.35f, (float)weather.StormGust));
+        }
+
+        private void UpdatePresentationAdvection(
+            SteppeWeatherSample weather,
+            double weatherSeconds)
+        {
+            if (!UsesFiniteWorld)
+            {
+                advectionUsesFiniteWorld = false;
+                return;
+            }
+
+            if (!advectionUsesFiniteWorld || weatherSeconds < lastAdvectionSeconds)
+            {
+                ResetPresentationAdvection(weather, weatherSeconds);
+                return;
+            }
+
+            var delta = weatherSeconds - lastAdvectionSeconds;
+            cloudAdvectionX += (previousCloudVelocity.x + weather.CloudWind.x) * 0.5d * delta;
+            cloudAdvectionZ += (previousCloudVelocity.y + weather.CloudWind.y) * 0.5d * delta;
+            surfaceAdvectionX += (previousSurfaceVelocity.x + weather.SurfaceWind.x) * 0.5d * delta;
+            surfaceAdvectionZ += (previousSurfaceVelocity.y + weather.SurfaceWind.y) * 0.5d * delta;
+            previousCloudVelocity = weather.CloudWind;
+            previousSurfaceVelocity = weather.SurfaceWind;
+            lastAdvectionSeconds = weatherSeconds;
+        }
+
+        private void ResetPresentationAdvection(
+            SteppeWeatherSample weather,
+            double weatherSeconds)
+        {
+            cloudAdvectionX = cloudAdvectionZ = 0d;
+            surfaceAdvectionX = surfaceAdvectionZ = 0d;
+            previousCloudVelocity = weather.CloudWind;
+            previousSurfaceVelocity = weather.SurfaceWind;
+            lastAdvectionSeconds = weatherSeconds;
+            advectionUsesFiniteWorld = UsesFiniteWorld;
         }
 
         private void PublishWindShaderState()

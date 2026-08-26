@@ -16,9 +16,8 @@ float _SteppeCloudTransmissionAtFocus;
 float SteppeCloudShadowFromWeather(float3 weather)
 {
     float opticalDepth = saturate(
-        weather.r * 0.25
-        + weather.g * 0.85
-        + weather.b * 0.45);
+        weather.r * 0.32
+        + weather.g * 0.92);
     return smoothstep(0.12, 1.0, opticalDepth);
 }
 

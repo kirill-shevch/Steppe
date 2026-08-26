@@ -2,6 +2,7 @@ using UnityEngine;
 using UnityEngine.Experimental.Rendering;
 using UnityEngine.Rendering;
 using UnityEngine.Rendering.RenderGraphModule;
+using UnityEngine.Rendering.RenderGraphModule.Util;
 using UnityEngine.Rendering.Universal;
 
 namespace Steppe.Rendering
@@ -14,14 +15,19 @@ namespace Steppe.Rendering
     public sealed class SteppeVolumetricCloudRendererFeature : ScriptableRendererFeature
     {
         private const string ShaderName = "Hidden/Steppe/Volumetric Clouds";
+        private const string HeatHazeShaderName = "Hidden/Steppe/Surface Heat Haze";
 
         [SerializeField] private Shader cloudShader;
+        [SerializeField] private Shader heatHazeShader;
 
         private Material cloudMaterial;
+        private Material heatHazeMaterial;
         private VolumetricCloudPass cloudPass;
+        private SurfaceHeatHazePass heatHazePass;
 
         public static bool PresentationActive { get; private set; }
         public Shader CloudShader => cloudShader;
+        public Shader HeatHazeShader => heatHazeShader;
 
         public static void SetPresentationActive(bool active)
         {
@@ -37,8 +43,11 @@ namespace Steppe.Rendering
         public override void Create()
         {
             CoreUtils.Destroy(cloudMaterial);
+            CoreUtils.Destroy(heatHazeMaterial);
             cloudMaterial = null;
+            heatHazeMaterial = null;
             cloudPass = null;
+            heatHazePass = null;
 
             if (cloudShader == null)
             {
@@ -53,6 +62,17 @@ namespace Steppe.Rendering
             cloudMaterial = CoreUtils.CreateEngineMaterial(cloudShader);
             cloudMaterial.name = "Steppe Volumetric Cloud Renderer Material";
             cloudPass = new VolumetricCloudPass(cloudMaterial);
+
+            if (heatHazeShader == null)
+            {
+                heatHazeShader = Shader.Find(HeatHazeShaderName);
+            }
+            if (heatHazeShader != null)
+            {
+                heatHazeMaterial = CoreUtils.CreateEngineMaterial(heatHazeShader);
+                heatHazeMaterial.name = "Steppe Surface Heat Haze Material";
+                heatHazePass = new SurfaceHeatHazePass(heatHazeMaterial);
+            }
         }
 
         public override void AddRenderPasses(ScriptableRenderer renderer, ref RenderingData renderingData)
@@ -69,13 +89,61 @@ namespace Steppe.Rendering
             }
 
             renderer.EnqueuePass(cloudPass);
+            if (heatHazePass != null)
+            {
+                renderer.EnqueuePass(heatHazePass);
+            }
         }
 
         protected override void Dispose(bool disposing)
         {
             CoreUtils.Destroy(cloudMaterial);
+            CoreUtils.Destroy(heatHazeMaterial);
             cloudMaterial = null;
+            heatHazeMaterial = null;
             cloudPass = null;
+            heatHazePass = null;
+        }
+
+        /// <summary>
+        /// Applies an achromatic, lower-frame refraction after transparent natural
+        /// carriers. Its amplitude is published exclusively by SurfaceTemperature;
+        /// it does not add warmth, fog, dust or any simulation feedback.
+        /// </summary>
+        private sealed class SurfaceHeatHazePass : ScriptableRenderPass
+        {
+            private readonly Material material;
+
+            public SurfaceHeatHazePass(Material heatMaterial)
+            {
+                material = heatMaterial;
+                renderPassEvent = RenderPassEvent.BeforeRenderingPostProcessing;
+                profilingSampler = new ProfilingSampler("Steppe Surface Heat Haze");
+                requiresIntermediateTexture = true;
+            }
+
+            public override void RecordRenderGraph(RenderGraph renderGraph, ContextContainer frameData)
+            {
+                var resources = frameData.Get<UniversalResourceData>();
+                if (resources.isActiveTargetBackBuffer
+                    || !resources.activeColorTexture.IsValid())
+                {
+                    return;
+                }
+
+                var source = resources.activeColorTexture;
+                var descriptor = renderGraph.GetTextureDesc(source);
+                descriptor.name = "_SteppeSurfaceHeatHazeTexture";
+                descriptor.clearBuffer = false;
+                var destination = renderGraph.CreateTexture(descriptor);
+                var parameters = new RenderGraphUtils.BlitMaterialParameters(
+                    source,
+                    destination,
+                    material,
+                    0);
+                renderGraph.AddBlitPass(parameters, "Steppe Surface Heat Haze");
+                resources.cameraColor = destination;
+            }
         }
 
         private sealed class VolumetricCloudPass : ScriptableRenderPass

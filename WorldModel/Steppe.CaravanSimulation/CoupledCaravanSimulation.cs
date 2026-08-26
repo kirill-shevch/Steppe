@@ -20,10 +20,10 @@ public sealed class CoupledCaravanSimulation
         double tickHours = 3d,
         int scoutRadiusCells = 28)
     {
-        ArgumentNullException.ThrowIfNull(world);
-        ArgumentNullException.ThrowIfNull(caravan);
-        ArgumentNullException.ThrowIfNull(policy);
-        if (!double.IsFinite(tickHours) || tickHours <= 0d || tickHours > 24d)
+        RuntimeCompatibility.ThrowIfNull(world, nameof(world));
+        RuntimeCompatibility.ThrowIfNull(caravan, nameof(caravan));
+        RuntimeCompatibility.ThrowIfNull(policy, nameof(policy));
+        if (!RuntimeCompatibility.IsFinite(tickHours) || tickHours <= 0d || tickHours > 24d)
             throw new ArgumentOutOfRangeException(nameof(tickHours));
         if (scoutRadiusCells < 0 || scoutRadiusCells > Math.Max(world.Config.Width, world.Config.Height))
             throw new ArgumentOutOfRangeException(nameof(scoutRadiusCells));

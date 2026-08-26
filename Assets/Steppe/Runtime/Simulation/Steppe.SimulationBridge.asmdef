@@ -1,0 +1,16 @@
+{
+  "name": "Steppe.SimulationBridge",
+  "rootNamespace": "Steppe.UnitySimulation",
+  "references": [],
+  "includePlatforms": [],
+  "excludePlatforms": [],
+  "allowUnsafeCode": false,
+  "overrideReferences": true,
+  "precompiledReferences": [
+    "Steppe.Simulation.dll"
+  ],
+  "autoReferenced": false,
+  "defineConstraints": [],
+  "versionDefines": [],
+  "noEngineReferences": false
+}

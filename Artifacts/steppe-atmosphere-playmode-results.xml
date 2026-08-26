@@ -1,0 +1,34 @@
+<?xml version="1.0" encoding="utf-8"?>
+<test-run id="2" testcasecount="1" result="Passed" total="1" passed="1" failed="0" inconclusive="0" skipped="0" asserts="0" engine-version="3.5.0.0" clr-version="4.0.30319.42000" start-time="2026-08-25 17:57:33Z" end-time="2026-08-25 17:57:33Z" duration="0.4603892">
+  <test-suite type="TestSuite" id="1028" name="Steppe" fullname="Steppe" runstate="Runnable" testcasecount="18" result="Passed" start-time="2026-08-25 17:57:33Z" end-time="2026-08-25 17:57:33Z" duration="0.460389" total="1" passed="1" failed="0" inconclusive="0" skipped="0" asserts="0">
+    <properties>
+      <property name="platform" value="PlayMode" />
+    </properties>
+    <test-suite type="Assembly" id="1022" name="Steppe.Tests.PlayMode.dll" fullname="C:/Projects/Steppe/Steppe/Library/ScriptAssemblies/Steppe.Tests.PlayMode.dll" runstate="Runnable" testcasecount="18" result="Passed" start-time="2026-08-25 17:57:33Z" end-time="2026-08-25 17:57:33Z" duration="0.441746" total="1" passed="1" failed="0" inconclusive="0" skipped="0" asserts="0">
+      <properties>
+        <property name="_PID" value="2740" />
+        <property name="_APPDOMAIN" value="Unity Child Domain" />
+        <property name="platform" value="PlayMode" />
+        <property name="EditorOnly" value="False" />
+      </properties>
+      <test-suite type="TestSuite" id="1023" name="Steppe" fullname="Steppe" runstate="Runnable" testcasecount="18" result="Passed" start-time="2026-08-25 17:57:33Z" end-time="2026-08-25 17:57:33Z" duration="0.429705" total="1" passed="1" failed="0" inconclusive="0" skipped="0" asserts="0">
+        <properties />
+        <test-suite type="TestSuite" id="1024" name="Tests" fullname="Steppe.Tests" runstate="Runnable" testcasecount="18" result="Passed" start-time="2026-08-25 17:57:33Z" end-time="2026-08-25 17:57:33Z" duration="0.386458" total="1" passed="1" failed="0" inconclusive="0" skipped="0" asserts="0">
+          <properties />
+          <test-suite type="TestFixture" id="1001" name="P0RuntimeSmokeTests" fullname="Steppe.Tests.P0RuntimeSmokeTests" classname="Steppe.Tests.P0RuntimeSmokeTests" runstate="Runnable" testcasecount="16" result="Passed" start-time="2026-08-25 17:57:33Z" end-time="2026-08-25 17:57:33Z" duration="0.374118" total="1" passed="1" failed="0" inconclusive="0" skipped="0" asserts="0">
+            <properties />
+            <test-case id="1015" name="SemanticAtmosphereReadsEightAuthoritativeStatesWithoutChannelOverlap" fullname="Steppe.Tests.P0RuntimeSmokeTests.SemanticAtmosphereReadsEightAuthoritativeStatesWithoutChannelOverlap" methodname="SemanticAtmosphereReadsEightAuthoritativeStatesWithoutChannelOverlap" classname="Steppe.Tests.P0RuntimeSmokeTests" runstate="Runnable" seed="1649692411" result="Passed" start-time="2026-08-25 17:57:33Z" end-time="2026-08-25 17:57:33Z" duration="0.347074" asserts="0">
+              <properties>
+                <property name="_JOINTYPE" value="UnityCombinatorial" />
+                <property name="retryIteration" value="0" />
+                <property name="repeatIteration" value="0" />
+              </properties>
+              <output><![CDATA[Saving results to: C:/Users/Kirill/AppData/LocalLow/DefaultCompany/Steppe\TestResults.xml
+]]></output>
+            </test-case>
+          </test-suite>
+        </test-suite>
+      </test-suite>
+    </test-suite>
+  </test-suite>
+</test-run>

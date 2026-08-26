@@ -15,12 +15,12 @@ internal sealed class WorldFluxState
 
     public WorldFluxState(int cellCount)
     {
-        fluxValues = NewFields(Enum.GetValues<SimulationFlux>().Length, cellCount);
-        vectorX = NewFields(Enum.GetValues<VectorProcess>().Length, cellCount);
-        vectorY = NewFields(Enum.GetValues<VectorProcess>().Length, cellCount);
-        vectorGross = NewFields(Enum.GetValues<VectorProcess>().Length, cellCount);
-        stateBefore = NewFields(Enum.GetValues<SimulationLayer>().Length, cellCount);
-        stateDeltas = NewFields(Enum.GetValues<SimulationLayer>().Length, cellCount);
+        fluxValues = NewFields(RuntimeCompatibility.GetEnumValues<SimulationFlux>().Length, cellCount);
+        vectorX = NewFields(RuntimeCompatibility.GetEnumValues<VectorProcess>().Length, cellCount);
+        vectorY = NewFields(RuntimeCompatibility.GetEnumValues<VectorProcess>().Length, cellCount);
+        vectorGross = NewFields(RuntimeCompatibility.GetEnumValues<VectorProcess>().Length, cellCount);
+        stateBefore = NewFields(RuntimeCompatibility.GetEnumValues<SimulationLayer>().Length, cellCount);
+        stateDeltas = NewFields(RuntimeCompatibility.GetEnumValues<SimulationLayer>().Length, cellCount);
     }
 
     public double PeriodHours { get; private set; }
@@ -30,25 +30,25 @@ internal sealed class WorldFluxState
         PeriodHours = 0;
         foreach (var field in fluxValues)
         {
-            Array.Clear(field);
+            RuntimeCompatibility.Clear(field);
         }
 
         foreach (var field in vectorX)
         {
-            Array.Clear(field);
+            RuntimeCompatibility.Clear(field);
         }
 
         foreach (var field in vectorY)
         {
-            Array.Clear(field);
+            RuntimeCompatibility.Clear(field);
         }
 
         foreach (var field in vectorGross)
         {
-            Array.Clear(field);
+            RuntimeCompatibility.Clear(field);
         }
 
-        foreach (var layer in Enum.GetValues<SimulationLayer>())
+        foreach (var layer in RuntimeCompatibility.GetEnumValues<SimulationLayer>())
         {
             var field = stateBefore[(int)layer];
             for (var index = 0; index < field.Length; index++)
@@ -61,7 +61,7 @@ internal sealed class WorldFluxState
     public void Complete(double periodHours, Func<SimulationLayer, int, float> sample)
     {
         PeriodHours = periodHours;
-        foreach (var layer in Enum.GetValues<SimulationLayer>())
+        foreach (var layer in RuntimeCompatibility.GetEnumValues<SimulationLayer>())
         {
             var before = stateBefore[(int)layer];
             var delta = stateDeltas[(int)layer];

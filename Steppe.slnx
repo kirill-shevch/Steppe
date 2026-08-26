@@ -1,8 +1,9 @@
 ﻿<Solution>
-  <Project Path="Assembly-CSharp.csproj" />
-  <Project Path="UnityVersionCompatibility.csproj" />
   <Project Path="Steppe.Runtime.csproj" />
-  <Project Path="Assembly-CSharp-Editor.csproj" />
+  <Project Path="Assembly-CSharp.csproj" />
   <Project Path="Steppe.Tests.EditMode.csproj" />
+  <Project Path="UnityVersionCompatibility.csproj" />
+  <Project Path="Assembly-CSharp-Editor.csproj" />
+  <Project Path="Steppe.SimulationBridge.csproj" />
   <Project Path="Steppe.Tests.PlayMode.csproj" />
 </Solution>

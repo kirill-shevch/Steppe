@@ -154,8 +154,8 @@ internal sealed class WorldEventLog
 
     private readonly Queue<WorldRegimeMetrics> trend = new(TrendSamples);
     private readonly Queue<WorldRegimeEvent> completed = new(CompletedCapacity);
-    private readonly Dictionary<WorldEventKind, EventTracker> trackers = Enum
-        .GetValues<WorldEventKind>()
+    private readonly Dictionary<WorldEventKind, EventTracker> trackers = RuntimeCompatibility
+        .GetEnumValues<WorldEventKind>()
         .ToDictionary(kind => kind, kind => new EventTracker(WorldEventCatalog.Get(kind)));
     private long nextId = 1;
     private WorldRegimeMetrics? current;

@@ -31,8 +31,8 @@ public sealed class CaravanSimulation
         float initialXCells,
         float initialYCells)
     {
-        ArgumentNullException.ThrowIfNull(blueprint);
-        if (!float.IsFinite(initialXCells) || !float.IsFinite(initialYCells))
+        RuntimeCompatibility.ThrowIfNull(blueprint, nameof(blueprint));
+        if (!RuntimeCompatibility.IsFinite(initialXCells) || !RuntimeCompatibility.IsFinite(initialYCells))
         {
             throw new ArgumentOutOfRangeException(nameof(initialXCells));
         }
@@ -46,6 +46,308 @@ public sealed class CaravanSimulation
 
     public CaravanStateSnapshot Capture() => state.Capture();
     public CaravanBlueprint Blueprint => state.Blueprint;
+
+    /// <summary>
+    /// Advances only slow caravan physiology. The caller remains authoritative for
+    /// vehicle movement, fast equipment networks and all exchanges with the world.
+    /// Optional external stores are synchronized at the tick boundary and the
+    /// returned state contains the maintenance/growth result to apply atomically.
+    /// </summary>
+    public CaravanEmbeddedStepResult AdvanceEmbedded(CaravanEmbeddedStepInput input)
+    {
+        RuntimeCompatibility.ThrowIfNull(input, nameof(input));
+        ValidateEmbeddedInput(input);
+        SynchronizeEmbeddedState(input);
+
+        var accounting = StepAccounting.Start(state);
+        var actions = new List<CaravanActionRecord>(20);
+        var usages = RuntimeCompatibility.GetEnumValues<CaravanOrganKind>()
+            .ToDictionary(kind => kind, kind => Math.Clamp(
+                input.OrganUsage.GetValueOrDefault(kind),
+                0f,
+                1.5f));
+        ApplyGrowthPriorities(input.GrowthPriorities);
+        var observation = CreateEmbeddedObservation(input);
+        var wasHibernating = state.IsHibernating;
+
+        float thermalFulfillment;
+        if (wasHibernating)
+        {
+            var alpha = 1f - MathF.Exp(-(float)input.Hours / (24f * 4f));
+            state.BodyTemperatureC +=
+                (input.AirTemperatureC - state.BodyTemperatureC) * alpha;
+            thermalFulfillment = state.BodyTemperatureC is >= -20f and <= 38f ? 1f : 0f;
+        }
+        else
+        {
+            thermalFulfillment = RegulateTemperature(
+                observation,
+                accounting,
+                actions,
+                usages,
+                input.Hours);
+        }
+
+        var maintenance = ConsumeMaintenance(
+            observation,
+            accounting,
+            actions,
+            usages,
+            input.Hours,
+            wasHibernating ? HibernationMetabolicFraction : 1f);
+        var waterFulfillment = Fulfillment(
+            maintenance.WaterDemand,
+            maintenance.WaterConsumed);
+        var organicFulfillment = Fulfillment(
+            maintenance.OrganicDemand,
+            maintenance.OrganicConsumed);
+        var nitrogenFulfillment = Fulfillment(
+            maintenance.NitrogenDemand,
+            maintenance.NitrogenConsumed);
+        organicFulfillment = Math.Min(organicFulfillment, nitrogenFulfillment);
+        var electricityFulfillment = Fulfillment(
+            maintenance.ElectricityDemand,
+            maintenance.ElectricityConsumed);
+        var maintenanceFulfillment = Math.Min(
+            Math.Min(waterFulfillment, organicFulfillment),
+            electricityFulfillment);
+
+        ApplyMaintenanceToOrgans(
+            wasHibernating
+                ? 0.8f + maintenanceFulfillment * 0.2f
+                : maintenanceFulfillment * (0.75f + thermalFulfillment * 0.25f),
+            input.Hours);
+        if (wasHibernating)
+        {
+            state.CurrentHibernationHours += (float)input.Hours;
+            state.CumulativeHibernationHours += (float)input.Hours;
+            state.WaterDeficitHours = UpdateDormantStressDebt(
+                state.WaterDeficitHours,
+                waterFulfillment,
+                input.Hours);
+            state.OrganicDeficitHours = UpdateDormantStressDebt(
+                state.OrganicDeficitHours,
+                organicFulfillment,
+                input.Hours);
+            state.ThermalDeficitHours = UpdateDormantStressDebt(
+                state.ThermalDeficitHours,
+                thermalFulfillment,
+                input.Hours);
+            ApplyAtrophy(accounting, actions, input.Hours);
+            TryWakeEmbedded(actions);
+        }
+        else
+        {
+            GrowAndAtrophy(
+                waterFulfillment,
+                organicFulfillment,
+                thermalFulfillment,
+                accounting,
+                actions,
+                usages,
+                input.Hours);
+            UpdateHibernationState(
+                waterFulfillment,
+                organicFulfillment,
+                thermalFulfillment,
+                actions,
+                input.Hours);
+        }
+
+        foreach (var organ in state.Organs.Values)
+        {
+            organ.RecordUsage(usages[organ.Definition.Kind], input.Hours);
+        }
+
+        ClampStores(accounting);
+        state.DistanceKilometers += input.ExternalDistanceKilometers;
+        state.SimulatedHours += input.Hours;
+        state.RecordActivity(wasHibernating
+            ? CaravanActivity.Hibernate
+            : CaravanActivity.Maintain);
+        state.RecordRegime(observation.Regime, input.Hours);
+        return new CaravanEmbeddedStepResult(
+            state.Capture(),
+            accounting.Complete(state),
+            actions.ToArray(),
+            waterFulfillment,
+            organicFulfillment,
+            nitrogenFulfillment,
+            thermalFulfillment);
+    }
+
+    private static void ValidateEmbeddedInput(CaravanEmbeddedStepInput input)
+    {
+        if (!RuntimeCompatibility.IsFinite(input.Hours)
+            || input.Hours <= 0d
+            || input.Hours > 24d)
+            throw new ArgumentOutOfRangeException(nameof(input.Hours));
+        if (input.WorldWidthCells <= 0 || input.WorldHeightCells <= 0)
+            throw new ArgumentOutOfRangeException(nameof(input.WorldWidthCells));
+        if (!RuntimeCompatibility.IsFinite(input.CellSizeMeters) || input.CellSizeMeters <= 0f)
+            throw new ArgumentOutOfRangeException(nameof(input.CellSizeMeters));
+        ValidateOptionalStore(input.ExternalWaterLiters, nameof(input.ExternalWaterLiters));
+        ValidateOptionalStore(input.ExternalWetOrganicDryKg, nameof(input.ExternalWetOrganicDryKg));
+        ValidateOptionalStore(input.ExternalWetOrganicWaterLiters, nameof(input.ExternalWetOrganicWaterLiters));
+        ValidateOptionalStore(input.ExternalDryOrganicKg, nameof(input.ExternalDryOrganicKg));
+        ValidateOptionalStore(input.ExternalElectricityKwh, nameof(input.ExternalElectricityKwh));
+        if (input.ExternalBodyTemperatureC.HasValue
+            && !RuntimeCompatibility.IsFinite(input.ExternalBodyTemperatureC.Value))
+            throw new ArgumentOutOfRangeException(nameof(input.ExternalBodyTemperatureC));
+        if (!RuntimeCompatibility.IsFinite(input.ExternalDistanceKilometers)
+            || input.ExternalDistanceKilometers < 0f)
+            throw new ArgumentOutOfRangeException(nameof(input.ExternalDistanceKilometers));
+        RuntimeCompatibility.ThrowIfNull(input.OrganUsage, nameof(input.OrganUsage));
+        RuntimeCompatibility.ThrowIfNull(input.GrowthPriorities, nameof(input.GrowthPriorities));
+    }
+
+    private static void ValidateOptionalStore(float? value, string parameterName)
+    {
+        if (value.HasValue
+            && (!RuntimeCompatibility.IsFinite(value.Value) || value.Value < 0f))
+            throw new ArgumentOutOfRangeException(parameterName);
+    }
+
+    private void SynchronizeEmbeddedState(CaravanEmbeddedStepInput input)
+    {
+        state.XCells = Math.Clamp(input.XCells, 0f, input.WorldWidthCells - 1f);
+        state.YCells = Math.Clamp(input.YCells, 0f, input.WorldHeightCells - 1f);
+        if (input.ExternalWaterLiters.HasValue)
+        {
+            state.WaterLiters = Math.Min(
+                state.WaterCapacityLiters,
+                input.ExternalWaterLiters.Value);
+        }
+
+        if (input.ExternalWetOrganicDryKg.HasValue
+            && input.ExternalWetOrganicWaterLiters.HasValue
+            && input.ExternalDryOrganicKg.HasValue)
+        {
+            var organicBefore = state.WetOrganicDryKg + state.DryOrganicKg;
+            state.WetOrganicDryKg = input.ExternalWetOrganicDryKg.Value;
+            state.WetOrganicWaterLiters = input.ExternalWetOrganicWaterLiters.Value;
+            state.DryOrganicKg = input.ExternalDryOrganicKg.Value;
+            var organicAfter = state.WetOrganicDryKg + state.DryOrganicKg;
+            if (organicAfter < organicBefore && organicBefore > 1e-6f)
+            {
+                state.OrganicNitrogenKg *= organicAfter / organicBefore;
+            }
+        }
+
+        if (input.ExternalElectricityKwh.HasValue)
+        {
+            state.StoredElectricityKwh = Math.Min(
+                state.BatteryCapacityKwh,
+                input.ExternalElectricityKwh.Value);
+        }
+
+        if (input.ExternalBodyTemperatureC.HasValue)
+        {
+            state.BodyTemperatureC = input.ExternalBodyTemperatureC.Value;
+        }
+    }
+
+    private static CaravanObservation CreateEmbeddedObservation(
+        CaravanEmbeddedStepInput input)
+    {
+        var cell = new CellSnapshot(
+            (int)MathF.Round(input.XCells),
+            (int)MathF.Round(input.YCells),
+            0f,
+            0f,
+            0,
+            input.SurfaceTemperatureC,
+            input.SurfaceTemperatureC,
+            input.AirTemperatureC,
+            1013.25f,
+            input.HumidityMm,
+            0f,
+            input.WindXMs,
+            input.WindYMs,
+            input.PrecipitationMmPerHour,
+            input.SurfaceWaterMm,
+            0f,
+            0f,
+            input.SnowWaterEquivalentMm,
+            0f,
+            input.LiveBiomassGm2,
+            input.DryBiomassGm2,
+            0f,
+            0f,
+            0f,
+            0f,
+            input.DustGm2,
+            0f,
+            input.BurnScarFraction,
+            "embedded Unity sample",
+            null,
+            null,
+            new[]
+            {
+                new CellStateValue(
+                    SimulationLayer.SolarRadiation,
+                    input.SolarRadiationWm2)
+            });
+        return new CaravanObservation(
+            input.Year,
+            input.DayOfYear,
+            input.HourOfDay,
+            input.XCells,
+            input.YCells,
+            input.WorldWidthCells,
+            input.WorldHeightCells,
+            input.CellSizeMeters,
+            cell,
+            new CaravanOpportunityScan(
+                cell.X,
+                cell.Y,
+                0,
+                Array.Empty<CaravanFlowReading>(),
+                Array.Empty<CaravanOpportunity>()),
+            ClassifyEmbeddedRegime(input));
+    }
+
+    private static CaravanRegime ClassifyEmbeddedRegime(
+        CaravanEmbeddedStepInput input)
+    {
+        var regime = CaravanRegime.None;
+        var wind = MathF.Sqrt(input.WindXMs * input.WindXMs + input.WindYMs * input.WindYMs);
+        if (input.SurfaceWaterMm > 0.5f) regime |= CaravanRegime.WaterRich;
+        if (input.LiveBiomassGm2 + input.DryBiomassGm2 > 150f) regime |= CaravanRegime.BiomassRich;
+        if (input.SolarRadiationWm2 > 520f) regime |= CaravanRegime.SolarRich;
+        if (wind > 7.5f) regime |= CaravanRegime.WindRich;
+        if (input.AirTemperatureC < 2f || input.SnowWaterEquivalentMm > 1f) regime |= CaravanRegime.ColdOrSnow;
+        if (input.DustGm2 > 0.08f) regime |= CaravanRegime.DustStressed;
+        if (input.SurfaceWaterMm > 10f) regime |= CaravanRegime.Flooded;
+        if (input.BurnScarFraction > 0.15f) regime |= CaravanRegime.PostFire;
+        return regime;
+    }
+
+    private void TryWakeEmbedded(List<CaravanActionRecord> actions)
+    {
+        var structuralMass = state.TotalStructuralMassKg;
+        var hasWater = state.WaterLiters
+            >= Math.Max(5f, structuralMass * StructuralWaterLitersPerKgDay * 0.5f);
+        var hasOrganic = state.WetOrganicDryKg + state.DryOrganicKg
+            >= Math.Max(0.5f, structuralMass * StructuralOrganicKgPerKgDay * 0.5f);
+        var hasElectricity = state.StoredElectricityKwh
+            >= Math.Max(0.25f, structuralMass * StructuralElectricityKwhPerKgDay * 0.5f);
+        var recovered = state.WaterDeficitHours <= 6f
+            && state.OrganicDeficitHours <= 6f
+            && state.ThermalDeficitHours <= 6f;
+        var stable = state.BodyTemperatureC is >= 4f and <= 32f
+            && state.TotalMassKg <= state.FrameCapacityKg * 1.25f
+            && state.StructuralOverloadHours < 30f * 24f;
+        if (!hasWater || !hasOrganic || !hasElectricity || !recovered || !stable)
+        {
+            return;
+        }
+
+        state.OperatingMode = CaravanOperatingMode.Active;
+        state.HibernationReason = CaravanHibernationReason.None;
+        state.CurrentHibernationHours = 0f;
+        AddAction(actions, "leave hibernation", 1f, "эпизод");
+    }
 
     internal CaravanPhysicalExchangeRequest BuildIntakeRequest(
         CaravanObservation observation,
@@ -177,7 +479,7 @@ public sealed class CaravanSimulation
 
         var accounting = StepAccounting.Start(state);
         var actions = new List<CaravanActionRecord>(24);
-        var usages = Enum.GetValues<CaravanOrganKind>().ToDictionary(item => item, _ => 0f);
+        var usages = RuntimeCompatibility.GetEnumValues<CaravanOrganKind>().ToDictionary(item => item, _ => 0f);
 
         ApplyGrowthPriorities(decision.GrowthPriorities);
         ApplyIntake(intake, accounting, actions, usages, hours);
@@ -1050,7 +1352,7 @@ public sealed class CaravanSimulation
     {
         var accounting = StepAccounting.Start(state);
         var actions = new List<CaravanActionRecord>(12);
-        var usages = Enum.GetValues<CaravanOrganKind>().ToDictionary(item => item, _ => 0f);
+        var usages = RuntimeCompatibility.GetEnumValues<CaravanOrganKind>().ToDictionary(item => item, _ => 0f);
         var stepHours = (float)hours;
         state.CurrentHibernationHours += stepHours;
         state.CumulativeHibernationHours += stepHours;
@@ -1272,7 +1574,7 @@ public sealed class CaravanSimulation
         string unit,
         CaravanOrganKind? organ = null)
     {
-        if (amount > 1e-7f && float.IsFinite(amount))
+        if (amount > 1e-7f && RuntimeCompatibility.IsFinite(amount))
         {
             actions.Add(new CaravanActionRecord(action, amount, unit, organ));
         }

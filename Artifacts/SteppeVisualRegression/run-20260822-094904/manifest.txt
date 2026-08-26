@@ -1,0 +1,109 @@
+STEPPE UNITY VISUAL REGRESSION
+UTC: 2026-08-22T09:49:04.9313553Z
+Resolution: 1280x720
+States: 43
+The macro snapshot is frozen between day and night so only presentation changes.
+Every -day/-night pair uses the same camera pose and field selection.
+
+state-01-Elevation-day.png	Абсолютная высота	м
+state-02-Slope-day.png	Крутизна склона	м/м
+state-03-Aspect-day.png	Экспозиция склона	рад
+state-04-FaultInfluence-day.png	Влияние разломов	доля
+state-05-RockHardness-day.png	Твёрдость породы	доля
+state-06-DepressionStorage-day.png	Ёмкость впадины	мм
+state-07-Drainage-day.png	Направление стока	связь
+state-08-Catchments-day.png	Водосборы	id
+state-09-SoilDepth-day.png	Глубина почвы	м
+state-10-SandFraction-day.png	Доля песка	доля
+state-11-SiltFraction-day.png	Доля ила	доля
+state-12-ClayFraction-day.png	Доля глины	доля
+state-13-Porosity-day.png	Пористость	доля
+state-14-Permeability-day.png	Проницаемость	мм/ч
+state-15-MineralContent-day.png	Минеральное богатство	доля
+state-16-SoilCompaction-day.png	Уплотнение почвы	доля
+state-17-SolarRadiation-day.png	Солнечная радиация	Вт/м²
+state-18-SurfaceTemperature-day.png	Температура поверхности	°C
+state-19-SoilTemperature-day.png	Температура почвы	°C
+state-20-AirTemperature-day.png	Температура воздуха	°C
+state-21-Pressure-day.png	Давление воздуха	гПа
+state-22-Wind-day.png	Скорость и направление ветра	м/с
+state-23-Humidity-day.png	Влага в воздухе	мм экв.
+state-24-CloudWater-day.png	Облачная вода	мм экв.
+state-25-Precipitation-day.png	Интенсивность осадков	мм/ч
+state-26-SurfaceWater-day.png	Поверхностная вода	мм
+state-27-RootWater-day.png	Вода корневой зоны	мм
+state-28-Groundwater-day.png	Грунтовая вода	мм
+state-29-Snow-day.png	Снежный запас	мм SWE
+state-30-FrozenSoil-day.png	Промерзание почвы	доля
+state-31-LiveBiomass-day.png	Живая биомасса	г/м²
+state-32-DryBiomass-day.png	Сухая стоящая биомасса	г/м²
+state-33-LitterBiomass-day.png	Растительная подстилка	г/м²
+state-34-SeedBank-day.png	Семенной банк	доля
+state-35-SoilOrganicMatter-day.png	Органическое вещество почвы	г/м²
+state-36-AvailableNitrogen-day.png	Доступный азот	г/м²
+state-37-PlantNitrogen-day.png	Азот живых растений	г/м²
+state-38-OrganicNitrogen-day.png	Органический азот	г/м²
+state-39-FireIntensity-day.png	Интенсивность огня	доля
+state-40-BurnScar-day.png	Выгоревший след	доля
+state-41-LooseSediment-day.png	Рыхлый осадочный материал	кг/м²
+state-42-SurfaceCrust-day.png	Поверхностная корка	доля
+state-43-Dust-day.png	Пыль в воздухе	г/м²
+overview-natural-day.png	natural overview
+seam-same-lod-edge-day.png	chunk seam same-lod-edge
+seam-four-chunk-corner-day.png	chunk seam four-chunk-corner
+seam-near-middle-lod-edge-day.png	chunk seam near-middle-lod-edge
+seam-middle-far-lod-edge-day.png	chunk seam middle-far-lod-edge
+state-01-Elevation-night.png	Абсолютная высота	м
+state-02-Slope-night.png	Крутизна склона	м/м
+state-03-Aspect-night.png	Экспозиция склона	рад
+state-04-FaultInfluence-night.png	Влияние разломов	доля
+state-05-RockHardness-night.png	Твёрдость породы	доля
+state-06-DepressionStorage-night.png	Ёмкость впадины	мм
+state-07-Drainage-night.png	Направление стока	связь
+state-08-Catchments-night.png	Водосборы	id
+state-09-SoilDepth-night.png	Глубина почвы	м
+state-10-SandFraction-night.png	Доля песка	доля
+state-11-SiltFraction-night.png	Доля ила	доля
+state-12-ClayFraction-night.png	Доля глины	доля
+state-13-Porosity-night.png	Пористость	доля
+state-14-Permeability-night.png	Проницаемость	мм/ч
+state-15-MineralContent-night.png	Минеральное богатство	доля
+state-16-SoilCompaction-night.png	Уплотнение почвы	доля
+state-17-SolarRadiation-night.png	Солнечная радиация	Вт/м²
+state-18-SurfaceTemperature-night.png	Температура поверхности	°C
+state-19-SoilTemperature-night.png	Температура почвы	°C
+state-20-AirTemperature-night.png	Температура воздуха	°C
+state-21-Pressure-night.png	Давление воздуха	гПа
+state-22-Wind-night.png	Скорость и направление ветра	м/с
+state-23-Humidity-night.png	Влага в воздухе	мм экв.
+state-24-CloudWater-night.png	Облачная вода	мм экв.
+state-25-Precipitation-night.png	Интенсивность осадков	мм/ч
+state-26-SurfaceWater-night.png	Поверхностная вода	мм
+state-27-RootWater-night.png	Вода корневой зоны	мм
+state-28-Groundwater-night.png	Грунтовая вода	мм
+state-29-Snow-night.png	Снежный запас	мм SWE
+state-30-FrozenSoil-night.png	Промерзание почвы	доля
+state-31-LiveBiomass-night.png	Живая биомасса	г/м²
+state-32-DryBiomass-night.png	Сухая стоящая биомасса	г/м²
+state-33-LitterBiomass-night.png	Растительная подстилка	г/м²
+state-34-SeedBank-night.png	Семенной банк	доля
+state-35-SoilOrganicMatter-night.png	Органическое вещество почвы	г/м²
+state-36-AvailableNitrogen-night.png	Доступный азот	г/м²
+state-37-PlantNitrogen-night.png	Азот живых растений	г/м²
+state-38-OrganicNitrogen-night.png	Органический азот	г/м²
+state-39-FireIntensity-night.png	Интенсивность огня	доля
+state-40-BurnScar-night.png	Выгоревший след	доля
+state-41-LooseSediment-night.png	Рыхлый осадочный материал	кг/м²
+state-42-SurfaceCrust-night.png	Поверхностная корка	доля
+state-43-Dust-night.png	Пыль в воздухе	г/м²
+overview-natural-night.png	natural overview
+seam-same-lod-edge-night.png	chunk seam same-lod-edge
+seam-four-chunk-corner-night.png	chunk seam four-chunk-corner
+seam-near-middle-lod-edge-night.png	chunk seam near-middle-lod-edge
+seam-middle-far-lod-edge-night.png	chunk seam middle-far-lod-edge
+
+NUMERICAL SEAM CHECKS
+same LOD edge max delta: 0 m
+near-middle edge max delta: 0 m
+middle-far edge max delta: 0 m
+four-chunk corner max delta: 0 m

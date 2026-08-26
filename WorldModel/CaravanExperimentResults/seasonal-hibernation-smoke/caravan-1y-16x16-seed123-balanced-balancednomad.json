@@ -1,0 +1,3178 @@
+{
+  "seed": 123,
+  "morphology": "balanced",
+  "policy": "BalancedNomad",
+  "years": 1,
+  "size": 16,
+  "cellSizeMeters": 250,
+  "tickHours": 3,
+  "steps": 2920,
+  "firstHibernationAtHours": 7572,
+  "waterScarcityHours": 0,
+  "organicScarcityHours": 0,
+  "thermalScarcityHours": 105,
+  "maximumWaterScarcityStreakHours": 0,
+  "maximumOrganicScarcityStreakHours": 0,
+  "maximumThermalScarcityStreakHours": 51,
+  "maximumInternalLedgerError": 0.001953125,
+  "usedOrgans": 15,
+  "nicheKinds": 6,
+  "actionCounts": {
+    "harvest live biomass": 47,
+    "harvest dry biomass": 684,
+    "burn dry organic matter": 2448,
+    "power intake and harvest": 1349,
+    "heat caravan": 1960,
+    "reject heat": 2556,
+    "maintain caravan water circuit": 2907,
+    "maintain living structure": 2907,
+    "maintain electrical systems": 2881,
+    "move": 1411,
+    "movement water loss": 1411,
+    "movement organic maintenance": 1411,
+    "grow \u041F\u0430\u0440\u0443\u0441": 471,
+    "grow \u0421\u043E\u043B\u043D\u0435\u0447\u043D\u044B\u0439 \u043B\u0438\u0441\u0442": 605,
+    "grow \u0420\u0435\u0437\u0435\u0440\u0432\u0443\u0430\u0440": 480,
+    "grow \u041E\u0440\u0433\u0430\u043D\u0438\u0447\u0435\u0441\u043A\u043E\u0435 \u0445\u0440\u0430\u043D\u0438\u043B\u0438\u0449\u0435": 935,
+    "grow \u041A\u0430\u0440\u043A\u0430\u0441": 476,
+    "capture dust": 824,
+    "generate solar electricity": 1410,
+    "grow \u0412\u043E\u0434\u043E\u0437\u0430\u0431\u043E\u0440": 9,
+    "grow \u0421\u043D\u0435\u0433\u043E\u0441\u0431\u043E\u0440\u043D\u0438\u043A": 9,
+    "grow \u0422\u0435\u043F\u043B\u043E\u0432\u043E\u0439 \u043E\u0440\u0433\u0430\u043D": 9,
+    "collect snow": 1,
+    "melt collected snow": 9,
+    "withdraw surface water": 76,
+    "grow \u0421\u0431\u043E\u0440\u0449\u0438\u043A \u0441\u0443\u0445\u043E\u0439 \u043C\u0430\u0441\u0441\u044B": 464,
+    "grow \u0411\u0438\u043E\u0440\u0435\u0430\u043A\u0442\u043E\u0440 / \u0442\u043E\u043F\u043A\u0430": 464,
+    "collect chitin": 10,
+    "spoil wet organic matter": 2114,
+    "grow \u0420\u043E\u0441\u0442\u043E\u0432\u0430\u044F \u0442\u043A\u0430\u043D\u044C": 5,
+    "grow \u0421\u0443\u0448\u0438\u043B\u044C\u043D\u044B\u0439 \u043E\u0440\u0433\u0430\u043D": 134,
+    "grow \u041E\u0445\u043B\u0430\u0436\u0434\u0430\u044E\u0449\u0438\u0439 \u043E\u0440\u0433\u0430\u043D": 134,
+    "atrophy \u0421\u0443\u0448\u0438\u043B\u044C\u043D\u044B\u0439 \u043E\u0440\u0433\u0430\u043D": 1319,
+    "atrophy \u0422\u0435\u043F\u043B\u043E\u0432\u043E\u0439 \u043E\u0440\u0433\u0430\u043D": 1406,
+    "atrophy \u0421\u043D\u0435\u0433\u043E\u0441\u0431\u043E\u0440\u043D\u0438\u043A": 2081,
+    "enter hibernation": 1,
+    "hibernate": 13,
+    "leave hibernation": 1
+  },
+  "actionFrequencyPerYear": {
+    "harvest live biomass": 47,
+    "harvest dry biomass": 684,
+    "burn dry organic matter": 2448,
+    "power intake and harvest": 1349,
+    "heat caravan": 1960,
+    "reject heat": 2556,
+    "maintain caravan water circuit": 2907,
+    "maintain living structure": 2907,
+    "maintain electrical systems": 2881,
+    "move": 1411,
+    "movement water loss": 1411,
+    "movement organic maintenance": 1411,
+    "grow \u041F\u0430\u0440\u0443\u0441": 471,
+    "grow \u0421\u043E\u043B\u043D\u0435\u0447\u043D\u044B\u0439 \u043B\u0438\u0441\u0442": 605,
+    "grow \u0420\u0435\u0437\u0435\u0440\u0432\u0443\u0430\u0440": 480,
+    "grow \u041E\u0440\u0433\u0430\u043D\u0438\u0447\u0435\u0441\u043A\u043E\u0435 \u0445\u0440\u0430\u043D\u0438\u043B\u0438\u0449\u0435": 935,
+    "grow \u041A\u0430\u0440\u043A\u0430\u0441": 476,
+    "capture dust": 824,
+    "generate solar electricity": 1410,
+    "grow \u0412\u043E\u0434\u043E\u0437\u0430\u0431\u043E\u0440": 9,
+    "grow \u0421\u043D\u0435\u0433\u043E\u0441\u0431\u043E\u0440\u043D\u0438\u043A": 9,
+    "grow \u0422\u0435\u043F\u043B\u043E\u0432\u043E\u0439 \u043E\u0440\u0433\u0430\u043D": 9,
+    "collect snow": 1,
+    "melt collected snow": 9,
+    "withdraw surface water": 76,
+    "grow \u0421\u0431\u043E\u0440\u0449\u0438\u043A \u0441\u0443\u0445\u043E\u0439 \u043C\u0430\u0441\u0441\u044B": 464,
+    "grow \u0411\u0438\u043E\u0440\u0435\u0430\u043A\u0442\u043E\u0440 / \u0442\u043E\u043F\u043A\u0430": 464,
+    "collect chitin": 10,
+    "spoil wet organic matter": 2114,
+    "grow \u0420\u043E\u0441\u0442\u043E\u0432\u0430\u044F \u0442\u043A\u0430\u043D\u044C": 5,
+    "grow \u0421\u0443\u0448\u0438\u043B\u044C\u043D\u044B\u0439 \u043E\u0440\u0433\u0430\u043D": 134,
+    "grow \u041E\u0445\u043B\u0430\u0436\u0434\u0430\u044E\u0449\u0438\u0439 \u043E\u0440\u0433\u0430\u043D": 134,
+    "atrophy \u0421\u0443\u0448\u0438\u043B\u044C\u043D\u044B\u0439 \u043E\u0440\u0433\u0430\u043D": 1319,
+    "atrophy \u0422\u0435\u043F\u043B\u043E\u0432\u043E\u0439 \u043E\u0440\u0433\u0430\u043D": 1406,
+    "atrophy \u0421\u043D\u0435\u0433\u043E\u0441\u0431\u043E\u0440\u043D\u0438\u043A": 2081,
+    "enter hibernation": 1,
+    "hibernate": 13,
+    "leave hibernation": 1
+  },
+  "activityFrequencyPerYear": {
+    "rest": 0,
+    "hibernate": 13,
+    "travel": 1091,
+    "collectWater": 26,
+    "collectSnow": 1,
+    "harvestLiveBiomass": 0,
+    "harvestDryBiomass": 841,
+    "dryOrganicMatter": 935,
+    "collectChitin": 13,
+    "returnResidues": 0,
+    "maintain": 0,
+    "escapeWildfire": 0
+  },
+  "organActiveFraction": {
+    "sail": 0.32808219178082193,
+    "solarLeaf": 0.4315068493150685,
+    "waterIntake": 0.026027397260273973,
+    "snowCollector": 0.002397260273972603,
+    "waterReservoir": 0.9955479452054794,
+    "liveBiomassHarvester": 0.016095890410958904,
+    "dryBiomassCollector": 0.2136986301369863,
+    "dryer": 0,
+    "organicStorage": 0.9955479452054794,
+    "furnace": 0.8383561643835616,
+    "battery": 0.7438356164383562,
+    "electricMotor": 0.14794520547945206,
+    "thermalOrgan": 0.49075342465753424,
+    "radiator": 0.864041095890411,
+    "growthTissue": 0.37397260273972605,
+    "frame": 0.9955479452054794
+  },
+  "extrema": {
+    "minimumWaterLiters": 1496.6919,
+    "maximumWaterLiters": 3774.456,
+    "minimumOrganicDryEquivalentKg": 1165.5342,
+    "maximumOrganicDryEquivalentKg": 1961.6989,
+    "minimumElectricityKwh": 0,
+    "maximumElectricityKwh": 279.1119,
+    "minimumStoredHeatKwh": 0,
+    "maximumStoredHeatKwh": 18,
+    "minimumBodyTemperatureC": 7.4147625,
+    "maximumBodyTemperatureC": 24.114422,
+    "minimumTotalMassKg": 20237,
+    "maximumTotalMassKg": 25511.73,
+    "minimumOrganFunctionalFraction": 0.96238536,
+    "minimumWaterFulfillment": 1,
+    "minimumOrganicFulfillment": 1,
+    "minimumThermalFulfillment": 0
+  },
+  "seasonalStatistics": [
+    {
+      "year": 1,
+      "season": "winter",
+      "hours": 2160,
+      "hibernationHours": 0,
+      "distanceKilometers": 291.98005455732346,
+      "waterScarcityHours": 0,
+      "organicScarcityHours": 0,
+      "thermalScarcityHours": 0,
+      "waterLiters": {
+        "minimum": 1496.6919,
+        "mean": 2966.8718,
+        "maximum": 3699.369
+      },
+      "snowWaterLiters": {
+        "minimum": 0,
+        "mean": 1.6337104,
+        "maximum": 155.9195
+      },
+      "wetOrganicDryKg": {
+        "minimum": 304,
+        "mean": 1496.3654,
+        "maximum": 1757.3414
+      },
+      "wetOrganicWaterLiters": {
+        "minimum": 544.8,
+        "mean": 3199.771,
+        "maximum": 3834.3623
+      },
+      "dryOrganicKg": {
+        "minimum": 65.56064,
+        "mean": 211.61304,
+        "maximum": 1218.1431
+      },
+      "organicNitrogenKg": {
+        "minimum": 16.790518,
+        "mean": 21.604753,
+        "maximum": 24.483992
+      },
+      "structuralReserveKg": {
+        "minimum": 853.65137,
+        "mean": 921.94507,
+        "maximum": 1023.38574
+      },
+      "electricityKwh": {
+        "minimum": 179.17397,
+        "mean": 274.75354,
+        "maximum": 279.1117
+      },
+      "storedHeatKwh": {
+        "minimum": 0,
+        "mean": 0.13292848,
+        "maximum": 3.003604
+      },
+      "bodyTemperatureC": {
+        "minimum": 17.999996,
+        "mean": 17.999998,
+        "maximum": 18
+      },
+      "totalMassKg": {
+        "minimum": 20572.918,
+        "mean": 23781.934,
+        "maximum": 25493.328
+      },
+      "activitySteps": {
+        "rest": 0,
+        "hibernate": 0,
+        "travel": 441,
+        "collectWater": 4,
+        "collectSnow": 1,
+        "harvestLiveBiomass": 0,
+        "harvestDryBiomass": 245,
+        "dryOrganicMatter": 24,
+        "collectChitin": 5,
+        "returnResidues": 0,
+        "maintain": 0,
+        "escapeWildfire": 0
+      },
+      "actionCounts": {
+        "harvest live biomass": 18,
+        "harvest dry biomass": 288,
+        "burn dry organic matter": 720,
+        "power intake and harvest": 500,
+        "heat caravan": 720,
+        "reject heat": 720,
+        "maintain caravan water circuit": 720,
+        "maintain living structure": 720,
+        "maintain electrical systems": 720,
+        "move": 288,
+        "movement water loss": 288,
+        "movement organic maintenance": 288,
+        "grow \u041F\u0430\u0440\u0443\u0441": 218,
+        "grow \u0421\u043E\u043B\u043D\u0435\u0447\u043D\u044B\u0439 \u043B\u0438\u0441\u0442": 223,
+        "grow \u0420\u0435\u0437\u0435\u0440\u0432\u0443\u0430\u0440": 222,
+        "grow \u041E\u0440\u0433\u0430\u043D\u0438\u0447\u0435\u0441\u043A\u043E\u0435 \u0445\u0440\u0430\u043D\u0438\u043B\u0438\u0449\u0435": 345,
+        "grow \u041A\u0430\u0440\u043A\u0430\u0441": 219,
+        "capture dust": 350,
+        "generate solar electricity": 274,
+        "grow \u0412\u043E\u0434\u043E\u0437\u0430\u0431\u043E\u0440": 4,
+        "grow \u0421\u043D\u0435\u0433\u043E\u0441\u0431\u043E\u0440\u043D\u0438\u043A": 4,
+        "grow \u0422\u0435\u043F\u043B\u043E\u0432\u043E\u0439 \u043E\u0440\u0433\u0430\u043D": 4,
+        "collect snow": 1,
+        "melt collected snow": 9,
+        "withdraw surface water": 20,
+        "grow \u0421\u0431\u043E\u0440\u0449\u0438\u043A \u0441\u0443\u0445\u043E\u0439 \u043C\u0430\u0441\u0441\u044B": 127,
+        "grow \u0411\u0438\u043E\u0440\u0435\u0430\u043A\u0442\u043E\u0440 / \u0442\u043E\u043F\u043A\u0430": 127,
+        "collect chitin": 4,
+        "spoil wet organic matter": 64,
+        "grow \u0420\u043E\u0441\u0442\u043E\u0432\u0430\u044F \u0442\u043A\u0430\u043D\u044C": 1,
+        "grow \u0421\u0443\u0448\u0438\u043B\u044C\u043D\u044B\u0439 \u043E\u0440\u0433\u0430\u043D": 5,
+        "grow \u041E\u0445\u043B\u0430\u0436\u0434\u0430\u044E\u0449\u0438\u0439 \u043E\u0440\u0433\u0430\u043D": 5,
+        "atrophy \u0421\u043D\u0435\u0433\u043E\u0441\u0431\u043E\u0440\u043D\u0438\u043A": 248,
+        "atrophy \u0421\u0443\u0448\u0438\u043B\u044C\u043D\u044B\u0439 \u043E\u0440\u0433\u0430\u043D": 248
+      },
+      "organs": {
+        "sail": {
+          "size": {
+            "minimum": 160.04839,
+            "mean": 169.15277,
+            "maximum": 178.065
+          },
+          "functionalFraction": {
+            "minimum": 0.97323835,
+            "mean": 0.9931242,
+            "maximum": 1
+          },
+          "meanUsage": 0.16682495,
+          "activeFraction": 0.26666666666666666
+        },
+        "solarLeaf": {
+          "size": {
+            "minimum": 135.00871,
+            "mean": 137.24794,
+            "maximum": 140.03862
+          },
+          "functionalFraction": {
+            "minimum": 0.97323835,
+            "mean": 0.9931242,
+            "maximum": 1
+          },
+          "meanUsage": 0.024971085,
+          "activeFraction": 0.275
+        },
+        "waterIntake": {
+          "size": {
+            "minimum": 280,
+            "mean": 282.56003,
+            "maximum": 284.5644
+          },
+          "functionalFraction": {
+            "minimum": 0.97323835,
+            "mean": 0.9931242,
+            "maximum": 1
+          },
+          "meanUsage": 0.024186254,
+          "activeFraction": 0.027777777777777776
+        },
+        "snowCollector": {
+          "size": {
+            "minimum": 65.15564,
+            "mean": 71.83948,
+            "maximum": 75.08596
+          },
+          "functionalFraction": {
+            "minimum": 0.97323835,
+            "mean": 0.9931242,
+            "maximum": 1
+          },
+          "meanUsage": 0.0027627125,
+          "activeFraction": 0.009722222222222222
+        },
+        "waterReservoir": {
+          "size": {
+            "minimum": 4800.6353,
+            "mean": 4968.173,
+            "maximum": 5143.5483
+          },
+          "functionalFraction": {
+            "minimum": 0.97323835,
+            "mean": 0.9931242,
+            "maximum": 1
+          },
+          "meanUsage": 0.6014164,
+          "activeFraction": 1
+        },
+        "liveBiomassHarvester": {
+          "size": {
+            "minimum": 28,
+            "mean": 28,
+            "maximum": 28
+          },
+          "functionalFraction": {
+            "minimum": 0.97323835,
+            "mean": 0.9931242,
+            "maximum": 1
+          },
+          "meanUsage": 0.022673639,
+          "activeFraction": 0.025
+        },
+        "dryBiomassCollector": {
+          "size": {
+            "minimum": 34,
+            "mean": 34.68586,
+            "maximum": 35.8426
+          },
+          "functionalFraction": {
+            "minimum": 0.97323835,
+            "mean": 0.9931242,
+            "maximum": 1
+          },
+          "meanUsage": 0.1990512,
+          "activeFraction": 0.3277777777777778
+        },
+        "dryer": {
+          "size": {
+            "minimum": 29.657919,
+            "mean": 31.281918,
+            "maximum": 32.02003
+          },
+          "functionalFraction": {
+            "minimum": 0.97323835,
+            "mean": 0.9931242,
+            "maximum": 1
+          },
+          "meanUsage": 0,
+          "activeFraction": 0
+        },
+        "organicStorage": {
+          "size": {
+            "minimum": 2600.4233,
+            "mean": 2810.8018,
+            "maximum": 3100.277
+          },
+          "functionalFraction": {
+            "minimum": 0.97323835,
+            "mean": 0.9931242,
+            "maximum": 1
+          },
+          "meanUsage": 0.61149937,
+          "activeFraction": 1
+        },
+        "furnace": {
+          "size": {
+            "minimum": 75,
+            "mean": 76.1454,
+            "maximum": 78.076546
+          },
+          "functionalFraction": {
+            "minimum": 0.97323835,
+            "mean": 0.9931242,
+            "maximum": 1
+          },
+          "meanUsage": 0.38286808,
+          "activeFraction": 1
+        },
+        "battery": {
+          "size": {
+            "minimum": 280,
+            "mean": 280,
+            "maximum": 280
+          },
+          "functionalFraction": {
+            "minimum": 0.97323835,
+            "mean": 0.9931242,
+            "maximum": 1
+          },
+          "meanUsage": 0.25881085,
+          "activeFraction": 0.5777777777777777
+        },
+        "electricMotor": {
+          "size": {
+            "minimum": 130,
+            "mean": 130,
+            "maximum": 130
+          },
+          "functionalFraction": {
+            "minimum": 0.97323835,
+            "mean": 0.9931242,
+            "maximum": 1
+          },
+          "meanUsage": 0.001788336,
+          "activeFraction": 0.05
+        },
+        "thermalOrgan": {
+          "size": {
+            "minimum": 59.03363,
+            "mean": 62.950344,
+            "maximum": 65.01216
+          },
+          "functionalFraction": {
+            "minimum": 0.97323835,
+            "mean": 0.9931242,
+            "maximum": 1
+          },
+          "meanUsage": 0.027086964,
+          "activeFraction": 1
+        },
+        "radiator": {
+          "size": {
+            "minimum": 80,
+            "mean": 80.416985,
+            "maximum": 81.20113
+          },
+          "functionalFraction": {
+            "minimum": 0.97323835,
+            "mean": 0.9931242,
+            "maximum": 1
+          },
+          "meanUsage": 0.28224814,
+          "activeFraction": 1
+        },
+        "growthTissue": {
+          "size": {
+            "minimum": 1.8,
+            "mean": 1.8212034,
+            "maximum": 1.8562303
+          },
+          "functionalFraction": {
+            "minimum": 0.97323835,
+            "mean": 0.9931242,
+            "maximum": 1
+          },
+          "meanUsage": 0.1509022,
+          "activeFraction": 0.4986111111111111
+        },
+        "frame": {
+          "size": {
+            "minimum": 32000.201,
+            "mean": 32060.047,
+            "maximum": 32126.91
+          },
+          "functionalFraction": {
+            "minimum": 0.97323835,
+            "mean": 0.9931242,
+            "maximum": 1
+          },
+          "meanUsage": 0.7472696,
+          "activeFraction": 1
+        }
+      }
+    },
+    {
+      "year": 1,
+      "season": "spring",
+      "hours": 2208,
+      "hibernationHours": 0,
+      "distanceKilometers": 600.3457547724247,
+      "waterScarcityHours": 0,
+      "organicScarcityHours": 0,
+      "thermalScarcityHours": 0,
+      "waterLiters": {
+        "minimum": 1544.3795,
+        "mean": 2925.4849,
+        "maximum": 3704.6523
+      },
+      "snowWaterLiters": {
+        "minimum": 0,
+        "mean": 0,
+        "maximum": 0
+      },
+      "wetOrganicDryKg": {
+        "minimum": 1527.2662,
+        "mean": 1580.2346,
+        "maximum": 1642.7029
+      },
+      "wetOrganicWaterLiters": {
+        "minimum": 3240.9824,
+        "mean": 3364.9329,
+        "maximum": 3515.7551
+      },
+      "dryOrganicKg": {
+        "minimum": 70.59788,
+        "mean": 136.22324,
+        "maximum": 205.0864
+      },
+      "organicNitrogenKg": {
+        "minimum": 19.3153,
+        "mean": 20.916525,
+        "maximum": 22.685635
+      },
+      "structuralReserveKg": {
+        "minimum": 874.54865,
+        "mean": 888.9373,
+        "maximum": 906.02423
+      },
+      "electricityKwh": {
+        "minimum": 236.92279,
+        "mean": 273.12985,
+        "maximum": 279.1104
+      },
+      "storedHeatKwh": {
+        "minimum": 0,
+        "mean": 0.4549973,
+        "maximum": 5.985216
+      },
+      "bodyTemperatureC": {
+        "minimum": 18,
+        "mean": 18,
+        "maximum": 18
+      },
+      "totalMassKg": {
+        "minimum": 22518.58,
+        "mean": 23909.664,
+        "maximum": 24890.525
+      },
+      "activitySteps": {
+        "rest": 0,
+        "hibernate": 0,
+        "travel": 277,
+        "collectWater": 2,
+        "collectSnow": 0,
+        "harvestLiveBiomass": 0,
+        "harvestDryBiomass": 259,
+        "dryOrganicMatter": 194,
+        "collectChitin": 4,
+        "returnResidues": 0,
+        "maintain": 0,
+        "escapeWildfire": 0
+      },
+      "actionCounts": {
+        "harvest dry biomass": 171,
+        "capture dust": 220,
+        "burn dry organic matter": 736,
+        "power intake and harvest": 368,
+        "heat caravan": 519,
+        "reject heat": 736,
+        "spoil wet organic matter": 736,
+        "maintain caravan water circuit": 736,
+        "maintain living structure": 736,
+        "maintain electrical systems": 736,
+        "grow \u0421\u0431\u043E\u0440\u0449\u0438\u043A \u0441\u0443\u0445\u043E\u0439 \u043C\u0430\u0441\u0441\u044B": 156,
+        "grow \u041E\u0440\u0433\u0430\u043D\u0438\u0447\u0435\u0441\u043A\u043E\u0435 \u0445\u0440\u0430\u043D\u0438\u043B\u0438\u0449\u0435": 275,
+        "grow \u0411\u0438\u043E\u0440\u0435\u0430\u043A\u0442\u043E\u0440 / \u0442\u043E\u043F\u043A\u0430": 156,
+        "move": 450,
+        "movement water loss": 450,
+        "movement organic maintenance": 450,
+        "grow \u041F\u0430\u0440\u0443\u0441": 119,
+        "grow \u0421\u043E\u043B\u043D\u0435\u0447\u043D\u044B\u0439 \u043B\u0438\u0441\u0442": 185,
+        "grow \u0420\u0435\u0437\u0435\u0440\u0432\u0443\u0430\u0440": 120,
+        "grow \u041A\u0430\u0440\u043A\u0430\u0441": 121,
+        "generate solar electricity": 391,
+        "grow \u0420\u043E\u0441\u0442\u043E\u0432\u0430\u044F \u0442\u043A\u0430\u043D\u044C": 2,
+        "collect chitin": 2,
+        "grow \u0412\u043E\u0434\u043E\u0437\u0430\u0431\u043E\u0440": 1,
+        "grow \u0421\u043D\u0435\u0433\u043E\u0441\u0431\u043E\u0440\u043D\u0438\u043A": 1,
+        "grow \u0422\u0435\u043F\u043B\u043E\u0432\u043E\u0439 \u043E\u0440\u0433\u0430\u043D": 1,
+        "withdraw surface water": 18,
+        "grow \u0421\u0443\u0448\u0438\u043B\u044C\u043D\u044B\u0439 \u043E\u0440\u0433\u0430\u043D": 66,
+        "grow \u041E\u0445\u043B\u0430\u0436\u0434\u0430\u044E\u0449\u0438\u0439 \u043E\u0440\u0433\u0430\u043D": 66,
+        "atrophy \u0421\u0443\u0448\u0438\u043B\u044C\u043D\u044B\u0439 \u043E\u0440\u0433\u0430\u043D": 337,
+        "atrophy \u0422\u0435\u043F\u043B\u043E\u0432\u043E\u0439 \u043E\u0440\u0433\u0430\u043D": 488,
+        "harvest live biomass": 6,
+        "atrophy \u0421\u043D\u0435\u0433\u043E\u0441\u0431\u043E\u0440\u043D\u0438\u043A": 402
+      },
+      "organs": {
+        "sail": {
+          "size": {
+            "minimum": 166.75832,
+            "mean": 169.00967,
+            "maximum": 171.29608
+          },
+          "functionalFraction": {
+            "minimum": 1,
+            "mean": 1,
+            "maximum": 1
+          },
+          "meanUsage": 0.34039634,
+          "activeFraction": 0.41983695652173914
+        },
+        "solarLeaf": {
+          "size": {
+            "minimum": 136.18347,
+            "mean": 136.90979,
+            "maximum": 137.81633
+          },
+          "functionalFraction": {
+            "minimum": 1,
+            "mean": 1,
+            "maximum": 1
+          },
+          "meanUsage": 0.22304845,
+          "activeFraction": 0.501358695652174
+        },
+        "waterIntake": {
+          "size": {
+            "minimum": 282.21356,
+            "mean": 282.6381,
+            "maximum": 282.68625
+          },
+          "functionalFraction": {
+            "minimum": 1,
+            "mean": 1,
+            "maximum": 1
+          },
+          "meanUsage": 0.024456521,
+          "activeFraction": 0.024456521739130436
+        },
+        "snowCollector": {
+          "size": {
+            "minimum": 73.0563,
+            "mean": 74.53876,
+            "maximum": 75.103645
+          },
+          "functionalFraction": {
+            "minimum": 1,
+            "mean": 1,
+            "maximum": 1
+          },
+          "meanUsage": 0,
+          "activeFraction": 0
+        },
+        "waterReservoir": {
+          "size": {
+            "minimum": 4927.1016,
+            "mean": 4972.4834,
+            "maximum": 5014.7275
+          },
+          "functionalFraction": {
+            "minimum": 1,
+            "mean": 1,
+            "maximum": 1
+          },
+          "meanUsage": 0.58815145,
+          "activeFraction": 1
+        },
+        "liveBiomassHarvester": {
+          "size": {
+            "minimum": 28,
+            "mean": 28,
+            "maximum": 28
+          },
+          "functionalFraction": {
+            "minimum": 1,
+            "mean": 1,
+            "maximum": 1
+          },
+          "meanUsage": 0.008152174,
+          "activeFraction": 0.008152173913043478
+        },
+        "dryBiomassCollector": {
+          "size": {
+            "minimum": 34.32434,
+            "mean": 34.63772,
+            "maximum": 34.940716
+          },
+          "functionalFraction": {
+            "minimum": 1,
+            "mean": 1,
+            "maximum": 1
+          },
+          "meanUsage": 0.21302998,
+          "activeFraction": 0.22282608695652173
+        },
+        "dryer": {
+          "size": {
+            "minimum": 31.518234,
+            "mean": 31.882322,
+            "maximum": 32.074104
+          },
+          "functionalFraction": {
+            "minimum": 1,
+            "mean": 1,
+            "maximum": 1
+          },
+          "meanUsage": 0,
+          "activeFraction": 0
+        },
+        "organicStorage": {
+          "size": {
+            "minimum": 2726.013,
+            "mean": 2800.726,
+            "maximum": 2872.4707
+          },
+          "functionalFraction": {
+            "minimum": 1,
+            "mean": 1,
+            "maximum": 1
+          },
+          "meanUsage": 0.6129529,
+          "activeFraction": 1
+        },
+        "furnace": {
+          "size": {
+            "minimum": 75.53974,
+            "mean": 76.074066,
+            "maximum": 76.59127
+          },
+          "functionalFraction": {
+            "minimum": 1,
+            "mean": 1,
+            "maximum": 1
+          },
+          "meanUsage": 0.3889945,
+          "activeFraction": 1
+        },
+        "battery": {
+          "size": {
+            "minimum": 280,
+            "mean": 280,
+            "maximum": 280
+          },
+          "functionalFraction": {
+            "minimum": 1,
+            "mean": 1,
+            "maximum": 1
+          },
+          "meanUsage": 0.4715306,
+          "activeFraction": 0.7350543478260869
+        },
+        "electricMotor": {
+          "size": {
+            "minimum": 130,
+            "mean": 130,
+            "maximum": 130
+          },
+          "functionalFraction": {
+            "minimum": 1,
+            "mean": 1,
+            "maximum": 1
+          },
+          "meanUsage": 0.0061249626,
+          "activeFraction": 0.18478260869565216
+        },
+        "thermalOrgan": {
+          "size": {
+            "minimum": 62.869625,
+            "mean": 64.29789,
+            "maximum": 65.01474
+          },
+          "functionalFraction": {
+            "minimum": 1,
+            "mean": 1,
+            "maximum": 1
+          },
+          "meanUsage": 0.0070250174,
+          "activeFraction": 0.3383152173913043
+        },
+        "radiator": {
+          "size": {
+            "minimum": 80.047,
+            "mean": 80.324684,
+            "maximum": 80.65919
+          },
+          "functionalFraction": {
+            "minimum": 1,
+            "mean": 1,
+            "maximum": 1
+          },
+          "meanUsage": 0.3287956,
+          "activeFraction": 1
+        },
+        "growthTissue": {
+          "size": {
+            "minimum": 1.811693,
+            "mean": 1.8246254,
+            "maximum": 1.8341742
+          },
+          "functionalFraction": {
+            "minimum": 1,
+            "mean": 1,
+            "maximum": 1
+          },
+          "meanUsage": 0.15487519,
+          "activeFraction": 0.4701086956521739
+        },
+        "frame": {
+          "size": {
+            "minimum": 32043.059,
+            "mean": 32060.488,
+            "maximum": 32076.732
+          },
+          "functionalFraction": {
+            "minimum": 1,
+            "mean": 1,
+            "maximum": 1
+          },
+          "meanUsage": 0.7458121,
+          "activeFraction": 1
+        }
+      }
+    },
+    {
+      "year": 1,
+      "season": "summer",
+      "hours": 2208,
+      "hibernationHours": 0,
+      "distanceKilometers": 697.6805089116096,
+      "waterScarcityHours": 0,
+      "organicScarcityHours": 0,
+      "thermalScarcityHours": 0,
+      "waterLiters": {
+        "minimum": 1571.9806,
+        "mean": 2545.4155,
+        "maximum": 3705.2573
+      },
+      "snowWaterLiters": {
+        "minimum": 0,
+        "mean": 0,
+        "maximum": 0
+      },
+      "wetOrganicDryKg": {
+        "minimum": 1558.5686,
+        "mean": 1649.174,
+        "maximum": 1738.7943
+      },
+      "wetOrganicWaterLiters": {
+        "minimum": 3340.4607,
+        "mean": 3564.3174,
+        "maximum": 3777.139
+      },
+      "dryOrganicKg": {
+        "minimum": 63.379795,
+        "mean": 138.22894,
+        "maximum": 207.98764
+      },
+      "organicNitrogenKg": {
+        "minimum": 20.348404,
+        "mean": 22.229403,
+        "maximum": 23.902786
+      },
+      "structuralReserveKg": {
+        "minimum": 888.6609,
+        "mean": 919.2346,
+        "maximum": 956.00354
+      },
+      "electricityKwh": {
+        "minimum": 247.78627,
+        "mean": 271.60846,
+        "maximum": 279.11145
+      },
+      "storedHeatKwh": {
+        "minimum": 0,
+        "mean": 0.56689614,
+        "maximum": 3.6427097
+      },
+      "bodyTemperatureC": {
+        "minimum": 18,
+        "mean": 18.28261,
+        "maximum": 24.114422
+      },
+      "totalMassKg": {
+        "minimum": 22698.99,
+        "mean": 23840.707,
+        "maximum": 25242.908
+      },
+      "activitySteps": {
+        "rest": 0,
+        "hibernate": 0,
+        "travel": 257,
+        "collectWater": 10,
+        "collectSnow": 0,
+        "harvestLiveBiomass": 0,
+        "harvestDryBiomass": 251,
+        "dryOrganicMatter": 214,
+        "collectChitin": 4,
+        "returnResidues": 0,
+        "maintain": 0,
+        "escapeWildfire": 0
+      },
+      "actionCounts": {
+        "burn dry organic matter": 736,
+        "reject heat": 736,
+        "spoil wet organic matter": 736,
+        "maintain caravan water circuit": 736,
+        "maintain living structure": 736,
+        "maintain electrical systems": 736,
+        "atrophy \u0421\u043D\u0435\u0433\u043E\u0441\u0431\u043E\u0440\u043D\u0438\u043A": 726,
+        "atrophy \u0421\u0443\u0448\u0438\u043B\u044C\u043D\u044B\u0439 \u043E\u0440\u0433\u0430\u043D": 522,
+        "atrophy \u0422\u0435\u043F\u043B\u043E\u0432\u043E\u0439 \u043E\u0440\u0433\u0430\u043D": 726,
+        "harvest live biomass": 14,
+        "power intake and harvest": 324,
+        "move": 471,
+        "movement water loss": 471,
+        "movement organic maintenance": 471,
+        "harvest dry biomass": 170,
+        "grow \u0421\u0431\u043E\u0440\u0449\u0438\u043A \u0441\u0443\u0445\u043E\u0439 \u043C\u0430\u0441\u0441\u044B": 137,
+        "grow \u041E\u0440\u0433\u0430\u043D\u0438\u0447\u0435\u0441\u043A\u043E\u0435 \u0445\u0440\u0430\u043D\u0438\u043B\u0438\u0449\u0435": 238,
+        "grow \u0411\u0438\u043E\u0440\u0435\u0430\u043A\u0442\u043E\u0440 / \u0442\u043E\u043F\u043A\u0430": 137,
+        "generate solar electricity": 434,
+        "grow \u041F\u0430\u0440\u0443\u0441": 101,
+        "grow \u0421\u043E\u043B\u043D\u0435\u0447\u043D\u044B\u0439 \u043B\u0438\u0441\u0442": 157,
+        "grow \u0420\u0435\u0437\u0435\u0440\u0432\u0443\u0430\u0440": 104,
+        "grow \u041A\u0430\u0440\u043A\u0430\u0441": 103,
+        "grow \u0421\u0443\u0448\u0438\u043B\u044C\u043D\u044B\u0439 \u043E\u0440\u0433\u0430\u043D": 56,
+        "grow \u041E\u0445\u043B\u0430\u0436\u0434\u0430\u044E\u0449\u0438\u0439 \u043E\u0440\u0433\u0430\u043D": 56,
+        "capture dust": 158,
+        "withdraw surface water": 19,
+        "grow \u0412\u043E\u0434\u043E\u0437\u0430\u0431\u043E\u0440": 3,
+        "grow \u0421\u043D\u0435\u0433\u043E\u0441\u0431\u043E\u0440\u043D\u0438\u043A": 3,
+        "grow \u0422\u0435\u043F\u043B\u043E\u0432\u043E\u0439 \u043E\u0440\u0433\u0430\u043D": 3,
+        "collect chitin": 3,
+        "grow \u0420\u043E\u0441\u0442\u043E\u0432\u0430\u044F \u0442\u043A\u0430\u043D\u044C": 2,
+        "heat caravan": 34
+      },
+      "organs": {
+        "sail": {
+          "size": {
+            "minimum": 171.29608,
+            "mean": 173.49686,
+            "maximum": 175.55003
+          },
+          "functionalFraction": {
+            "minimum": 1,
+            "mean": 1,
+            "maximum": 1
+          },
+          "meanUsage": 0.38767612,
+          "activeFraction": 0.4361413043478261
+        },
+        "solarLeaf": {
+          "size": {
+            "minimum": 137.81633,
+            "mean": 138.67647,
+            "maximum": 139.52518
+          },
+          "functionalFraction": {
+            "minimum": 1,
+            "mean": 1,
+            "maximum": 1
+          },
+          "meanUsage": 0.3195702,
+          "activeFraction": 0.5584239130434783
+        },
+        "waterIntake": {
+          "size": {
+            "minimum": 282.68625,
+            "mean": 283.6556,
+            "maximum": 284.0911
+          },
+          "functionalFraction": {
+            "minimum": 1,
+            "mean": 1,
+            "maximum": 1
+          },
+          "meanUsage": 0.024966057,
+          "activeFraction": 0.025815217391304348
+        },
+        "snowCollector": {
+          "size": {
+            "minimum": 69.54943,
+            "mean": 71.29694,
+            "maximum": 73.05128
+          },
+          "functionalFraction": {
+            "minimum": 1,
+            "mean": 1,
+            "maximum": 1
+          },
+          "meanUsage": 0,
+          "activeFraction": 0
+        },
+        "waterReservoir": {
+          "size": {
+            "minimum": 5014.7275,
+            "mean": 5053.227,
+            "maximum": 5086.602
+          },
+          "functionalFraction": {
+            "minimum": 1,
+            "mean": 1,
+            "maximum": 1
+          },
+          "meanUsage": 0.50372016,
+          "activeFraction": 1
+        },
+        "liveBiomassHarvester": {
+          "size": {
+            "minimum": 28,
+            "mean": 28,
+            "maximum": 28
+          },
+          "functionalFraction": {
+            "minimum": 1,
+            "mean": 1,
+            "maximum": 1
+          },
+          "meanUsage": 0.019021738,
+          "activeFraction": 0.019021739130434784
+        },
+        "dryBiomassCollector": {
+          "size": {
+            "minimum": 34.940716,
+            "mean": 35.214226,
+            "maximum": 35.48737
+          },
+          "functionalFraction": {
+            "minimum": 1,
+            "mean": 1,
+            "maximum": 1
+          },
+          "meanUsage": 0.19314009,
+          "activeFraction": 0.23097826086956522
+        },
+        "dryer": {
+          "size": {
+            "minimum": 30.585476,
+            "mean": 31.048012,
+            "maximum": 31.517195
+          },
+          "functionalFraction": {
+            "minimum": 1,
+            "mean": 1,
+            "maximum": 1
+          },
+          "meanUsage": 0,
+          "activeFraction": 0
+        },
+        "organicStorage": {
+          "size": {
+            "minimum": 2872.4707,
+            "mean": 2937.3708,
+            "maximum": 3000.9368
+          },
+          "functionalFraction": {
+            "minimum": 1,
+            "mean": 1,
+            "maximum": 1
+          },
+          "meanUsage": 0.6085004,
+          "activeFraction": 1
+        },
+        "furnace": {
+          "size": {
+            "minimum": 76.59127,
+            "mean": 77.054276,
+            "maximum": 77.51517
+          },
+          "functionalFraction": {
+            "minimum": 1,
+            "mean": 1,
+            "maximum": 1
+          },
+          "meanUsage": 0.3539057,
+          "activeFraction": 1
+        },
+        "battery": {
+          "size": {
+            "minimum": 280,
+            "mean": 280,
+            "maximum": 280
+          },
+          "functionalFraction": {
+            "minimum": 1,
+            "mean": 1,
+            "maximum": 1
+          },
+          "meanUsage": 0.5319403,
+          "activeFraction": 0.8220108695652174
+        },
+        "electricMotor": {
+          "size": {
+            "minimum": 130,
+            "mean": 130,
+            "maximum": 130
+          },
+          "functionalFraction": {
+            "minimum": 1,
+            "mean": 1,
+            "maximum": 1
+          },
+          "meanUsage": 0.0076312926,
+          "activeFraction": 0.24456521739130435
+        },
+        "thermalOrgan": {
+          "size": {
+            "minimum": 59.81553,
+            "mean": 61.33018,
+            "maximum": 62.865303
+          },
+          "functionalFraction": {
+            "minimum": 1,
+            "mean": 1,
+            "maximum": 1
+          },
+          "meanUsage": 4.9073013E-05,
+          "activeFraction": 0
+        },
+        "radiator": {
+          "size": {
+            "minimum": 80.65919,
+            "mean": 80.89921,
+            "maximum": 81.14162
+          },
+          "functionalFraction": {
+            "minimum": 1,
+            "mean": 1,
+            "maximum": 1
+          },
+          "meanUsage": 0.3239918,
+          "activeFraction": 1
+        },
+        "growthTissue": {
+          "size": {
+            "minimum": 1.8341742,
+            "mean": 1.8456367,
+            "maximum": 1.8562303
+          },
+          "functionalFraction": {
+            "minimum": 1,
+            "mean": 1,
+            "maximum": 1
+          },
+          "meanUsage": 0.13516794,
+          "activeFraction": 0.40896739130434784
+        },
+        "frame": {
+          "size": {
+            "minimum": 32076.732,
+            "mean": 32091.223,
+            "maximum": 32104.736
+          },
+          "functionalFraction": {
+            "minimum": 1,
+            "mean": 1,
+            "maximum": 1
+          },
+          "meanUsage": 0.74294466,
+          "activeFraction": 1
+        }
+      }
+    },
+    {
+      "year": 1,
+      "season": "autumn",
+      "hours": 2184,
+      "hibernationHours": 39,
+      "distanceKilometers": 252.6730656325817,
+      "waterScarcityHours": 0,
+      "organicScarcityHours": 0,
+      "thermalScarcityHours": 105,
+      "waterLiters": {
+        "minimum": 1593.0537,
+        "mean": 2621.32,
+        "maximum": 3774.456
+      },
+      "snowWaterLiters": {
+        "minimum": 0,
+        "mean": 0,
+        "maximum": 0
+      },
+      "wetOrganicDryKg": {
+        "minimum": 1649.3129,
+        "mean": 1770.4695,
+        "maximum": 1832.8549
+      },
+      "wetOrganicWaterLiters": {
+        "minimum": 3582.761,
+        "mean": 3857.8315,
+        "maximum": 3999.1262
+      },
+      "dryOrganicKg": {
+        "minimum": 0,
+        "mean": 44.417816,
+        "maximum": 204.35738
+      },
+      "organicNitrogenKg": {
+        "minimum": 21.054005,
+        "mean": 23.688612,
+        "maximum": 26.08815
+      },
+      "structuralReserveKg": {
+        "minimum": 951.15955,
+        "mean": 964.48846,
+        "maximum": 985.6809
+      },
+      "electricityKwh": {
+        "minimum": 0,
+        "mean": 223.0538,
+        "maximum": 279.1119
+      },
+      "storedHeatKwh": {
+        "minimum": 0,
+        "mean": 0.22080721,
+        "maximum": 4.3372173
+      },
+      "bodyTemperatureC": {
+        "minimum": 7.4147625,
+        "mean": 17.658127,
+        "maximum": 18.000004
+      },
+      "totalMassKg": {
+        "minimum": 23126.361,
+        "mean": 24278.129,
+        "maximum": 25511.73
+      },
+      "activitySteps": {
+        "rest": 0,
+        "hibernate": 13,
+        "travel": 116,
+        "collectWater": 10,
+        "collectSnow": 0,
+        "harvestLiveBiomass": 0,
+        "harvestDryBiomass": 86,
+        "dryOrganicMatter": 503,
+        "collectChitin": 0,
+        "returnResidues": 0,
+        "maintain": 0,
+        "escapeWildfire": 0
+      },
+      "actionCounts": {
+        "capture dust": 96,
+        "burn dry organic matter": 256,
+        "power intake and harvest": 157,
+        "reject heat": 364,
+        "spoil wet organic matter": 578,
+        "maintain caravan water circuit": 715,
+        "maintain living structure": 715,
+        "maintain electrical systems": 689,
+        "move": 202,
+        "movement water loss": 202,
+        "movement organic maintenance": 202,
+        "atrophy \u0421\u043D\u0435\u0433\u043E\u0441\u0431\u043E\u0440\u043D\u0438\u043A": 705,
+        "atrophy \u0421\u0443\u0448\u0438\u043B\u044C\u043D\u044B\u0439 \u043E\u0440\u0433\u0430\u043D": 212,
+        "atrophy \u0422\u0435\u043F\u043B\u043E\u0432\u043E\u0439 \u043E\u0440\u0433\u0430\u043D": 192,
+        "harvest dry biomass": 55,
+        "heat caravan": 687,
+        "grow \u0421\u0431\u043E\u0440\u0449\u0438\u043A \u0441\u0443\u0445\u043E\u0439 \u043C\u0430\u0441\u0441\u044B": 44,
+        "grow \u041E\u0440\u0433\u0430\u043D\u0438\u0447\u0435\u0441\u043A\u043E\u0435 \u0445\u0440\u0430\u043D\u0438\u043B\u0438\u0449\u0435": 77,
+        "grow \u0411\u0438\u043E\u0440\u0435\u0430\u043A\u0442\u043E\u0440 / \u0442\u043E\u043F\u043A\u0430": 44,
+        "grow \u041F\u0430\u0440\u0443\u0441": 33,
+        "grow \u0421\u043E\u043B\u043D\u0435\u0447\u043D\u044B\u0439 \u043B\u0438\u0441\u0442": 40,
+        "grow \u0420\u0435\u0437\u0435\u0440\u0432\u0443\u0430\u0440": 34,
+        "grow \u041A\u0430\u0440\u043A\u0430\u0441": 33,
+        "generate solar electricity": 311,
+        "withdraw surface water": 19,
+        "grow \u0421\u0443\u0448\u0438\u043B\u044C\u043D\u044B\u0439 \u043E\u0440\u0433\u0430\u043D": 7,
+        "grow \u041E\u0445\u043B\u0430\u0436\u0434\u0430\u044E\u0449\u0438\u0439 \u043E\u0440\u0433\u0430\u043D": 7,
+        "harvest live biomass": 9,
+        "collect chitin": 1,
+        "enter hibernation": 1,
+        "hibernate": 13,
+        "leave hibernation": 1,
+        "grow \u0412\u043E\u0434\u043E\u0437\u0430\u0431\u043E\u0440": 1,
+        "grow \u0421\u043D\u0435\u0433\u043E\u0441\u0431\u043E\u0440\u043D\u0438\u043A": 1,
+        "grow \u0422\u0435\u043F\u043B\u043E\u0432\u043E\u0439 \u043E\u0440\u0433\u0430\u043D": 1
+      },
+      "organs": {
+        "sail": {
+          "size": {
+            "minimum": 175.55003,
+            "mean": 176.01398,
+            "maximum": 176.68906
+          },
+          "functionalFraction": {
+            "minimum": 0.96238536,
+            "mean": 0.9923434,
+            "maximum": 1
+          },
+          "meanUsage": 0.1461061,
+          "activeFraction": 0.18681318681318682
+        },
+        "solarLeaf": {
+          "size": {
+            "minimum": 139.52518,
+            "mean": 139.69969,
+            "maximum": 139.83362
+          },
+          "functionalFraction": {
+            "minimum": 0.96238536,
+            "mean": 0.9923434,
+            "maximum": 1
+          },
+          "meanUsage": 0.12877737,
+          "activeFraction": 0.3873626373626374
+        },
+        "waterIntake": {
+          "size": {
+            "minimum": 284.0911,
+            "mean": 284.16782,
+            "maximum": 284.5644
+          },
+          "functionalFraction": {
+            "minimum": 0.96238536,
+            "mean": 0.9923434,
+            "maximum": 1
+          },
+          "meanUsage": 0.023709903,
+          "activeFraction": 0.0260989010989011
+        },
+        "snowCollector": {
+          "size": {
+            "minimum": 66.27611,
+            "mean": 67.86918,
+            "maximum": 69.54465
+          },
+          "functionalFraction": {
+            "minimum": 0.96238536,
+            "mean": 0.9923434,
+            "maximum": 1
+          },
+          "meanUsage": 0,
+          "activeFraction": 0
+        },
+        "waterReservoir": {
+          "size": {
+            "minimum": 5086.602,
+            "mean": 5094.575,
+            "maximum": 5110.6997
+          },
+          "functionalFraction": {
+            "minimum": 0.96238536,
+            "mean": 0.9923434,
+            "maximum": 1
+          },
+          "meanUsage": 0.5112972,
+          "activeFraction": 0.9821428571428571
+        },
+        "liveBiomassHarvester": {
+          "size": {
+            "minimum": 28,
+            "mean": 28,
+            "maximum": 28
+          },
+          "functionalFraction": {
+            "minimum": 0.96238536,
+            "mean": 0.9923434,
+            "maximum": 1
+          },
+          "meanUsage": 0.012362638,
+          "activeFraction": 0.012362637362637362
+        },
+        "dryBiomassCollector": {
+          "size": {
+            "minimum": 35.48737,
+            "mean": 35.56427,
+            "maximum": 35.65725
+          },
+          "functionalFraction": {
+            "minimum": 0.96238536,
+            "mean": 0.9923434,
+            "maximum": 1
+          },
+          "meanUsage": 0.069980025,
+          "activeFraction": 0.07417582417582418
+        },
+        "dryer": {
+          "size": {
+            "minimum": 30.16794,
+            "mean": 30.427896,
+            "maximum": 30.584583
+          },
+          "functionalFraction": {
+            "minimum": 0.96238536,
+            "mean": 0.9923434,
+            "maximum": 1
+          },
+          "meanUsage": 0,
+          "activeFraction": 0
+        },
+        "organicStorage": {
+          "size": {
+            "minimum": 3000.9368,
+            "mean": 3018.352,
+            "maximum": 3046.496
+          },
+          "functionalFraction": {
+            "minimum": 0.96238536,
+            "mean": 0.9923434,
+            "maximum": 1
+          },
+          "meanUsage": 0.5953213,
+          "activeFraction": 0.9821428571428571
+        },
+        "furnace": {
+          "size": {
+            "minimum": 77.51517,
+            "mean": 77.64243,
+            "maximum": 77.78063
+          },
+          "functionalFraction": {
+            "minimum": 0.96238536,
+            "mean": 0.9923434,
+            "maximum": 1
+          },
+          "meanUsage": 0.12872739,
+          "activeFraction": 0.3516483516483517
+        },
+        "battery": {
+          "size": {
+            "minimum": 280,
+            "mean": 280,
+            "maximum": 280
+          },
+          "functionalFraction": {
+            "minimum": 0.96238536,
+            "mean": 0.9923434,
+            "maximum": 1
+          },
+          "meanUsage": 0.26354158,
+          "activeFraction": 0.8379120879120879
+        },
+        "electricMotor": {
+          "size": {
+            "minimum": 130,
+            "mean": 130,
+            "maximum": 130
+          },
+          "functionalFraction": {
+            "minimum": 0.96238536,
+            "mean": 0.9923434,
+            "maximum": 1
+          },
+          "meanUsage": 0.0029878418,
+          "activeFraction": 0.10989010989010989
+        },
+        "thermalOrgan": {
+          "size": {
+            "minimum": 59.03363,
+            "mean": 59.39862,
+            "maximum": 59.811417
+          },
+          "functionalFraction": {
+            "minimum": 0.96238536,
+            "mean": 0.9923434,
+            "maximum": 1
+          },
+          "meanUsage": 0.014541843,
+          "activeFraction": 0.6373626373626373
+        },
+        "radiator": {
+          "size": {
+            "minimum": 81.14162,
+            "mean": 81.191376,
+            "maximum": 81.20113
+          },
+          "functionalFraction": {
+            "minimum": 0.96238536,
+            "mean": 0.9923434,
+            "maximum": 1
+          },
+          "meanUsage": 0.10653772,
+          "activeFraction": 0.45467032967032966
+        },
+        "growthTissue": {
+          "size": {
+            "minimum": 1.8562303,
+            "mean": 1.8562303,
+            "maximum": 1.8562303
+          },
+          "functionalFraction": {
+            "minimum": 0.96238536,
+            "mean": 0.9923434,
+            "maximum": 1
+          },
+          "meanUsage": 0.039630648,
+          "activeFraction": 0.11813186813186813
+        },
+        "frame": {
+          "size": {
+            "minimum": 32104.736,
+            "mean": 32107.846,
+            "maximum": 32114.047
+          },
+          "functionalFraction": {
+            "minimum": 0.96238536,
+            "mean": 0.9923434,
+            "maximum": 1
+          },
+          "meanUsage": 0.7484841,
+          "activeFraction": 0.9821428571428571
+        }
+      }
+    }
+  ],
+  "seasonalProfile": [
+    {
+      "year": null,
+      "season": "winter",
+      "hours": 2160,
+      "hibernationHours": 0,
+      "distanceKilometers": 291.98005455732346,
+      "waterScarcityHours": 0,
+      "organicScarcityHours": 0,
+      "thermalScarcityHours": 0,
+      "waterLiters": {
+        "minimum": 1496.6919,
+        "mean": 2966.8718,
+        "maximum": 3699.369
+      },
+      "snowWaterLiters": {
+        "minimum": 0,
+        "mean": 1.6337104,
+        "maximum": 155.9195
+      },
+      "wetOrganicDryKg": {
+        "minimum": 304,
+        "mean": 1496.3654,
+        "maximum": 1757.3414
+      },
+      "wetOrganicWaterLiters": {
+        "minimum": 544.8,
+        "mean": 3199.771,
+        "maximum": 3834.3623
+      },
+      "dryOrganicKg": {
+        "minimum": 65.56064,
+        "mean": 211.61304,
+        "maximum": 1218.1431
+      },
+      "organicNitrogenKg": {
+        "minimum": 16.790518,
+        "mean": 21.604753,
+        "maximum": 24.483992
+      },
+      "structuralReserveKg": {
+        "minimum": 853.65137,
+        "mean": 921.94507,
+        "maximum": 1023.38574
+      },
+      "electricityKwh": {
+        "minimum": 179.17397,
+        "mean": 274.75354,
+        "maximum": 279.1117
+      },
+      "storedHeatKwh": {
+        "minimum": 0,
+        "mean": 0.13292848,
+        "maximum": 3.003604
+      },
+      "bodyTemperatureC": {
+        "minimum": 17.999996,
+        "mean": 17.999998,
+        "maximum": 18
+      },
+      "totalMassKg": {
+        "minimum": 20572.918,
+        "mean": 23781.934,
+        "maximum": 25493.328
+      },
+      "activitySteps": {
+        "rest": 0,
+        "hibernate": 0,
+        "travel": 441,
+        "collectWater": 4,
+        "collectSnow": 1,
+        "harvestLiveBiomass": 0,
+        "harvestDryBiomass": 245,
+        "dryOrganicMatter": 24,
+        "collectChitin": 5,
+        "returnResidues": 0,
+        "maintain": 0,
+        "escapeWildfire": 0
+      },
+      "actionCounts": {
+        "harvest live biomass": 18,
+        "harvest dry biomass": 288,
+        "burn dry organic matter": 720,
+        "power intake and harvest": 500,
+        "heat caravan": 720,
+        "reject heat": 720,
+        "maintain caravan water circuit": 720,
+        "maintain living structure": 720,
+        "maintain electrical systems": 720,
+        "move": 288,
+        "movement water loss": 288,
+        "movement organic maintenance": 288,
+        "grow \u041F\u0430\u0440\u0443\u0441": 218,
+        "grow \u0421\u043E\u043B\u043D\u0435\u0447\u043D\u044B\u0439 \u043B\u0438\u0441\u0442": 223,
+        "grow \u0420\u0435\u0437\u0435\u0440\u0432\u0443\u0430\u0440": 222,
+        "grow \u041E\u0440\u0433\u0430\u043D\u0438\u0447\u0435\u0441\u043A\u043E\u0435 \u0445\u0440\u0430\u043D\u0438\u043B\u0438\u0449\u0435": 345,
+        "grow \u041A\u0430\u0440\u043A\u0430\u0441": 219,
+        "capture dust": 350,
+        "generate solar electricity": 274,
+        "grow \u0412\u043E\u0434\u043E\u0437\u0430\u0431\u043E\u0440": 4,
+        "grow \u0421\u043D\u0435\u0433\u043E\u0441\u0431\u043E\u0440\u043D\u0438\u043A": 4,
+        "grow \u0422\u0435\u043F\u043B\u043E\u0432\u043E\u0439 \u043E\u0440\u0433\u0430\u043D": 4,
+        "collect snow": 1,
+        "melt collected snow": 9,
+        "withdraw surface water": 20,
+        "grow \u0421\u0431\u043E\u0440\u0449\u0438\u043A \u0441\u0443\u0445\u043E\u0439 \u043C\u0430\u0441\u0441\u044B": 127,
+        "grow \u0411\u0438\u043E\u0440\u0435\u0430\u043A\u0442\u043E\u0440 / \u0442\u043E\u043F\u043A\u0430": 127,
+        "collect chitin": 4,
+        "spoil wet organic matter": 64,
+        "grow \u0420\u043E\u0441\u0442\u043E\u0432\u0430\u044F \u0442\u043A\u0430\u043D\u044C": 1,
+        "grow \u0421\u0443\u0448\u0438\u043B\u044C\u043D\u044B\u0439 \u043E\u0440\u0433\u0430\u043D": 5,
+        "grow \u041E\u0445\u043B\u0430\u0436\u0434\u0430\u044E\u0449\u0438\u0439 \u043E\u0440\u0433\u0430\u043D": 5,
+        "atrophy \u0421\u043D\u0435\u0433\u043E\u0441\u0431\u043E\u0440\u043D\u0438\u043A": 248,
+        "atrophy \u0421\u0443\u0448\u0438\u043B\u044C\u043D\u044B\u0439 \u043E\u0440\u0433\u0430\u043D": 248
+      },
+      "organs": {
+        "sail": {
+          "size": {
+            "minimum": 160.04839,
+            "mean": 169.15277,
+            "maximum": 178.065
+          },
+          "functionalFraction": {
+            "minimum": 0.97323835,
+            "mean": 0.9931242,
+            "maximum": 1
+          },
+          "meanUsage": 0.16682495,
+          "activeFraction": 0.26666666666666666
+        },
+        "solarLeaf": {
+          "size": {
+            "minimum": 135.00871,
+            "mean": 137.24794,
+            "maximum": 140.03862
+          },
+          "functionalFraction": {
+            "minimum": 0.97323835,
+            "mean": 0.9931242,
+            "maximum": 1
+          },
+          "meanUsage": 0.024971085,
+          "activeFraction": 0.275
+        },
+        "waterIntake": {
+          "size": {
+            "minimum": 280,
+            "mean": 282.56003,
+            "maximum": 284.5644
+          },
+          "functionalFraction": {
+            "minimum": 0.97323835,
+            "mean": 0.9931242,
+            "maximum": 1
+          },
+          "meanUsage": 0.024186254,
+          "activeFraction": 0.027777777777777776
+        },
+        "snowCollector": {
+          "size": {
+            "minimum": 65.15564,
+            "mean": 71.83948,
+            "maximum": 75.08596
+          },
+          "functionalFraction": {
+            "minimum": 0.97323835,
+            "mean": 0.9931242,
+            "maximum": 1
+          },
+          "meanUsage": 0.0027627125,
+          "activeFraction": 0.009722222222222222
+        },
+        "waterReservoir": {
+          "size": {
+            "minimum": 4800.6353,
+            "mean": 4968.173,
+            "maximum": 5143.5483
+          },
+          "functionalFraction": {
+            "minimum": 0.97323835,
+            "mean": 0.9931242,
+            "maximum": 1
+          },
+          "meanUsage": 0.6014164,
+          "activeFraction": 1
+        },
+        "liveBiomassHarvester": {
+          "size": {
+            "minimum": 28,
+            "mean": 28,
+            "maximum": 28
+          },
+          "functionalFraction": {
+            "minimum": 0.97323835,
+            "mean": 0.9931242,
+            "maximum": 1
+          },
+          "meanUsage": 0.022673639,
+          "activeFraction": 0.025
+        },
+        "dryBiomassCollector": {
+          "size": {
+            "minimum": 34,
+            "mean": 34.68586,
+            "maximum": 35.8426
+          },
+          "functionalFraction": {
+            "minimum": 0.97323835,
+            "mean": 0.9931242,
+            "maximum": 1
+          },
+          "meanUsage": 0.1990512,
+          "activeFraction": 0.3277777777777778
+        },
+        "dryer": {
+          "size": {
+            "minimum": 29.657919,
+            "mean": 31.281918,
+            "maximum": 32.02003
+          },
+          "functionalFraction": {
+            "minimum": 0.97323835,
+            "mean": 0.9931242,
+            "maximum": 1
+          },
+          "meanUsage": 0,
+          "activeFraction": 0
+        },
+        "organicStorage": {
+          "size": {
+            "minimum": 2600.4233,
+            "mean": 2810.8018,
+            "maximum": 3100.277
+          },
+          "functionalFraction": {
+            "minimum": 0.97323835,
+            "mean": 0.9931242,
+            "maximum": 1
+          },
+          "meanUsage": 0.61149937,
+          "activeFraction": 1
+        },
+        "furnace": {
+          "size": {
+            "minimum": 75,
+            "mean": 76.1454,
+            "maximum": 78.076546
+          },
+          "functionalFraction": {
+            "minimum": 0.97323835,
+            "mean": 0.9931242,
+            "maximum": 1
+          },
+          "meanUsage": 0.38286808,
+          "activeFraction": 1
+        },
+        "battery": {
+          "size": {
+            "minimum": 280,
+            "mean": 280,
+            "maximum": 280
+          },
+          "functionalFraction": {
+            "minimum": 0.97323835,
+            "mean": 0.9931242,
+            "maximum": 1
+          },
+          "meanUsage": 0.25881085,
+          "activeFraction": 0.5777777777777777
+        },
+        "electricMotor": {
+          "size": {
+            "minimum": 130,
+            "mean": 130,
+            "maximum": 130
+          },
+          "functionalFraction": {
+            "minimum": 0.97323835,
+            "mean": 0.9931242,
+            "maximum": 1
+          },
+          "meanUsage": 0.001788336,
+          "activeFraction": 0.05
+        },
+        "thermalOrgan": {
+          "size": {
+            "minimum": 59.03363,
+            "mean": 62.950344,
+            "maximum": 65.01216
+          },
+          "functionalFraction": {
+            "minimum": 0.97323835,
+            "mean": 0.9931242,
+            "maximum": 1
+          },
+          "meanUsage": 0.027086964,
+          "activeFraction": 1
+        },
+        "radiator": {
+          "size": {
+            "minimum": 80,
+            "mean": 80.416985,
+            "maximum": 81.20113
+          },
+          "functionalFraction": {
+            "minimum": 0.97323835,
+            "mean": 0.9931242,
+            "maximum": 1
+          },
+          "meanUsage": 0.28224814,
+          "activeFraction": 1
+        },
+        "growthTissue": {
+          "size": {
+            "minimum": 1.8,
+            "mean": 1.8212034,
+            "maximum": 1.8562303
+          },
+          "functionalFraction": {
+            "minimum": 0.97323835,
+            "mean": 0.9931242,
+            "maximum": 1
+          },
+          "meanUsage": 0.1509022,
+          "activeFraction": 0.4986111111111111
+        },
+        "frame": {
+          "size": {
+            "minimum": 32000.201,
+            "mean": 32060.047,
+            "maximum": 32126.91
+          },
+          "functionalFraction": {
+            "minimum": 0.97323835,
+            "mean": 0.9931242,
+            "maximum": 1
+          },
+          "meanUsage": 0.7472696,
+          "activeFraction": 1
+        }
+      }
+    },
+    {
+      "year": null,
+      "season": "spring",
+      "hours": 2208,
+      "hibernationHours": 0,
+      "distanceKilometers": 600.3457547724247,
+      "waterScarcityHours": 0,
+      "organicScarcityHours": 0,
+      "thermalScarcityHours": 0,
+      "waterLiters": {
+        "minimum": 1544.3795,
+        "mean": 2925.4849,
+        "maximum": 3704.6523
+      },
+      "snowWaterLiters": {
+        "minimum": 0,
+        "mean": 0,
+        "maximum": 0
+      },
+      "wetOrganicDryKg": {
+        "minimum": 1527.2662,
+        "mean": 1580.2346,
+        "maximum": 1642.7029
+      },
+      "wetOrganicWaterLiters": {
+        "minimum": 3240.9824,
+        "mean": 3364.9329,
+        "maximum": 3515.7551
+      },
+      "dryOrganicKg": {
+        "minimum": 70.59788,
+        "mean": 136.22324,
+        "maximum": 205.0864
+      },
+      "organicNitrogenKg": {
+        "minimum": 19.3153,
+        "mean": 20.916525,
+        "maximum": 22.685635
+      },
+      "structuralReserveKg": {
+        "minimum": 874.54865,
+        "mean": 888.9373,
+        "maximum": 906.02423
+      },
+      "electricityKwh": {
+        "minimum": 236.92279,
+        "mean": 273.12985,
+        "maximum": 279.1104
+      },
+      "storedHeatKwh": {
+        "minimum": 0,
+        "mean": 0.4549973,
+        "maximum": 5.985216
+      },
+      "bodyTemperatureC": {
+        "minimum": 18,
+        "mean": 18,
+        "maximum": 18
+      },
+      "totalMassKg": {
+        "minimum": 22518.58,
+        "mean": 23909.664,
+        "maximum": 24890.525
+      },
+      "activitySteps": {
+        "rest": 0,
+        "hibernate": 0,
+        "travel": 277,
+        "collectWater": 2,
+        "collectSnow": 0,
+        "harvestLiveBiomass": 0,
+        "harvestDryBiomass": 259,
+        "dryOrganicMatter": 194,
+        "collectChitin": 4,
+        "returnResidues": 0,
+        "maintain": 0,
+        "escapeWildfire": 0
+      },
+      "actionCounts": {
+        "harvest dry biomass": 171,
+        "capture dust": 220,
+        "burn dry organic matter": 736,
+        "power intake and harvest": 368,
+        "heat caravan": 519,
+        "reject heat": 736,
+        "spoil wet organic matter": 736,
+        "maintain caravan water circuit": 736,
+        "maintain living structure": 736,
+        "maintain electrical systems": 736,
+        "grow \u0421\u0431\u043E\u0440\u0449\u0438\u043A \u0441\u0443\u0445\u043E\u0439 \u043C\u0430\u0441\u0441\u044B": 156,
+        "grow \u041E\u0440\u0433\u0430\u043D\u0438\u0447\u0435\u0441\u043A\u043E\u0435 \u0445\u0440\u0430\u043D\u0438\u043B\u0438\u0449\u0435": 275,
+        "grow \u0411\u0438\u043E\u0440\u0435\u0430\u043A\u0442\u043E\u0440 / \u0442\u043E\u043F\u043A\u0430": 156,
+        "move": 450,
+        "movement water loss": 450,
+        "movement organic maintenance": 450,
+        "grow \u041F\u0430\u0440\u0443\u0441": 119,
+        "grow \u0421\u043E\u043B\u043D\u0435\u0447\u043D\u044B\u0439 \u043B\u0438\u0441\u0442": 185,
+        "grow \u0420\u0435\u0437\u0435\u0440\u0432\u0443\u0430\u0440": 120,
+        "grow \u041A\u0430\u0440\u043A\u0430\u0441": 121,
+        "generate solar electricity": 391,
+        "grow \u0420\u043E\u0441\u0442\u043E\u0432\u0430\u044F \u0442\u043A\u0430\u043D\u044C": 2,
+        "collect chitin": 2,
+        "grow \u0412\u043E\u0434\u043E\u0437\u0430\u0431\u043E\u0440": 1,
+        "grow \u0421\u043D\u0435\u0433\u043E\u0441\u0431\u043E\u0440\u043D\u0438\u043A": 1,
+        "grow \u0422\u0435\u043F\u043B\u043E\u0432\u043E\u0439 \u043E\u0440\u0433\u0430\u043D": 1,
+        "withdraw surface water": 18,
+        "grow \u0421\u0443\u0448\u0438\u043B\u044C\u043D\u044B\u0439 \u043E\u0440\u0433\u0430\u043D": 66,
+        "grow \u041E\u0445\u043B\u0430\u0436\u0434\u0430\u044E\u0449\u0438\u0439 \u043E\u0440\u0433\u0430\u043D": 66,
+        "atrophy \u0421\u0443\u0448\u0438\u043B\u044C\u043D\u044B\u0439 \u043E\u0440\u0433\u0430\u043D": 337,
+        "atrophy \u0422\u0435\u043F\u043B\u043E\u0432\u043E\u0439 \u043E\u0440\u0433\u0430\u043D": 488,
+        "harvest live biomass": 6,
+        "atrophy \u0421\u043D\u0435\u0433\u043E\u0441\u0431\u043E\u0440\u043D\u0438\u043A": 402
+      },
+      "organs": {
+        "sail": {
+          "size": {
+            "minimum": 166.75832,
+            "mean": 169.00967,
+            "maximum": 171.29608
+          },
+          "functionalFraction": {
+            "minimum": 1,
+            "mean": 1,
+            "maximum": 1
+          },
+          "meanUsage": 0.34039634,
+          "activeFraction": 0.41983695652173914
+        },
+        "solarLeaf": {
+          "size": {
+            "minimum": 136.18347,
+            "mean": 136.90979,
+            "maximum": 137.81633
+          },
+          "functionalFraction": {
+            "minimum": 1,
+            "mean": 1,
+            "maximum": 1
+          },
+          "meanUsage": 0.22304845,
+          "activeFraction": 0.501358695652174
+        },
+        "waterIntake": {
+          "size": {
+            "minimum": 282.21356,
+            "mean": 282.6381,
+            "maximum": 282.68625
+          },
+          "functionalFraction": {
+            "minimum": 1,
+            "mean": 1,
+            "maximum": 1
+          },
+          "meanUsage": 0.024456521,
+          "activeFraction": 0.024456521739130436
+        },
+        "snowCollector": {
+          "size": {
+            "minimum": 73.0563,
+            "mean": 74.53876,
+            "maximum": 75.103645
+          },
+          "functionalFraction": {
+            "minimum": 1,
+            "mean": 1,
+            "maximum": 1
+          },
+          "meanUsage": 0,
+          "activeFraction": 0
+        },
+        "waterReservoir": {
+          "size": {
+            "minimum": 4927.1016,
+            "mean": 4972.4834,
+            "maximum": 5014.7275
+          },
+          "functionalFraction": {
+            "minimum": 1,
+            "mean": 1,
+            "maximum": 1
+          },
+          "meanUsage": 0.58815145,
+          "activeFraction": 1
+        },
+        "liveBiomassHarvester": {
+          "size": {
+            "minimum": 28,
+            "mean": 28,
+            "maximum": 28
+          },
+          "functionalFraction": {
+            "minimum": 1,
+            "mean": 1,
+            "maximum": 1
+          },
+          "meanUsage": 0.008152174,
+          "activeFraction": 0.008152173913043478
+        },
+        "dryBiomassCollector": {
+          "size": {
+            "minimum": 34.32434,
+            "mean": 34.63772,
+            "maximum": 34.940716
+          },
+          "functionalFraction": {
+            "minimum": 1,
+            "mean": 1,
+            "maximum": 1
+          },
+          "meanUsage": 0.21302998,
+          "activeFraction": 0.22282608695652173
+        },
+        "dryer": {
+          "size": {
+            "minimum": 31.518234,
+            "mean": 31.882322,
+            "maximum": 32.074104
+          },
+          "functionalFraction": {
+            "minimum": 1,
+            "mean": 1,
+            "maximum": 1
+          },
+          "meanUsage": 0,
+          "activeFraction": 0
+        },
+        "organicStorage": {
+          "size": {
+            "minimum": 2726.013,
+            "mean": 2800.726,
+            "maximum": 2872.4707
+          },
+          "functionalFraction": {
+            "minimum": 1,
+            "mean": 1,
+            "maximum": 1
+          },
+          "meanUsage": 0.6129529,
+          "activeFraction": 1
+        },
+        "furnace": {
+          "size": {
+            "minimum": 75.53974,
+            "mean": 76.074066,
+            "maximum": 76.59127
+          },
+          "functionalFraction": {
+            "minimum": 1,
+            "mean": 1,
+            "maximum": 1
+          },
+          "meanUsage": 0.3889945,
+          "activeFraction": 1
+        },
+        "battery": {
+          "size": {
+            "minimum": 280,
+            "mean": 280,
+            "maximum": 280
+          },
+          "functionalFraction": {
+            "minimum": 1,
+            "mean": 1,
+            "maximum": 1
+          },
+          "meanUsage": 0.4715306,
+          "activeFraction": 0.7350543478260869
+        },
+        "electricMotor": {
+          "size": {
+            "minimum": 130,
+            "mean": 130,
+            "maximum": 130
+          },
+          "functionalFraction": {
+            "minimum": 1,
+            "mean": 1,
+            "maximum": 1
+          },
+          "meanUsage": 0.0061249626,
+          "activeFraction": 0.18478260869565216
+        },
+        "thermalOrgan": {
+          "size": {
+            "minimum": 62.869625,
+            "mean": 64.29789,
+            "maximum": 65.01474
+          },
+          "functionalFraction": {
+            "minimum": 1,
+            "mean": 1,
+            "maximum": 1
+          },
+          "meanUsage": 0.0070250174,
+          "activeFraction": 0.3383152173913043
+        },
+        "radiator": {
+          "size": {
+            "minimum": 80.047,
+            "mean": 80.324684,
+            "maximum": 80.65919
+          },
+          "functionalFraction": {
+            "minimum": 1,
+            "mean": 1,
+            "maximum": 1
+          },
+          "meanUsage": 0.3287956,
+          "activeFraction": 1
+        },
+        "growthTissue": {
+          "size": {
+            "minimum": 1.811693,
+            "mean": 1.8246254,
+            "maximum": 1.8341742
+          },
+          "functionalFraction": {
+            "minimum": 1,
+            "mean": 1,
+            "maximum": 1
+          },
+          "meanUsage": 0.15487519,
+          "activeFraction": 0.4701086956521739
+        },
+        "frame": {
+          "size": {
+            "minimum": 32043.059,
+            "mean": 32060.488,
+            "maximum": 32076.732
+          },
+          "functionalFraction": {
+            "minimum": 1,
+            "mean": 1,
+            "maximum": 1
+          },
+          "meanUsage": 0.7458121,
+          "activeFraction": 1
+        }
+      }
+    },
+    {
+      "year": null,
+      "season": "summer",
+      "hours": 2208,
+      "hibernationHours": 0,
+      "distanceKilometers": 697.6805089116096,
+      "waterScarcityHours": 0,
+      "organicScarcityHours": 0,
+      "thermalScarcityHours": 0,
+      "waterLiters": {
+        "minimum": 1571.9806,
+        "mean": 2545.4155,
+        "maximum": 3705.2573
+      },
+      "snowWaterLiters": {
+        "minimum": 0,
+        "mean": 0,
+        "maximum": 0
+      },
+      "wetOrganicDryKg": {
+        "minimum": 1558.5686,
+        "mean": 1649.174,
+        "maximum": 1738.7943
+      },
+      "wetOrganicWaterLiters": {
+        "minimum": 3340.4607,
+        "mean": 3564.3174,
+        "maximum": 3777.139
+      },
+      "dryOrganicKg": {
+        "minimum": 63.379795,
+        "mean": 138.22894,
+        "maximum": 207.98764
+      },
+      "organicNitrogenKg": {
+        "minimum": 20.348404,
+        "mean": 22.229403,
+        "maximum": 23.902786
+      },
+      "structuralReserveKg": {
+        "minimum": 888.6609,
+        "mean": 919.2346,
+        "maximum": 956.00354
+      },
+      "electricityKwh": {
+        "minimum": 247.78627,
+        "mean": 271.60846,
+        "maximum": 279.11145
+      },
+      "storedHeatKwh": {
+        "minimum": 0,
+        "mean": 0.56689614,
+        "maximum": 3.6427097
+      },
+      "bodyTemperatureC": {
+        "minimum": 18,
+        "mean": 18.28261,
+        "maximum": 24.114422
+      },
+      "totalMassKg": {
+        "minimum": 22698.99,
+        "mean": 23840.707,
+        "maximum": 25242.908
+      },
+      "activitySteps": {
+        "rest": 0,
+        "hibernate": 0,
+        "travel": 257,
+        "collectWater": 10,
+        "collectSnow": 0,
+        "harvestLiveBiomass": 0,
+        "harvestDryBiomass": 251,
+        "dryOrganicMatter": 214,
+        "collectChitin": 4,
+        "returnResidues": 0,
+        "maintain": 0,
+        "escapeWildfire": 0
+      },
+      "actionCounts": {
+        "burn dry organic matter": 736,
+        "reject heat": 736,
+        "spoil wet organic matter": 736,
+        "maintain caravan water circuit": 736,
+        "maintain living structure": 736,
+        "maintain electrical systems": 736,
+        "atrophy \u0421\u043D\u0435\u0433\u043E\u0441\u0431\u043E\u0440\u043D\u0438\u043A": 726,
+        "atrophy \u0421\u0443\u0448\u0438\u043B\u044C\u043D\u044B\u0439 \u043E\u0440\u0433\u0430\u043D": 522,
+        "atrophy \u0422\u0435\u043F\u043B\u043E\u0432\u043E\u0439 \u043E\u0440\u0433\u0430\u043D": 726,
+        "harvest live biomass": 14,
+        "power intake and harvest": 324,
+        "move": 471,
+        "movement water loss": 471,
+        "movement organic maintenance": 471,
+        "harvest dry biomass": 170,
+        "grow \u0421\u0431\u043E\u0440\u0449\u0438\u043A \u0441\u0443\u0445\u043E\u0439 \u043C\u0430\u0441\u0441\u044B": 137,
+        "grow \u041E\u0440\u0433\u0430\u043D\u0438\u0447\u0435\u0441\u043A\u043E\u0435 \u0445\u0440\u0430\u043D\u0438\u043B\u0438\u0449\u0435": 238,
+        "grow \u0411\u0438\u043E\u0440\u0435\u0430\u043A\u0442\u043E\u0440 / \u0442\u043E\u043F\u043A\u0430": 137,
+        "generate solar electricity": 434,
+        "grow \u041F\u0430\u0440\u0443\u0441": 101,
+        "grow \u0421\u043E\u043B\u043D\u0435\u0447\u043D\u044B\u0439 \u043B\u0438\u0441\u0442": 157,
+        "grow \u0420\u0435\u0437\u0435\u0440\u0432\u0443\u0430\u0440": 104,
+        "grow \u041A\u0430\u0440\u043A\u0430\u0441": 103,
+        "grow \u0421\u0443\u0448\u0438\u043B\u044C\u043D\u044B\u0439 \u043E\u0440\u0433\u0430\u043D": 56,
+        "grow \u041E\u0445\u043B\u0430\u0436\u0434\u0430\u044E\u0449\u0438\u0439 \u043E\u0440\u0433\u0430\u043D": 56,
+        "capture dust": 158,
+        "withdraw surface water": 19,
+        "grow \u0412\u043E\u0434\u043E\u0437\u0430\u0431\u043E\u0440": 3,
+        "grow \u0421\u043D\u0435\u0433\u043E\u0441\u0431\u043E\u0440\u043D\u0438\u043A": 3,
+        "grow \u0422\u0435\u043F\u043B\u043E\u0432\u043E\u0439 \u043E\u0440\u0433\u0430\u043D": 3,
+        "collect chitin": 3,
+        "grow \u0420\u043E\u0441\u0442\u043E\u0432\u0430\u044F \u0442\u043A\u0430\u043D\u044C": 2,
+        "heat caravan": 34
+      },
+      "organs": {
+        "sail": {
+          "size": {
+            "minimum": 171.29608,
+            "mean": 173.49686,
+            "maximum": 175.55003
+          },
+          "functionalFraction": {
+            "minimum": 1,
+            "mean": 1,
+            "maximum": 1
+          },
+          "meanUsage": 0.38767612,
+          "activeFraction": 0.4361413043478261
+        },
+        "solarLeaf": {
+          "size": {
+            "minimum": 137.81633,
+            "mean": 138.67647,
+            "maximum": 139.52518
+          },
+          "functionalFraction": {
+            "minimum": 1,
+            "mean": 1,
+            "maximum": 1
+          },
+          "meanUsage": 0.3195702,
+          "activeFraction": 0.5584239130434783
+        },
+        "waterIntake": {
+          "size": {
+            "minimum": 282.68625,
+            "mean": 283.6556,
+            "maximum": 284.0911
+          },
+          "functionalFraction": {
+            "minimum": 1,
+            "mean": 1,
+            "maximum": 1
+          },
+          "meanUsage": 0.024966057,
+          "activeFraction": 0.025815217391304348
+        },
+        "snowCollector": {
+          "size": {
+            "minimum": 69.54943,
+            "mean": 71.29694,
+            "maximum": 73.05128
+          },
+          "functionalFraction": {
+            "minimum": 1,
+            "mean": 1,
+            "maximum": 1
+          },
+          "meanUsage": 0,
+          "activeFraction": 0
+        },
+        "waterReservoir": {
+          "size": {
+            "minimum": 5014.7275,
+            "mean": 5053.227,
+            "maximum": 5086.602
+          },
+          "functionalFraction": {
+            "minimum": 1,
+            "mean": 1,
+            "maximum": 1
+          },
+          "meanUsage": 0.50372016,
+          "activeFraction": 1
+        },
+        "liveBiomassHarvester": {
+          "size": {
+            "minimum": 28,
+            "mean": 28,
+            "maximum": 28
+          },
+          "functionalFraction": {
+            "minimum": 1,
+            "mean": 1,
+            "maximum": 1
+          },
+          "meanUsage": 0.019021738,
+          "activeFraction": 0.019021739130434784
+        },
+        "dryBiomassCollector": {
+          "size": {
+            "minimum": 34.940716,
+            "mean": 35.214226,
+            "maximum": 35.48737
+          },
+          "functionalFraction": {
+            "minimum": 1,
+            "mean": 1,
+            "maximum": 1
+          },
+          "meanUsage": 0.19314009,
+          "activeFraction": 0.23097826086956522
+        },
+        "dryer": {
+          "size": {
+            "minimum": 30.585476,
+            "mean": 31.048012,
+            "maximum": 31.517195
+          },
+          "functionalFraction": {
+            "minimum": 1,
+            "mean": 1,
+            "maximum": 1
+          },
+          "meanUsage": 0,
+          "activeFraction": 0
+        },
+        "organicStorage": {
+          "size": {
+            "minimum": 2872.4707,
+            "mean": 2937.3708,
+            "maximum": 3000.9368
+          },
+          "functionalFraction": {
+            "minimum": 1,
+            "mean": 1,
+            "maximum": 1
+          },
+          "meanUsage": 0.6085004,
+          "activeFraction": 1
+        },
+        "furnace": {
+          "size": {
+            "minimum": 76.59127,
+            "mean": 77.054276,
+            "maximum": 77.51517
+          },
+          "functionalFraction": {
+            "minimum": 1,
+            "mean": 1,
+            "maximum": 1
+          },
+          "meanUsage": 0.3539057,
+          "activeFraction": 1
+        },
+        "battery": {
+          "size": {
+            "minimum": 280,
+            "mean": 280,
+            "maximum": 280
+          },
+          "functionalFraction": {
+            "minimum": 1,
+            "mean": 1,
+            "maximum": 1
+          },
+          "meanUsage": 0.5319403,
+          "activeFraction": 0.8220108695652174
+        },
+        "electricMotor": {
+          "size": {
+            "minimum": 130,
+            "mean": 130,
+            "maximum": 130
+          },
+          "functionalFraction": {
+            "minimum": 1,
+            "mean": 1,
+            "maximum": 1
+          },
+          "meanUsage": 0.0076312926,
+          "activeFraction": 0.24456521739130435
+        },
+        "thermalOrgan": {
+          "size": {
+            "minimum": 59.81553,
+            "mean": 61.33018,
+            "maximum": 62.865303
+          },
+          "functionalFraction": {
+            "minimum": 1,
+            "mean": 1,
+            "maximum": 1
+          },
+          "meanUsage": 4.9073013E-05,
+          "activeFraction": 0
+        },
+        "radiator": {
+          "size": {
+            "minimum": 80.65919,
+            "mean": 80.89921,
+            "maximum": 81.14162
+          },
+          "functionalFraction": {
+            "minimum": 1,
+            "mean": 1,
+            "maximum": 1
+          },
+          "meanUsage": 0.3239918,
+          "activeFraction": 1
+        },
+        "growthTissue": {
+          "size": {
+            "minimum": 1.8341742,
+            "mean": 1.8456367,
+            "maximum": 1.8562303
+          },
+          "functionalFraction": {
+            "minimum": 1,
+            "mean": 1,
+            "maximum": 1
+          },
+          "meanUsage": 0.13516794,
+          "activeFraction": 0.40896739130434784
+        },
+        "frame": {
+          "size": {
+            "minimum": 32076.732,
+            "mean": 32091.223,
+            "maximum": 32104.736
+          },
+          "functionalFraction": {
+            "minimum": 1,
+            "mean": 1,
+            "maximum": 1
+          },
+          "meanUsage": 0.74294466,
+          "activeFraction": 1
+        }
+      }
+    },
+    {
+      "year": null,
+      "season": "autumn",
+      "hours": 2184,
+      "hibernationHours": 39,
+      "distanceKilometers": 252.6730656325817,
+      "waterScarcityHours": 0,
+      "organicScarcityHours": 0,
+      "thermalScarcityHours": 105,
+      "waterLiters": {
+        "minimum": 1593.0537,
+        "mean": 2621.32,
+        "maximum": 3774.456
+      },
+      "snowWaterLiters": {
+        "minimum": 0,
+        "mean": 0,
+        "maximum": 0
+      },
+      "wetOrganicDryKg": {
+        "minimum": 1649.3129,
+        "mean": 1770.4695,
+        "maximum": 1832.8549
+      },
+      "wetOrganicWaterLiters": {
+        "minimum": 3582.761,
+        "mean": 3857.8315,
+        "maximum": 3999.1262
+      },
+      "dryOrganicKg": {
+        "minimum": 0,
+        "mean": 44.417816,
+        "maximum": 204.35738
+      },
+      "organicNitrogenKg": {
+        "minimum": 21.054005,
+        "mean": 23.688612,
+        "maximum": 26.08815
+      },
+      "structuralReserveKg": {
+        "minimum": 951.15955,
+        "mean": 964.48846,
+        "maximum": 985.6809
+      },
+      "electricityKwh": {
+        "minimum": 0,
+        "mean": 223.0538,
+        "maximum": 279.1119
+      },
+      "storedHeatKwh": {
+        "minimum": 0,
+        "mean": 0.22080721,
+        "maximum": 4.3372173
+      },
+      "bodyTemperatureC": {
+        "minimum": 7.4147625,
+        "mean": 17.658127,
+        "maximum": 18.000004
+      },
+      "totalMassKg": {
+        "minimum": 23126.361,
+        "mean": 24278.129,
+        "maximum": 25511.73
+      },
+      "activitySteps": {
+        "rest": 0,
+        "hibernate": 13,
+        "travel": 116,
+        "collectWater": 10,
+        "collectSnow": 0,
+        "harvestLiveBiomass": 0,
+        "harvestDryBiomass": 86,
+        "dryOrganicMatter": 503,
+        "collectChitin": 0,
+        "returnResidues": 0,
+        "maintain": 0,
+        "escapeWildfire": 0
+      },
+      "actionCounts": {
+        "capture dust": 96,
+        "burn dry organic matter": 256,
+        "power intake and harvest": 157,
+        "reject heat": 364,
+        "spoil wet organic matter": 578,
+        "maintain caravan water circuit": 715,
+        "maintain living structure": 715,
+        "maintain electrical systems": 689,
+        "move": 202,
+        "movement water loss": 202,
+        "movement organic maintenance": 202,
+        "atrophy \u0421\u043D\u0435\u0433\u043E\u0441\u0431\u043E\u0440\u043D\u0438\u043A": 705,
+        "atrophy \u0421\u0443\u0448\u0438\u043B\u044C\u043D\u044B\u0439 \u043E\u0440\u0433\u0430\u043D": 212,
+        "atrophy \u0422\u0435\u043F\u043B\u043E\u0432\u043E\u0439 \u043E\u0440\u0433\u0430\u043D": 192,
+        "harvest dry biomass": 55,
+        "heat caravan": 687,
+        "grow \u0421\u0431\u043E\u0440\u0449\u0438\u043A \u0441\u0443\u0445\u043E\u0439 \u043C\u0430\u0441\u0441\u044B": 44,
+        "grow \u041E\u0440\u0433\u0430\u043D\u0438\u0447\u0435\u0441\u043A\u043E\u0435 \u0445\u0440\u0430\u043D\u0438\u043B\u0438\u0449\u0435": 77,
+        "grow \u0411\u0438\u043E\u0440\u0435\u0430\u043A\u0442\u043E\u0440 / \u0442\u043E\u043F\u043A\u0430": 44,
+        "grow \u041F\u0430\u0440\u0443\u0441": 33,
+        "grow \u0421\u043E\u043B\u043D\u0435\u0447\u043D\u044B\u0439 \u043B\u0438\u0441\u0442": 40,
+        "grow \u0420\u0435\u0437\u0435\u0440\u0432\u0443\u0430\u0440": 34,
+        "grow \u041A\u0430\u0440\u043A\u0430\u0441": 33,
+        "generate solar electricity": 311,
+        "withdraw surface water": 19,
+        "grow \u0421\u0443\u0448\u0438\u043B\u044C\u043D\u044B\u0439 \u043E\u0440\u0433\u0430\u043D": 7,
+        "grow \u041E\u0445\u043B\u0430\u0436\u0434\u0430\u044E\u0449\u0438\u0439 \u043E\u0440\u0433\u0430\u043D": 7,
+        "harvest live biomass": 9,
+        "collect chitin": 1,
+        "enter hibernation": 1,
+        "hibernate": 13,
+        "leave hibernation": 1,
+        "grow \u0412\u043E\u0434\u043E\u0437\u0430\u0431\u043E\u0440": 1,
+        "grow \u0421\u043D\u0435\u0433\u043E\u0441\u0431\u043E\u0440\u043D\u0438\u043A": 1,
+        "grow \u0422\u0435\u043F\u043B\u043E\u0432\u043E\u0439 \u043E\u0440\u0433\u0430\u043D": 1
+      },
+      "organs": {
+        "sail": {
+          "size": {
+            "minimum": 175.55003,
+            "mean": 176.01398,
+            "maximum": 176.68906
+          },
+          "functionalFraction": {
+            "minimum": 0.96238536,
+            "mean": 0.9923434,
+            "maximum": 1
+          },
+          "meanUsage": 0.1461061,
+          "activeFraction": 0.18681318681318682
+        },
+        "solarLeaf": {
+          "size": {
+            "minimum": 139.52518,
+            "mean": 139.69969,
+            "maximum": 139.83362
+          },
+          "functionalFraction": {
+            "minimum": 0.96238536,
+            "mean": 0.9923434,
+            "maximum": 1
+          },
+          "meanUsage": 0.12877737,
+          "activeFraction": 0.3873626373626374
+        },
+        "waterIntake": {
+          "size": {
+            "minimum": 284.0911,
+            "mean": 284.16782,
+            "maximum": 284.5644
+          },
+          "functionalFraction": {
+            "minimum": 0.96238536,
+            "mean": 0.9923434,
+            "maximum": 1
+          },
+          "meanUsage": 0.023709903,
+          "activeFraction": 0.0260989010989011
+        },
+        "snowCollector": {
+          "size": {
+            "minimum": 66.27611,
+            "mean": 67.86918,
+            "maximum": 69.54465
+          },
+          "functionalFraction": {
+            "minimum": 0.96238536,
+            "mean": 0.9923434,
+            "maximum": 1
+          },
+          "meanUsage": 0,
+          "activeFraction": 0
+        },
+        "waterReservoir": {
+          "size": {
+            "minimum": 5086.602,
+            "mean": 5094.575,
+            "maximum": 5110.6997
+          },
+          "functionalFraction": {
+            "minimum": 0.96238536,
+            "mean": 0.9923434,
+            "maximum": 1
+          },
+          "meanUsage": 0.5112972,
+          "activeFraction": 0.9821428571428571
+        },
+        "liveBiomassHarvester": {
+          "size": {
+            "minimum": 28,
+            "mean": 28,
+            "maximum": 28
+          },
+          "functionalFraction": {
+            "minimum": 0.96238536,
+            "mean": 0.9923434,
+            "maximum": 1
+          },
+          "meanUsage": 0.012362638,
+          "activeFraction": 0.012362637362637362
+        },
+        "dryBiomassCollector": {
+          "size": {
+            "minimum": 35.48737,
+            "mean": 35.56427,
+            "maximum": 35.65725
+          },
+          "functionalFraction": {
+            "minimum": 0.96238536,
+            "mean": 0.9923434,
+            "maximum": 1
+          },
+          "meanUsage": 0.069980025,
+          "activeFraction": 0.07417582417582418
+        },
+        "dryer": {
+          "size": {
+            "minimum": 30.16794,
+            "mean": 30.427896,
+            "maximum": 30.584583
+          },
+          "functionalFraction": {
+            "minimum": 0.96238536,
+            "mean": 0.9923434,
+            "maximum": 1
+          },
+          "meanUsage": 0,
+          "activeFraction": 0
+        },
+        "organicStorage": {
+          "size": {
+            "minimum": 3000.9368,
+            "mean": 3018.352,
+            "maximum": 3046.496
+          },
+          "functionalFraction": {
+            "minimum": 0.96238536,
+            "mean": 0.9923434,
+            "maximum": 1
+          },
+          "meanUsage": 0.5953213,
+          "activeFraction": 0.9821428571428571
+        },
+        "furnace": {
+          "size": {
+            "minimum": 77.51517,
+            "mean": 77.64243,
+            "maximum": 77.78063
+          },
+          "functionalFraction": {
+            "minimum": 0.96238536,
+            "mean": 0.9923434,
+            "maximum": 1
+          },
+          "meanUsage": 0.12872739,
+          "activeFraction": 0.3516483516483517
+        },
+        "battery": {
+          "size": {
+            "minimum": 280,
+            "mean": 280,
+            "maximum": 280
+          },
+          "functionalFraction": {
+            "minimum": 0.96238536,
+            "mean": 0.9923434,
+            "maximum": 1
+          },
+          "meanUsage": 0.26354158,
+          "activeFraction": 0.8379120879120879
+        },
+        "electricMotor": {
+          "size": {
+            "minimum": 130,
+            "mean": 130,
+            "maximum": 130
+          },
+          "functionalFraction": {
+            "minimum": 0.96238536,
+            "mean": 0.9923434,
+            "maximum": 1
+          },
+          "meanUsage": 0.0029878418,
+          "activeFraction": 0.10989010989010989
+        },
+        "thermalOrgan": {
+          "size": {
+            "minimum": 59.03363,
+            "mean": 59.39862,
+            "maximum": 59.811417
+          },
+          "functionalFraction": {
+            "minimum": 0.96238536,
+            "mean": 0.9923434,
+            "maximum": 1
+          },
+          "meanUsage": 0.014541843,
+          "activeFraction": 0.6373626373626373
+        },
+        "radiator": {
+          "size": {
+            "minimum": 81.14162,
+            "mean": 81.191376,
+            "maximum": 81.20113
+          },
+          "functionalFraction": {
+            "minimum": 0.96238536,
+            "mean": 0.9923434,
+            "maximum": 1
+          },
+          "meanUsage": 0.10653772,
+          "activeFraction": 0.45467032967032966
+        },
+        "growthTissue": {
+          "size": {
+            "minimum": 1.8562303,
+            "mean": 1.8562303,
+            "maximum": 1.8562303
+          },
+          "functionalFraction": {
+            "minimum": 0.96238536,
+            "mean": 0.9923434,
+            "maximum": 1
+          },
+          "meanUsage": 0.039630648,
+          "activeFraction": 0.11813186813186813
+        },
+        "frame": {
+          "size": {
+            "minimum": 32104.736,
+            "mean": 32107.846,
+            "maximum": 32114.047
+          },
+          "functionalFraction": {
+            "minimum": 0.96238536,
+            "mean": 0.9923434,
+            "maximum": 1
+          },
+          "meanUsage": 0.7484841,
+          "activeFraction": 0.9821428571428571
+        }
+      }
+    }
+  ],
+  "seasonalOscillation": {
+    "meanWaterAmplitudeLiters": 421.4563,
+    "meanOrganicAmplitudeKg": 106.908936,
+    "meanElectricityAmplitudeKwh": 51.699738,
+    "meanStoredHeatAmplitudeKwh": 0.43396765,
+    "meanBodyTemperatureAmplitudeC": 0.6244831,
+    "meanTotalMassAmplitudeKg": 496.1953,
+    "movementRateAmplitudeKmPerThousandHours": 200.28569,
+    "hibernationFractionAmplitude": 0.017857144,
+    "seasonallyVariableActivities": [
+      "hibernate",
+      "travel",
+      "collectWater",
+      "harvestDryBiomass",
+      "dryOrganicMatter",
+      "collectChitin"
+    ],
+    "seasonallyVariableOrganUsage": [
+      "sail",
+      "solarLeaf",
+      "waterReservoir",
+      "dryBiomassCollector",
+      "furnace",
+      "battery",
+      "radiator",
+      "growthTissue"
+    ]
+  },
+  "finalState": {
+    "blueprint": "balanced",
+    "morphology": "balanced",
+    "xCells": 13,
+    "yCells": 3,
+    "simulatedHours": 8760,
+    "distanceKilometers": 1842.6782,
+    "totalMassKg": 25054.791,
+    "waterLiters": 3249.038,
+    "snowWaterLiters": 0,
+    "wetOrganicDryKg": 1757.3414,
+    "wetOrganicWaterLiters": 3834.3623,
+    "dryOrganicKg": 179.0414,
+    "organicNitrogenKg": 23.284346,
+    "structuralReserveKg": 1017.4521,
+    "storedElectricityKwh": 272.7631,
+    "storedHeatKwh": 0,
+    "bodyTemperatureC": 17.999996,
+    "capturedDustKg": 5.243977,
+    "pendingOrganicResidueKg": 3.6937952,
+    "pendingNitrogenKg": 0.48984447,
+    "pendingWaterVaporLiters": 0,
+    "pendingWasteHeatKwh": 0,
+    "operatingMode": "active",
+    "hibernationReason": "none",
+    "currentHibernationHours": 0,
+    "cumulativeHibernationHours": 39,
+    "hibernationEpisodes": 1,
+    "waterDeficitHours": 0,
+    "organicDeficitHours": 0,
+    "thermalDeficitHours": 0,
+    "structuralOverloadHours": 0,
+    "cumulativeSurfaceWaterLiters": 60157.484,
+    "cumulativeSnowWaterLiters": 157.54776,
+    "cumulativePlantTissueWaterLiters": 8376.06,
+    "cumulativeLiveBiomassKg": 3807.3018,
+    "cumulativeDryBiomassKg": 51450.477,
+    "cumulativeChitinKg": 244.62067,
+    "cumulativeSolarElectricityKwh": 30506.293,
+    "cumulativeFurnaceElectricityKwh": 25140.04,
+    "cumulativeSailMechanicalKwh": 1718.4371,
+    "cumulativeMotorMechanicalKwh": 5290.5527,
+    "cumulativeOrganicMatterReturnedKg": 6612.4497,
+    "cumulativeWaterVaporReturnedLiters": 64767.656,
+    "cumulativeWasteHeatReturnedKwh": 115421.164,
+    "organs": {
+      "sail": {
+        "kind": "sail",
+        "size": 178.065,
+        "sizeUnit": "\u043C\u00B2",
+        "functionalFraction": 0.98557913,
+        "usage": 0,
+        "usageEma": 0.16093284,
+        "growthPriority": 0,
+        "idleDays": 0.125,
+        "activeHours": 2874,
+        "structuralMassKg": 160.2585
+      },
+      "solarLeaf": {
+        "kind": "solarLeaf",
+        "size": 140.03862,
+        "sizeUnit": "\u043C\u00B2",
+        "functionalFraction": 0.98557913,
+        "usage": 0,
+        "usageEma": 0.041292313,
+        "growthPriority": 0,
+        "idleDays": 0.25,
+        "activeHours": 3780,
+        "structuralMassKg": 700.1931
+      },
+      "waterIntake": {
+        "kind": "waterIntake",
+        "size": 284.5644,
+        "sizeUnit": "\u043B/\u0447",
+        "functionalFraction": 0.98557913,
+        "usage": 0,
+        "usageEma": 0.025521036,
+        "growthPriority": 0,
+        "idleDays": 2,
+        "activeHours": 228,
+        "structuralMassKg": 34.147728
+      },
+      "snowCollector": {
+        "kind": "snowCollector",
+        "size": 65.15564,
+        "sizeUnit": "\u043C\u00B2",
+        "functionalFraction": 0.98557913,
+        "usage": 0,
+        "usageEma": 5.802044E-08,
+        "growthPriority": 0,
+        "idleDays": 354.25,
+        "activeHours": 21,
+        "structuralMassKg": 130.31128
+      },
+      "waterReservoir": {
+        "kind": "waterReservoir",
+        "size": 5143.5483,
+        "sizeUnit": "\u043B",
+        "functionalFraction": 0.98557913,
+        "usage": 0.64091504,
+        "usageEma": 0.58603644,
+        "growthPriority": 0,
+        "idleDays": 0,
+        "activeHours": 8721,
+        "structuralMassKg": 411.48386
+      },
+      "liveBiomassHarvester": {
+        "kind": "liveBiomassHarvester",
+        "size": 28,
+        "sizeUnit": "\u043A\u0433 \u0441\u0443\u0445. \u0432-\u0432\u0430/\u0447",
+        "functionalFraction": 0.98557913,
+        "usage": 0,
+        "usageEma": 0.0024465055,
+        "growthPriority": 0,
+        "idleDays": 58.75,
+        "activeHours": 141,
+        "structuralMassKg": 840
+      },
+      "dryBiomassCollector": {
+        "kind": "dryBiomassCollector",
+        "size": 35.8426,
+        "sizeUnit": "\u043A\u0433/\u0447",
+        "functionalFraction": 0.98557913,
+        "usage": 1,
+        "usageEma": 0.16390185,
+        "growthPriority": 0.9,
+        "idleDays": 0,
+        "activeHours": 1872,
+        "structuralMassKg": 716.85205
+      },
+      "dryer": {
+        "kind": "dryer",
+        "size": 29.657919,
+        "sizeUnit": "\u043A\u0433 \u0441\u0443\u0445. \u0432-\u0432\u0430/\u0447",
+        "functionalFraction": 0.98557913,
+        "usage": 0,
+        "usageEma": 0,
+        "growthPriority": 0,
+        "idleDays": 365,
+        "activeHours": 0,
+        "structuralMassKg": 652.47424
+      },
+      "organicStorage": {
+        "kind": "organicStorage",
+        "size": 3100.277,
+        "sizeUnit": "\u043A\u0433",
+        "functionalFraction": 0.98557913,
+        "usage": 0.6337226,
+        "usageEma": 0.61730903,
+        "growthPriority": 0.45,
+        "idleDays": 0,
+        "activeHours": 8721,
+        "structuralMassKg": 372.03323
+      },
+      "furnace": {
+        "kind": "furnace",
+        "size": 78.076546,
+        "sizeUnit": "\u043A\u0412\u0442",
+        "functionalFraction": 0.98557913,
+        "usage": 0.34807378,
+        "usageEma": 0.29391873,
+        "growthPriority": 0.7,
+        "idleDays": 0,
+        "activeHours": 7344,
+        "structuralMassKg": 936.9186
+      },
+      "battery": {
+        "kind": "battery",
+        "size": 280,
+        "sizeUnit": "\u043A\u0412\u0442\u00B7\u0447",
+        "functionalFraction": 0.98557913,
+        "usage": 0.011555799,
+        "usageEma": 0.21560676,
+        "growthPriority": 0,
+        "idleDays": 0.25,
+        "activeHours": 6516,
+        "structuralMassKg": 2240
+      },
+      "electricMotor": {
+        "kind": "electricMotor",
+        "size": 130,
+        "sizeUnit": "\u043A\u0412\u0442",
+        "functionalFraction": 0.98557913,
+        "usage": 0,
+        "usageEma": 0.0022700087,
+        "growthPriority": 0,
+        "idleDays": 45.375,
+        "activeHours": 1296,
+        "structuralMassKg": 780
+      },
+      "thermalOrgan": {
+        "kind": "thermalOrgan",
+        "size": 59.03363,
+        "sizeUnit": "\u043A\u0412\u0442",
+        "functionalFraction": 0.98557913,
+        "usage": 0.029887505,
+        "usageEma": 0.027333543,
+        "growthPriority": 0,
+        "idleDays": 0.125,
+        "activeHours": 4299,
+        "structuralMassKg": 590.3363
+      },
+      "radiator": {
+        "kind": "radiator",
+        "size": 81.20113,
+        "sizeUnit": "\u043A\u0412\u0442",
+        "functionalFraction": 0.98557913,
+        "usage": 0.27728912,
+        "usageEma": 0.21339796,
+        "growthPriority": 0,
+        "idleDays": 0,
+        "activeHours": 7569,
+        "structuralMassKg": 649.6091
+      },
+      "growthTissue": {
+        "kind": "growthTissue",
+        "size": 1.8562303,
+        "sizeUnit": "\u043A\u0433 \u0441\u0442\u0440\u0443\u043A\u0442\u0443\u0440\u044B/\u0441\u0443\u0442",
+        "functionalFraction": 0.98557913,
+        "usage": 0.34148479,
+        "usageEma": 0.09875525,
+        "growthPriority": 0,
+        "idleDays": 0,
+        "activeHours": 3276,
+        "structuralMassKg": 14.849842
+      },
+      "frame": {
+        "kind": "frame",
+        "size": 32126.91,
+        "sizeUnit": "\u043A\u0433 \u043D\u0435\u0441\u0443\u0449\u0435\u0439 \u0441\u043F\u043E\u0441\u043E\u0431\u043D\u043E\u0441\u0442\u0438",
+        "functionalFraction": 0.98557913,
+        "usage": 0.7913189,
+        "usageEma": 0.7753033,
+        "growthPriority": 0,
+        "idleDays": 0,
+        "activeHours": 8721,
+        "structuralMassKg": 5782.844
+      }
+    },
+    "activitySteps": {
+      "rest": 0,
+      "hibernate": 13,
+      "travel": 1091,
+      "collectWater": 26,
+      "collectSnow": 1,
+      "harvestLiveBiomass": 0,
+      "harvestDryBiomass": 841,
+      "dryOrganicMatter": 935,
+      "collectChitin": 13,
+      "returnResidues": 0,
+      "maintain": 0,
+      "escapeWildfire": 0
+    },
+    "regimeHours": {
+      "waterRich": 2721,
+      "biomassRich": 0,
+      "solarRich": 966,
+      "windRich": 921,
+      "coldOrSnow": 3933,
+      "dustStressed": 1602,
+      "flooded": 24,
+      "postFire": 0
+    }
+  },
+  "worldWaterLedgerError": 1.8179264333284286E-06,
+  "worldNitrogenLedgerError": 5.999095124658998E-07,
+  "qualification": {
+    "passed": true,
+    "failures": []
+  }
+}

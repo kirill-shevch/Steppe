@@ -24,6 +24,27 @@ public sealed record WorldConfig
     public float WidthKilometers => Width * CellSizeMeters / 1000f;
     public float HeightKilometers => Height * CellSizeMeters / 1000f;
 
+    /// <summary>
+    /// Creates a validated configuration through a C# 9-friendly API. This keeps Unity
+    /// consumers independent from init-only object initializers emitted by newer SDKs.
+    /// </summary>
+    public static WorldConfig Create(
+        int seed,
+        int width = 96,
+        int height = 96,
+        float cellSizeMeters = 250f,
+        double latitudeDegrees = 48d,
+        int baseStepMinutes = 60) =>
+        new WorldConfig
+        {
+            Seed = seed,
+            Width = width,
+            Height = height,
+            CellSizeMeters = cellSizeMeters,
+            LatitudeDegrees = latitudeDegrees,
+            BaseStepMinutes = baseStepMinutes,
+        }.Validate();
+
     public WorldConfig Validate()
     {
         if (Width is < 8 or > 512 || Height is < 8 or > 512)
@@ -56,7 +77,7 @@ public sealed record WorldConfig
             throw new ArgumentOutOfRangeException(nameof(GiantHarvesterCount));
         }
 
-        if (!float.IsFinite(ClimateVariability) || ClimateVariability is < 0f or > 2f)
+        if (!RuntimeCompatibility.IsFinite(ClimateVariability) || ClimateVariability is < 0f or > 2f)
         {
             throw new ArgumentOutOfRangeException(nameof(ClimateVariability));
         }

@@ -4,7 +4,7 @@ using UnityEngine.InputSystem;
 namespace Steppe.Player
 {
     [DisallowMultipleComponent]
-    public sealed class FlyCameraController : MonoBehaviour
+    public sealed class FlyCameraController : MonoBehaviour, ISteppeTravelFocus
     {
         private float moveSpeed = 80f;
         private float boostMultiplier = 6f;
@@ -14,6 +14,11 @@ namespace Steppe.Player
         private bool pointerLocked;
 
         public float CurrentMoveSpeed { get; private set; }
+        public Transform FocusTransform => transform;
+        public bool IsGrounded => false;
+        public float Speed => CurrentMoveSpeed;
+        public float TrackRadius => 0f;
+        public SteppeTraversalState CurrentSurface => default;
 
         public void Configure(float speed, float boost, float sensitivity)
         {
@@ -75,12 +80,22 @@ namespace Steppe.Player
             if (keyboard.qKey.isPressed) movement -= Vector3.up;
 
             var boost = keyboard.leftShiftKey.isPressed || keyboard.rightShiftKey.isPressed;
-            CurrentMoveSpeed = moveSpeed * (boost ? boostMultiplier : 1f);
+            var requestedSpeed = moveSpeed * (boost ? boostMultiplier : 1f);
 
             if (movement.sqrMagnitude > 0f)
             {
-                transform.position += movement.normalized * (CurrentMoveSpeed * UnityEngine.Time.unscaledDeltaTime);
+                CurrentMoveSpeed = requestedSpeed;
+                transform.position += movement.normalized * (requestedSpeed * UnityEngine.Time.unscaledDeltaTime);
             }
+            else
+            {
+                CurrentMoveSpeed = 0f;
+            }
+        }
+
+        public void Teleport(Vector3 localPosition)
+        {
+            transform.position = localPosition;
         }
 
         private void OnDisable()

@@ -6,6 +6,7 @@ using Steppe.Settings;
 using Steppe.Surface;
 using Steppe.Terrain;
 using Steppe.Time;
+using Steppe.UnitySimulation;
 using Steppe.Weather;
 using Steppe.World;
 using UnityEngine;
@@ -31,6 +32,7 @@ namespace Steppe.Prototype
         private SteppeSnowPresentation snowPresentation;
         private SteppeGrassRenderer grassRenderer;
         private WorldWorkScheduler workScheduler;
+        private SteppeSimulationHost simulationHost;
         private bool visible;
 
         public void Configure(
@@ -46,7 +48,8 @@ namespace Steppe.Prototype
             SteppeDustPresentation dust,
             SteppeSnowPresentation snow,
             SteppeGrassRenderer grass,
-            WorldWorkScheduler scheduler)
+            WorldWorkScheduler scheduler,
+            SteppeSimulationHost finiteSimulation)
         {
             settings = worldSettings;
             floatingOrigin = origin;
@@ -61,6 +64,7 @@ namespace Steppe.Prototype
             snowPresentation = snow;
             grassRenderer = grass;
             workScheduler = scheduler;
+            simulationHost = finiteSimulation;
             terrainGenerator = new TerrainHeightGenerator(settings);
             surfaceGenerator = new SteppeSurfaceGenerator(settings);
             climateModel = new SteppeClimateModel(settings);
@@ -120,23 +124,50 @@ namespace Steppe.Prototype
             chunkStreamer.GetLodCounts(out var near, out var middle, out var far);
 
             const float width = 470f;
-            const float height = 552f;
+            const float height = 650f;
             var area = new Rect(12f, 12f, width, height);
             GUI.Box(area, GUIContent.none);
 
             GUILayout.BeginArea(new Rect(area.x + 12f, area.y + 10f, width - 24f, height - 20f));
-            GUILayout.Label("STEPPE - P12 PHYSICAL LIVING SURFACE");
+            GUILayout.Label("STEPPE - FINITE LIVING WORLD");
             GUILayout.Label($"World XZ: {worldPosition.X:F1}, {worldPosition.Z:F1} m    Altitude: {worldPosition.Y:F1} m");
             GUILayout.Label($"Biome: {surface.DominantBiome}    Climate: {surface.MeanAnnualPrecipitationMm:F0} mm/y, {surface.MeanAnnualTemperatureC:F1} C");
             GUILayout.Label($"Mix: meadow {surface.Biomes.Meadow:P0} / feather {surface.Biomes.FeatherGrass:P0} / dry {surface.Biomes.Dry:P0} / desert {surface.Biomes.Desert:P0}");
             GUILayout.Label($"Cover: {surface.VegetationPotential:P0}    Dust: {surface.DustPotential:P0}    Wind coherence: {surface.WindCoherence:P0}");
-            GUILayout.Label($"Year {time.Year + 1}, day {time.DayOfYear:F1}/{settings.DaysPerYear}    {time.Hour:00.00} h    {time.Season}");
+            GUILayout.Label(
+                $"Year {time.Year + 1}, day {time.DayOfYear:F1}/{timeSystem.DaysPerYear}    "
+                + $"{time.Hour:00.00} h    {time.Season}    "
+                + $"clock {(timeSystem.UsesFiniteWorld ? "continuous + macro" : "legacy")}");
             GUILayout.Label($"Air: {climate.AirTemperatureC:F1} C    Sun: {solar.ElevationDegrees:F1} deg    Clock: x{timeSystem.DebugMultiplier:F0}{(timeSystem.IsPaused ? " PAUSED" : string.Empty)}");
             GUILayout.Label(
                 $"Wind surface: {weather.SurfaceWind.x:F1}, {weather.SurfaceWind.y:F1} m/s    "
                 + $"cloud: {weather.CloudWind.x:F1}, {weather.CloudWind.y:F1} m/s    gust: {weather.StormGust:P0}");
             GUILayout.Label($"Clouds: {weather.CloudCoverage:P0}    Water: {weather.CloudWater:P0}    Precip: {weather.RainIntensity:P0}");
             GUILayout.Label($"Weather map: {(weatherSystem.IsWeatherMapReady ? $"ready v{weatherSystem.MapRevision}" : "building")}    Max clouds: {weatherSystem.MapMaximumCoverage:P0}    Max water: {weatherSystem.MapMaximumWater:P0}    Max rain: {weatherSystem.MapMaximumRain:P0}    Max gust: {weatherSystem.MapMaximumGust:P0}");
+            if (simulationHost != null
+                && simulationHost.TryGetDebugSample(worldPosition.X, worldPosition.Z, out var finite))
+            {
+                GUILayout.Label(
+                    $"Finite core: cell {finite.CellX},{finite.CellY}    year {finite.Year}, day {finite.DayOfYear}    "
+                    + $"{finite.HourOfDay:00.00} h {finite.Season}");
+                GUILayout.Label(
+                    $"Macro presentation: {simulationHost.MacroInterpolationAlpha:P0} between boundaries / "
+                    + $"core ready through {simulationHost.LatestMacroSimulationSeconds / 3600d:F1} h");
+                GUILayout.Label(
+                    $"Core state: {finite.SurfaceTemperatureC:F1} C / wind {finite.WindMetersPerSecond:F1} m/s / "
+                    + $"rain {finite.PrecipitationMillimetersPerHour:F2} mm/h / water {finite.SurfaceWaterMillimeters:F1}+{finite.RootWaterMillimeters:F1} mm / "
+                    + $"live {finite.LiveBiomassGramsPerSquareMeter:F0} g/m2 / dust {finite.DustGramsPerSquareMeter:F3} g/m2");
+                GUILayout.Label(
+                    $"Bridge reads: weather {(weatherSystem.UsesFiniteWorld ? "macro + local" : "legacy")} / "
+                    + $"ecology {(ecologySystem != null && ecologySystem.UsesFiniteWorld ? "macro blend" : "legacy")}    "
+                    + "all catalog states, fluxes and vectors published");
+            }
+            else if (simulationHost != null)
+            {
+                GUILayout.Label(string.IsNullOrEmpty(simulationHost.LastError)
+                    ? "Finite core: initializing snapshot..."
+                    : "Finite core: stopped (see Console)");
+            }
             if (ecologySystem != null && ecologySystem.TryGetState(worldPosition.X, worldPosition.Z, out var ecology))
             {
                 var lagHours = System.Math.Max(
@@ -199,9 +230,9 @@ namespace Steppe.Prototype
             GUILayout.Label($"World work: {workScheduler.LastFrameWorkMilliseconds:F2} ms / {workScheduler.LastFrameStepCount} steps / {workScheduler.RegisteredSourceCount} sources");
             GUILayout.Label($"Seed: {settings.WorldSeed}    Terrain: v{settings.GeneratorVersion}    Surface: v{settings.SurfaceVersion}    Speed: {(travelFocus != null ? travelFocus.Speed : 0f):F1} m/s");
             GUILayout.Space(4f);
-            GUILayout.Label("WASD walk - mouse look - Shift run - Space jump - E use");
-            GUILayout.Label("C clean - R repair - B build mode");
-            GUILayout.Label("1-4 biomes - F3 panel - F5 pause time - F6 accelerate time");
+            GUILayout.Label("WASD fly - mouse look - Q/E descend/ascend - Shift boost - wheel speed");
+            GUILayout.Label("F2 simulation atlas - Tab kind - [ ] field - O world overlay");
+            GUILayout.Label("F3 diagnostics - F5 pause time - F6 accelerate time");
             GUILayout.EndArea();
         }
     }

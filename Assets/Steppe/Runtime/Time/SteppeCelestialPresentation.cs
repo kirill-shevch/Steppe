@@ -10,7 +10,7 @@ namespace Steppe.Time
         private static readonly Color DayFog = new Color(0.72f, 0.79f, 0.82f);
         private static readonly Color DawnLight = new Color(1f, 0.58f, 0.35f);
         private static readonly Color DayLight = new Color(1f, 0.94f, 0.83f);
-        private static readonly Color MoonLightColor = new Color(0.55f, 0.67f, 0.92f);
+        private static readonly Color MoonLightColor = new Color(0.72f, 0.80f, 0.92f);
         private static readonly Vector3 FixedMoonDirection = new Vector3(-0.34f, 0.57f, 0.75f).normalized;
         private static readonly int NightAmountId = Shader.PropertyToID("_SteppeNightAmount");
         private static readonly int MoonDirectionId = Shader.PropertyToID("_SteppeMoonDirection");
@@ -68,7 +68,10 @@ namespace Steppe.Time
                 Mathf.InverseLerp(0.02f, 0.58f, daylight));
             var moonAltitude = Mathf.Clamp01((FixedMoonDirection.y + 0.06f) / 0.76f);
             MoonVisibility = starNightAmount;
-            moon.intensity = MoonVisibility * Mathf.Lerp(0.018f, 0.075f, moonAltitude);
+            // The project has no exposure post-process yet. These values include
+            // eye/camera adaptation so semantic surface cues remain readable while
+            // the sky palette and spectral balance still communicate night.
+            moon.intensity = MoonVisibility * Mathf.Lerp(0.24f, 0.36f, moonAltitude);
             moon.color = MoonLightColor;
             moon.enabled = moon.intensity > 0.0001f;
             RenderSettings.sun = moon.intensity > sun.intensity ? moon : sun;
@@ -78,7 +81,7 @@ namespace Steppe.Time
             fogColor = Color.Lerp(fogColor, DawnFog, dawnAmount * 0.6f);
             RenderSettings.fogColor = fogColor;
             RenderSettings.fogDensity = Mathf.Lerp(0.0003f, 0.00018f, daylight);
-            RenderSettings.ambientIntensity = Mathf.Lerp(0.16f, 1f, daylight);
+            RenderSettings.ambientIntensity = Mathf.Lerp(0.55f, 1f, daylight);
 
             Shader.SetGlobalFloat("_SteppeAbsoluteDay", (float)timeSystem.Current.AbsoluteDay);
             Shader.SetGlobalFloat("_SteppeYearFraction", (float)timeSystem.Current.YearFraction);

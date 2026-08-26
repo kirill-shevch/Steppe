@@ -1,0 +1,24 @@
+STEPPE RUNNING-WORLD TRAVERSAL VISUAL REGRESSION
+UTC: 2026-08-22T12:21:12.2766212Z
+Resolution: 1280x720
+The normal bootstrap, WASD camera, floating origin, simulation, streaming, ecology, grass and weather systems remain active.
+No diagnostic layer, synthetic scene, forced parameter value or direct teleport is used.
+
+waypoint-01-night.png	phase=night	waypoint=1	world=(32,42.625469,-64)	hour=0.009619	chunk=(0, -1)	lod=13/68/196	grassCells=104	grassInstances=610612	ecoCells=5205
+waypoint-02-night.png	phase=night	waypoint=2	world=(511.245148,23.959452,-277.373688)	hour=0.009619	chunk=(0, -1)	lod=13/68/196	grassCells=104	grassInstances=621183	ecoCells=5510
+waypoint-03-night.png	phase=night	waypoint=3	world=(1022.985046,-41.374748,-505.214966)	hour=0.009619	chunk=(1, -1)	lod=13/68/196	grassCells=103	grassInstances=609395	ecoCells=5819
+waypoint-04-night.png	phase=night	waypoint=4	world=(1536.762451,-21.37536,-733.963257)	hour=0.009619	chunk=(3, -2)	lod=13/68/196	grassCells=104	grassInstances=616185	ecoCells=6248
+waypoint-05-night.png	phase=night	waypoint=5	world=(2048.655518,9.291367,-961.87262)	hour=0.009619	chunk=(4, -2)	lod=13/68/196	grassCells=108	grassInstances=627686	ecoCells=6608
+waypoint-06-night.png	phase=night	waypoint=6	world=(2559.993103,22.62463,-1189.534836)	hour=0.009619	chunk=(4, -3)	lod=13/68/196	grassCells=104	grassInstances=567726	ecoCells=6904
+waypoint-07-night.png	phase=night	waypoint=7	world=(3072.636475,43.962151,-1417.77832)	hour=0.009619	chunk=(6, -3)	lod=13/68/196	grassCells=104	grassInstances=524664	ecoCells=7322
+waypoint-08-night.png	phase=night	waypoint=8	world=(3583.819946,43.962151,-1645.37207)	hour=0.009619	chunk=(6, -4)	lod=13/68/196	grassCells=102	grassInstances=496599	ecoCells=7596
+waypoint-09-night.png	phase=night	waypoint=9	world=(4097.044434,50.62999,-1873.874329)	hour=0.009619	chunk=(8, -4)	lod=13/68/196	grassCells=102	grassInstances=495504	ecoCells=8031
+waypoint-09-day.png	phase=day	waypoint=9	world=(4097.044434,50.62999,-1873.874329)	hour=12.019407	chunk=(8, -4)	lod=13/68/196	grassCells=102	grassInstances=495504	ecoCells=8031
+waypoint-08-day.png	phase=day	waypoint=8	world=(3584.017975,45.255375,-1645.460266)	hour=12.019407	chunk=(7, -4)	lod=13/68/196	grassCells=104	grassInstances=504441	ecoCells=8032
+waypoint-07-day.png	phase=day	waypoint=7	world=(3073.252319,45.255375,-1418.052734)	hour=12.019407	chunk=(6, -3)	lod=13/68/196	grassCells=104	grassInstances=521667	ecoCells=8032
+waypoint-06-day.png	phase=day	waypoint=6	world=(2559.026123,23.919691,-1189.104553)	hour=12.019407	chunk=(4, -3)	lod=13/68/196	grassCells=104	grassInstances=562293	ecoCells=8032
+waypoint-05-day.png	phase=day	waypoint=5	world=(2049.454468,11.921765,-962.228394)	hour=12.019407	chunk=(4, -2)	lod=13/68/196	grassCells=104	grassInstances=602136	ecoCells=8032
+waypoint-04-day.png	phase=day	waypoint=4	world=(1537.701508,-20.078121,-734.381317)	hour=12.019407	chunk=(3, -2)	lod=13/68/196	grassCells=105	grassInstances=621394	ecoCells=8032
+waypoint-03-day.png	phase=day	waypoint=3	world=(1024.223267,-41.417912,-505.765991)	hour=12.019407	chunk=(2, -1)	lod=13/68/196	grassCells=102	grassInstances=602795	ecoCells=8033
+waypoint-02-day.png	phase=day	waypoint=2	world=(512.239746,22.584929,-277.81604)	hour=12.019407	chunk=(1, -1)	lod=13/68/196	grassCells=102	grassInstances=607898	ecoCells=8033
+waypoint-01-day.png	phase=day	waypoint=1	world=(32.616577,41.249256,-64.273804)	hour=12.019407	chunk=(0, -1)	lod=13/68/196	grassCells=102	grassInstances=601399	ecoCells=8034

@@ -1,6 +1,8 @@
 using System;
 using Steppe.Rendering;
 using Steppe.Settings;
+using Steppe.Simulation;
+using Steppe.UnitySimulation;
 using Steppe.World;
 using UnityEngine;
 
@@ -29,22 +31,31 @@ namespace Steppe.Weather
         private SteppeWorldSettings settings;
         private SteppeWeatherSystem weatherSystem;
         private FloatingOriginSystem floatingOrigin;
+        private SteppeSimulationHost simulationHost;
+        private Transform focus;
         private Texture3D cloudNoise;
 
         public bool IsReady => settings != null && weatherSystem != null && cloudNoise != null;
         public Texture3D NoiseTexture => cloudNoise;
         public Texture WeatherTexture => weatherSystem != null ? weatherSystem.WeatherMap : null;
+        public float CurrentPressureHpa { get; private set; } = 982.5f;
+        public float CurrentBaseHeight { get; private set; }
 
         public void Configure(
             SteppeWorldSettings worldSettings,
             SteppeWeatherSystem weather,
-            FloatingOriginSystem origin)
+            FloatingOriginSystem origin,
+            SteppeSimulationHost host = null,
+            Transform focusTransform = null)
         {
             settings = worldSettings != null ? worldSettings : throw new ArgumentNullException(nameof(worldSettings));
             weatherSystem = weather != null ? weather : throw new ArgumentNullException(nameof(weather));
             floatingOrigin = origin != null ? origin : throw new ArgumentNullException(nameof(origin));
+            simulationHost = host;
+            focus = focusTransform;
 
             cloudNoise = BuildCloudNoise(NoiseResolution, settings.WorldSeed + 40933);
+            CurrentBaseHeight = settings.CloudBaseHeight;
             SteppeVolumetricCloudRendererFeature.SetPresentationActive(true);
             ApplyShaderState();
         }
@@ -61,6 +72,7 @@ namespace Steppe.Weather
 
         private void ApplyShaderState()
         {
+            UpdatePressurePresentation();
             var mapCenter = floatingOrigin.WorldToLocal(
                 weatherSystem.MapCenterX,
                 0.0,
@@ -97,10 +109,45 @@ namespace Steppe.Weather
             Shader.SetGlobalVector(
                 LayerParametersId,
                 new Vector4(
-                    settings.CloudBaseHeight,
+                    CurrentBaseHeight,
                     settings.CloudLayerThickness,
                     settings.CloudLayerRadius,
                     1f / Mathf.Max(settings.CloudLayerRadius, 1f)));
+        }
+
+        private void UpdatePressurePresentation()
+        {
+            if (simulationHost == null || focus == null || !simulationHost.IsReady)
+            {
+                CurrentBaseHeight = settings.CloudBaseHeight;
+                return;
+            }
+
+            var world = floatingOrigin.LocalToWorld(focus.position);
+            if (!simulationHost.TrySampleState(
+                    SimulationLayer.Pressure,
+                    world.X,
+                    world.Z,
+                    out var pressure))
+            {
+                return;
+            }
+
+            CurrentPressureHpa = pressure;
+            var target = EvaluateCloudBaseHeight(pressure, settings.CloudBaseHeight);
+            var response = Application.isPlaying
+                ? 1f - Mathf.Exp(-UnityEngine.Time.deltaTime * 0.72f)
+                : 1f;
+            CurrentBaseHeight = Mathf.Lerp(CurrentBaseHeight, target, response);
+        }
+
+        public static float EvaluateCloudBaseHeight(float pressureHpa, float configuredBaseHeight)
+        {
+            var pressure = Mathf.InverseLerp(930f, 1035f, pressureHpa);
+            return Mathf.Lerp(
+                Mathf.Max(220f, configuredBaseHeight - 520f),
+                configuredBaseHeight + 520f,
+                pressure);
         }
 
         private static Texture3D BuildCloudNoise(int size, int seed)

@@ -59,7 +59,7 @@ public sealed partial class FiniteWorld
 
     public void AdvanceHours(double hours, CancellationToken cancellationToken = default)
     {
-        if (!double.IsFinite(hours) || hours < 0)
+        if (!RuntimeCompatibility.IsFinite(hours) || hours < 0)
         {
             throw new ArgumentOutOfRangeException(nameof(hours));
         }
@@ -104,7 +104,7 @@ public sealed partial class FiniteWorld
 
     public void AddSurfaceWater(int x, int y, float millimeters)
     {
-        if (millimeters < 0 || !float.IsFinite(millimeters))
+        if (millimeters < 0 || !RuntimeCompatibility.IsFinite(millimeters))
         {
             throw new ArgumentOutOfRangeException(nameof(millimeters));
         }
@@ -122,7 +122,7 @@ public sealed partial class FiniteWorld
 
     public void IgniteFire(int x, int y, float intensity = 1f)
     {
-        if (!float.IsFinite(intensity) || intensity is <= 0f or > 1f)
+        if (!RuntimeCompatibility.IsFinite(intensity) || intensity is <= 0f or > 1f)
         {
             throw new ArgumentOutOfRangeException(nameof(intensity));
         }
@@ -195,7 +195,7 @@ public sealed partial class FiniteWorld
 
             foreach (var value in values)
             {
-                if (!float.IsFinite(value))
+                if (!RuntimeCompatibility.IsFinite(value))
                 {
                     continue;
                 }
@@ -204,7 +204,7 @@ public sealed partial class FiniteWorld
                 maximum = Math.Max(maximum, value);
             }
 
-            if (!float.IsFinite(minimum))
+            if (!RuntimeCompatibility.IsFinite(minimum))
             {
                 minimum = maximum = 0f;
             }
@@ -237,7 +237,7 @@ public sealed partial class FiniteWorld
             var nonFinite = 0;
             foreach (var value in values)
             {
-                if (!float.IsFinite(value))
+                if (!RuntimeCompatibility.IsFinite(value))
                 {
                     nonFinite++;
                     continue;
@@ -321,7 +321,7 @@ public sealed partial class FiniteWorld
             {
                 var value = MathF.Sqrt(vectorX[index] * vectorX[index] + vectorY[index] * vectorY[index]);
                 magnitude[index] = value;
-                if (!float.IsFinite(value) || !float.IsFinite(grossMagnitude[index]))
+                if (!RuntimeCompatibility.IsFinite(value) || !RuntimeCompatibility.IsFinite(grossMagnitude[index]))
                 {
                     nonFinite++;
                     continue;
@@ -546,7 +546,7 @@ public sealed partial class FiniteWorld
 
     public void Save(Stream destination)
     {
-        ArgumentNullException.ThrowIfNull(destination);
+        RuntimeCompatibility.ThrowIfNull(destination, nameof(destination));
         lock (sync)
         {
             WorldPersistence.Save(destination, Config, Clock, state, waterBudget, nitrogenBudget, fauna);
@@ -555,7 +555,7 @@ public sealed partial class FiniteWorld
 
     public void Save(string path)
     {
-        ArgumentException.ThrowIfNullOrWhiteSpace(path);
+        RuntimeCompatibility.ThrowIfNullOrWhiteSpace(path, nameof(path));
         using var stream = File.Create(path);
         Save(stream);
     }
@@ -564,7 +564,7 @@ public sealed partial class FiniteWorld
 
     public static FiniteWorld Load(string path)
     {
-        ArgumentException.ThrowIfNullOrWhiteSpace(path);
+        RuntimeCompatibility.ThrowIfNullOrWhiteSpace(path, nameof(path));
         using var stream = File.OpenRead(path);
         return Load(stream);
     }
@@ -693,7 +693,7 @@ public sealed partial class FiniteWorld
         var above = 0;
         foreach (var value in values)
         {
-            if (!float.IsFinite(value))
+            if (!RuntimeCompatibility.IsFinite(value))
             {
                 nonFiniteCount++;
                 continue;
@@ -722,7 +722,7 @@ public sealed partial class FiniteWorld
         var quantileSpan = Math.Max(1e-12f, maximum - minimum);
         foreach (var value in values)
         {
-            if (!float.IsFinite(value))
+            if (!RuntimeCompatibility.IsFinite(value))
             {
                 continue;
             }
@@ -903,8 +903,8 @@ public sealed partial class FiniteWorld
 
     private float[] CaptureCellValues(int index)
     {
-        var values = new float[Enum.GetValues<SimulationLayer>().Length];
-        foreach (var layer in Enum.GetValues<SimulationLayer>())
+        var values = new float[RuntimeCompatibility.GetEnumValues<SimulationLayer>().Length];
+        foreach (var layer in RuntimeCompatibility.GetEnumValues<SimulationLayer>())
         {
             values[(int)layer] = SampleValue(layer, index);
         }
